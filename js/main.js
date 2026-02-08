@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (carousel && track && prevBtn && nextBtn && dotsContainer) {
         const cards = track.querySelectorAll('.testimonial-card');
         const totalCards = cards.length;
-        let currentPage = 0;
+        let currentIndex = 0; // index of first visible card
         let cardsPerView = 3;
         let autoPlayInterval;
         let isHovered = false;
@@ -540,55 +540,58 @@ document.addEventListener('DOMContentLoaded', () => {
             return 3;
         }
 
-        function getTotalPages() {
-            return Math.ceil(totalCards / cardsPerView);
+        function getMaxIndex() {
+            return Math.max(0, totalCards - cardsPerView);
         }
 
         function buildDots() {
             dotsContainer.innerHTML = '';
-            const totalPages = getTotalPages();
-            for (let i = 0; i < totalPages; i++) {
+            const maxIdx = getMaxIndex();
+            // One dot per possible position (slide 1 at a time)
+            const numDots = maxIdx + 1;
+            for (let i = 0; i < numDots; i++) {
                 const dot = document.createElement('button');
                 dot.classList.add('carousel-dot');
-                if (i === currentPage) dot.classList.add('active');
+                if (i === currentIndex) dot.classList.add('active');
                 dot.setAttribute('aria-label', `עמוד ${i + 1}`);
-                dot.addEventListener('click', () => goToPage(i));
+                dot.addEventListener('click', () => goTo(i));
                 dotsContainer.appendChild(dot);
             }
         }
 
         function updateCarousel() {
-            const gap = parseInt(getComputedStyle(track).gap) || 24;
-            const cardWidth = cards[0].offsetWidth + gap;
-            const offset = currentPage * cardsPerView * cardWidth;
-            // In RTL, we move in positive direction
-            track.style.transform = `translateX(${offset}px)`;
+            // Each card is exactly (100% / cardsPerView) wide
+            // In RTL layout, translateX positive = move right (show next cards)
+            const percent = (currentIndex * 100) / cardsPerView;
+            track.style.transform = `translateX(${percent}%)`;
 
             // Update dots
             dotsContainer.querySelectorAll('.carousel-dot').forEach((dot, i) => {
-                dot.classList.toggle('active', i === currentPage);
+                dot.classList.toggle('active', i === currentIndex);
             });
         }
 
-        function goToPage(page) {
-            const totalPages = getTotalPages();
-            currentPage = ((page % totalPages) + totalPages) % totalPages;
+        function goTo(index) {
+            const maxIdx = getMaxIndex();
+            if (index < 0) index = maxIdx;
+            if (index > maxIdx) index = 0;
+            currentIndex = index;
             updateCarousel();
         }
 
-        function nextPage() {
-            goToPage(currentPage + 1);
+        function next() {
+            goTo(currentIndex + 1);
         }
 
-        function prevPage() {
-            goToPage(currentPage - 1);
+        function prev() {
+            goTo(currentIndex - 1);
         }
 
         function startAutoPlay() {
             stopAutoPlay();
             autoPlayInterval = setInterval(() => {
                 if (!isHovered) {
-                    nextPage();
+                    next();
                 }
             }, 4000);
         }
@@ -597,15 +600,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (autoPlayInterval) clearInterval(autoPlayInterval);
         }
 
-        // Event listeners
+        // Event listeners - next moves left in RTL (shows next cards)
         nextBtn.addEventListener('click', () => {
-            nextPage();
-            startAutoPlay(); // Reset timer
+            next();
+            startAutoPlay();
         });
 
         prevBtn.addEventListener('click', () => {
-            prevPage();
-            startAutoPlay(); // Reset timer
+            prev();
+            startAutoPlay();
         });
 
         carousel.addEventListener('mouseenter', () => { isHovered = true; });
@@ -613,7 +616,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Touch swipe support
         let touchStartX = 0;
-        let touchEndX = 0;
 
         track.addEventListener('touchstart', (e) => {
             touchStartX = e.changedTouches[0].screenX;
@@ -621,12 +623,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
 
         track.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
+            const touchEndX = e.changedTouches[0].screenX;
             const diff = touchStartX - touchEndX;
             // RTL: swipe left = next, swipe right = prev
             if (Math.abs(diff) > 50) {
-                if (diff < 0) nextPage();
-                else prevPage();
+                if (diff < 0) next();
+                else prev();
             }
             startAutoPlay();
         }, { passive: true });
@@ -634,7 +636,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Init
         function initCarousel() {
             cardsPerView = getCardsPerView();
-            currentPage = 0;
+            currentIndex = 0;
             buildDots();
             updateCarousel();
         }
@@ -646,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newPerView = getCardsPerView();
             if (newPerView !== cardsPerView) {
                 cardsPerView = newPerView;
-                currentPage = 0;
+                currentIndex = Math.min(currentIndex, getMaxIndex());
                 buildDots();
                 updateCarousel();
             }
