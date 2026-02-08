@@ -2009,21 +2009,13 @@ button {
 .testimonials-carousel {
   position: relative;
   overflow: hidden;
-  margin: 0 -10px;
 }
 
 .carousel-track {
   display: flex;
+  gap: 24px;
   transition: transform 0.6s var(--ease-out);
   will-change: transform;
-}
-
-.carousel-track .testimonial-card {
-  width: calc(100% / 3);
-  min-width: calc(100% / 3);
-  flex-shrink: 0;
-  padding: 0 10px;
-  box-sizing: border-box;
 }
 
 .carousel-nav {
@@ -2090,14 +2082,13 @@ button {
 .testimonial-card {
   background: var(--white);
   border-radius: var(--border-radius);
-  padding: var(--space-xl);
+  padding: var(--space-xl) var(--space-lg);
   border: 1px solid var(--gray-100);
   transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-height: 320px;
 }
 
 .testimonial-card::before {
@@ -2917,8 +2908,7 @@ textarea,
   }
 
   .carousel-track .testimonial-card {
-    width: calc(100% / 2);
-    min-width: calc(100% / 2);
+    /* JS handles sizing */
   }
 
   .contact-layout {
@@ -3069,8 +3059,7 @@ textarea,
   }
 
   .carousel-track .testimonial-card {
-    width: 100%;
-    min-width: 100%;
+    /* JS handles sizing */
   }
 
   /* Contact */

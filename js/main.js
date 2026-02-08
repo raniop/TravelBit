@@ -560,10 +560,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function updateCarousel() {
-            // Each card is exactly (100% / cardsPerView) wide
-            // In RTL layout, translateX positive = move right (show next cards)
-            const percent = (currentIndex * 100) / cardsPerView;
-            track.style.transform = `translateX(${percent}%)`;
+            // Calculate based on actual card width + gap
+            const gap = parseFloat(getComputedStyle(track).gap) || 24;
+            const trackWidth = track.parentElement.offsetWidth;
+            const cardWidth = (trackWidth - gap * (cardsPerView - 1)) / cardsPerView;
+            const offset = currentIndex * (cardWidth + gap);
+            // RTL: positive translateX moves content right
+            track.style.transform = `translateX(${offset}px)`;
 
             // Update dots
             dotsContainer.querySelectorAll('.carousel-dot').forEach((dot, i) => {
@@ -633,10 +636,21 @@ document.addEventListener('DOMContentLoaded', () => {
             startAutoPlay();
         }, { passive: true });
 
+        function sizeCards() {
+            const gap = parseFloat(getComputedStyle(track).gap) || 24;
+            const trackWidth = track.parentElement.offsetWidth;
+            const cardWidth = (trackWidth - gap * (cardsPerView - 1)) / cardsPerView;
+            cards.forEach(card => {
+                card.style.minWidth = cardWidth + 'px';
+                card.style.width = cardWidth + 'px';
+            });
+        }
+
         // Init
         function initCarousel() {
             cardsPerView = getCardsPerView();
             currentIndex = 0;
+            sizeCards();
             buildDots();
             updateCarousel();
         }
@@ -646,12 +660,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.addEventListener('resize', () => {
             const newPerView = getCardsPerView();
-            if (newPerView !== cardsPerView) {
-                cardsPerView = newPerView;
-                currentIndex = Math.min(currentIndex, getMaxIndex());
-                buildDots();
-                updateCarousel();
-            }
+            cardsPerView = newPerView;
+            currentIndex = Math.min(currentIndex, getMaxIndex());
+            sizeCards();
+            buildDots();
+            updateCarousel();
         });
 
         // Pause autoplay when section is not visible
