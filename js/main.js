@@ -713,8 +713,10 @@ document.head.appendChild(shakeStyle);
             'card.desc': 'כיסוי מותאם לחברה',
             'card.b1': 'כיסוי רפואי מלא בכל העולם',
             'card.b2': 'ביטוח כבודה ומטען',
-            'card.b3': 'ביטול / עיכוב טיסה',
-            'card.b4': 'מוקד רפואי ישראלי 24/7',
+            'card.b3': 'ביטול / קיצור נסיעה',
+            'card.b4': 'מוקד רפואי 24/7 בשירות AirDoctor',
+            'card.b5': 'חיפוש איתור וחילוץ',
+            'card.b6': 'חבות כלפי צד ג׳',
             'card.cta': 'לקבלת הצעת מחיר',
 
             // Float notifications
@@ -853,8 +855,10 @@ document.head.appendChild(shakeStyle);
             'card.desc': 'Custom coverage for your company',
             'card.b1': 'Full medical coverage worldwide',
             'card.b2': 'Luggage & cargo insurance',
-            'card.b3': 'Flight cancellation / delay',
-            'card.b4': 'Israeli medical hotline 24/7',
+            'card.b3': 'Trip cancellation / curtailment',
+            'card.b4': 'Medical hotline 24/7 by AirDoctor',
+            'card.b5': 'Search, locate & rescue',
+            'card.b6': 'Third party liability',
             'card.cta': 'Get a Quote',
 
             // Float notifications

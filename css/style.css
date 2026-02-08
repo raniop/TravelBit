@@ -987,6 +987,7 @@ button {
   overflow: hidden;
   transition: transform 0.6s var(--ease-out);
   transform-style: preserve-3d;
+  aspect-ratio: 1 / 1;
 }
 
 .hero-card:hover {
@@ -1019,6 +1020,8 @@ button {
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
 }
 
 .card-status-bar {
@@ -3137,6 +3140,10 @@ textarea,
   .hero-card-stack {
     max-width: 100%;
     padding: 30px 20px;
+  }
+
+  .hero-card {
+    aspect-ratio: auto;
   }
 
   .hero-metrics {
