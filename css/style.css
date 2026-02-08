@@ -943,6 +943,7 @@ button {
   width: 100%;
   max-width: 420px;
   perspective: 1000px;
+  padding: 50px 60px;
 }
 
 .hero-card {
@@ -1117,15 +1118,16 @@ button {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-lg) var(--space-sm) var(--space-sm);
+  padding: 10px 16px 10px 10px;
   background: var(--white);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-lg);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
   z-index: 10;
   white-space: nowrap;
   animation: floatNotif 6s ease-in-out infinite;
   opacity: 0;
   transform: translateX(30px);
+  font-size: var(--fs-sm);
 }
 
 .float-notif.visible {
@@ -1136,23 +1138,24 @@ button {
 
 .float-notif.notif-1,
 .float-notif:nth-child(2) {
-  top: 10%;
-  left: -30px;
+  top: -10px;
+  left: -40px;
   animation-delay: 0s;
 }
 
 .float-notif.notif-2,
 .float-notif:nth-child(3) {
-  top: 45%;
-  right: -40px;
+  top: 50%;
+  right: -60px;
   left: auto;
+  transform: translateY(-50%);
   animation-delay: 2s;
 }
 
 .float-notif.notif-3,
 .float-notif:nth-child(4) {
-  bottom: 10%;
-  left: -20px;
+  bottom: -10px;
+  left: -30px;
   animation-delay: 4s;
 }
 
@@ -1162,9 +1165,9 @@ button {
 }
 
 .notif-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2818,8 +2821,9 @@ textarea,
   }
 
   .hero-card-stack {
-    max-width: 360px;
+    max-width: 400px;
     margin: 0 auto;
+    padding: 40px 50px;
   }
 
   .services-grid {
@@ -3093,6 +3097,7 @@ textarea,
 
   .hero-card-stack {
     max-width: 100%;
+    padding: 30px 20px;
   }
 
   .hero-metrics {
@@ -3100,9 +3105,16 @@ textarea,
     align-items: center;
   }
 
-  .float-notif:nth-child(2),
+  .float-notif.notif-1,
+  .float-notif:nth-child(2) {
+    left: -5px;
+    top: -5px;
+  }
+
+  .float-notif.notif-3,
   .float-notif:nth-child(4) {
-    left: -10px;
+    left: -5px;
+    bottom: -5px;
   }
 
   .advantage-item {
