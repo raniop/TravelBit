@@ -5,12 +5,169 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Travelbit - רכישת ביטוח נסיעות עסקי לחו״ל">
     <title>Travelbit | רכישת ביטוח נסיעות</title>
-    <meta http-equiv="refresh" content="0;url=https://ophir.travelsure.co.il/buyinsnew">
-    <script>
-        window.location.href = "https://ophir.travelsure.co.il/buyinsnew";
-    </script>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Heebo', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .buy-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 14px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+        .buy-header .logo-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        .buy-header .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 107, 44, 0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .buy-header .logo-text {
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+        .buy-header .logo-text em {
+            font-style: normal;
+            color: #FF6B2C;
+        }
+        .buy-header .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .buy-header .page-title {
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            font-weight: 400;
+        }
+        .buy-header .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 22px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .buy-header .back-btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.3);
+        }
+        .iframe-wrapper {
+            flex: 1;
+            position: relative;
+            background: #f5f5f5;
+        }
+        .iframe-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+        .iframe-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            background: #f5f5f5;
+            z-index: 5;
+            transition: opacity 0.4s ease;
+        }
+        .iframe-loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e0e0e0;
+            border-top-color: #FF6B2C;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .iframe-loading p {
+            color: #666;
+            font-size: 15px;
+        }
+        @media (max-width: 768px) {
+            .buy-header {
+                padding: 12px 16px;
+            }
+            .buy-header .page-title {
+                display: none;
+            }
+            .buy-header .logo-text {
+                font-size: 18px;
+            }
+            .buy-header .back-btn {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <p style="text-align:center; font-family:sans-serif; padding:40px;">מעביר לעמוד הרכישה...</p>
+    <header class="buy-header">
+        <a href="index.html" class="logo-link">
+            <div class="logo-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF6B2C" stroke-width="2"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+            </div>
+            <span class="logo-text">Travel<em>bit</em></span>
+        </a>
+        <div class="header-actions">
+            <span class="page-title">רכישת ביטוח נסיעות לחו״ל</span>
+            <a href="index.html" class="back-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                חזרה לאתר
+            </a>
+        </div>
+    </header>
+    <div class="iframe-wrapper">
+        <div class="iframe-loading" id="iframeLoading">
+            <div class="spinner"></div>
+            <p>טוען את עמוד הרכישה...</p>
+        </div>
+        <iframe
+            src="https://ophir.travelsure.co.il/buyinsnew"
+            title="רכישת ביטוח נסיעות"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"
+            referrerpolicy="no-referrer"
+            onload="document.getElementById('iframeLoading').classList.add('hidden')"
+        ></iframe>
+    </div>
 </body>
 </html>
