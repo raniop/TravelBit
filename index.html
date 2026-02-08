@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Travelbit - ביטוח נסיעות עסקי חכם לחברות. פתרונות ביטוח נסיעות לחו״ל מותאמים לעסקים.">
+    <title>Travelbit | ביטוח נסיעות עסקי</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Cursor Glow -->
+    <div class="cursor-glow" id="cursorGlow"></div>
+
+    <!-- ===== HEADER ===== -->
+    <header class="header" id="header">
+        <div class="container">
+            <a href="#home" class="logo">
+                <div class="logo-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+                </div>
+                <span class="logo-text">Travel<em>bit</em></span>
+            </a>
+
+            <nav class="nav-menu" id="navMenu">
+                <a href="#home" class="active">בית</a>
+                <a href="#services">שירותים</a>
+                <a href="#process">איך זה עובד</a>
+                <a href="#why-us">למה אנחנו</a>
+                <a href="#testimonials">לקוחות</a>
+                <a href="#contact">צור קשר</a>
+            </nav>
+
+            <a href="#contact" class="btn btn-primary header-cta">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                קבלו הצעת מחיר
+            </a>
+
+            <button class="hamburger" id="hamburger" aria-label="תפריט">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- ===== HERO ===== -->
+    <section class="hero" id="home">
+        <!-- Particle Canvas -->
+        <canvas class="hero-particles" id="heroParticles"></canvas>
+
+        <!-- Gradient Mesh -->
+        <div class="hero-mesh">
+            <div class="mesh-blob mesh-1"></div>
+            <div class="mesh-blob mesh-2"></div>
+            <div class="mesh-blob mesh-3"></div>
+        </div>
+
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge animate-in" data-delay="0">
+                    <span class="badge-dot"></span>
+                    <span class="badge-text">ביטוח נסיעות עסקי לחו״ל</span>
+                    <span class="badge-arrow">←</span>
+                </div>
+                <h1 class="hero-title animate-in" data-delay="100">
+                    <span class="title-line">ככה חברות</span>
+                    <span class="title-line gradient-text">מבטחות נסיעות</span>
+                    <span class="title-line">לחו״ל</span>
+                </h1>
+                <p class="hero-subtitle animate-in" data-delay="200">
+                    <span id="typingText"></span><span class="typing-cursor">|</span>
+                </p>
+                <div class="hero-buttons animate-in" data-delay="300">
+                    <a href="#contact" class="btn btn-primary btn-lg btn-glow">
+                        <span>קבלו הצעת מחיר</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                    <a href="#services" class="btn btn-glass btn-lg">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                        <span>גלו את השירותים</span>
+                    </a>
+                </div>
+                <div class="hero-metrics animate-in" data-delay="400">
+                    <div class="metric">
+                        <div class="metric-value" data-count="500">0</div>
+                        <div class="metric-label">חברות מבוטחות</div>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric">
+                        <div class="metric-value" data-count="98" data-suffix="%">0</div>
+                        <div class="metric-label">שביעות רצון</div>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric">
+                        <div class="metric-value" data-count="24" data-suffix="/7">0</div>
+                        <div class="metric-label">זמינות מלאה</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hero-visual animate-in" data-delay="200">
+                <div class="hero-card-stack">
+                    <!-- Main Card -->
+                    <div class="hero-card tilt-card" data-tilt>
+                        <div class="card-glow"></div>
+                        <div class="card-inner">
+                            <div class="card-status-bar">
+                                <span class="status-pulse"></span>
+                                <span>פוליסה פעילה</span>
+                            </div>
+                            <div class="card-head">
+                                <div class="card-logo-circle">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF6B2C" stroke-width="2"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+                                </div>
+                                <div>
+                                    <h4>הפוליסה העסקית שלכם</h4>
+                                    <p>כיסוי מותאם לחברה</p>
+                                </div>
+                            </div>
+                            <div class="card-benefits">
+                                <div class="benefit-row">
+                                    <div class="benefit-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00B67A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                                    <span>כיסוי רפואי מלא בכל העולם</span>
+                                </div>
+                                <div class="benefit-row">
+                                    <div class="benefit-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00B67A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                                    <span>ביטוח כבודה ומטען</span>
+                                </div>
+                                <div class="benefit-row">
+                                    <div class="benefit-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00B67A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                                    <span>ביטול / עיכוב טיסה</span>
+                                </div>
+                                <div class="benefit-row">
+                                    <div class="benefit-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00B67A" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                                    <span>מוקד רפואי ישראלי 24/7</span>
+                                </div>
+                            </div>
+                            <div class="card-bottom">
+                                <div class="card-price-tag">
+                                    <span class="small">החל מ-</span>
+                                    <span class="big">₪5</span>
+                                    <span class="small">ליום / לעובד</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Floating Notification Cards -->
+                    <div class="float-notif notif-1">
+                        <div class="notif-icon green">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                        <div class="notif-text">
+                            <strong>תביעה אושרה</strong>
+                            <span>תוך 3 שעות</span>
+                        </div>
+                    </div>
+
+                    <div class="float-notif notif-2">
+                        <div class="notif-icon blue">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                        </div>
+                        <div class="notif-text">
+                            <strong>כיסוי רפואי</strong>
+                            <span>100% מלא</span>
+                        </div>
+                    </div>
+
+                    <div class="float-notif notif-3">
+                        <div class="notif-icon orange">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </div>
+                        <div class="notif-text">
+                            <strong>מוגנים בכל העולם</strong>
+                            <span>180+ מדינות</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scroll indicator -->
+        <div class="scroll-indicator">
+            <div class="scroll-mouse">
+                <div class="scroll-wheel"></div>
+            </div>
+            <span>גללו למטה</span>
+        </div>
+    </section>
+
+    <!-- ===== MARQUEE CLIENTS ===== -->
+    <section class="clients-marquee">
+        <div class="marquee-track">
+            <div class="marquee-content">
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg><span>TechCorp</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg><span>GlobalTech</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><span>InnovateLab</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>DataFlow</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>CloudNine</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg><span>StartupIL</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09zM12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/></svg><span>RocketDev</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg><span>CubeTech</span></div>
+                <!-- Duplicate for seamless loop -->
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg><span>TechCorp</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg><span>GlobalTech</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><span>InnovateLab</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>DataFlow</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span>CloudNine</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg><span>StartupIL</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09zM12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/></svg><span>RocketDev</span></div>
+                <div class="marquee-item"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg><span>CubeTech</span></div>
+            </div>
+        </div>
+        <p class="marquee-label">מעל <strong>500+</strong> חברות מובילות כבר סומכות עלינו</p>
+    </section>
+
+    <!-- ===== SERVICES ===== -->
+    <section class="section" id="services">
+        <div class="container">
+            <div class="section-header reveal-up">
+                <div class="section-tag">השירותים שלנו</div>
+                <h2 class="section-title">פתרונות ביטוח <span class="gradient-text">מותאמים אישית</span></h2>
+                <p class="section-subtitle">מגוון פתרונות ביטוח נסיעות לחו״ל, מותאמים לצרכים הייחודיים של כל חברה</p>
+            </div>
+
+            <div class="services-grid">
+                <div class="service-card tilt-card reveal-up" data-delay="0">
+                    <div class="service-card-bg"></div>
+                    <div class="service-icon-wrap si-1">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+                    </div>
+                    <h3>ביטוח נסיעות עסקי</h3>
+                    <p>כיסוי ביטוחי מקיף לעובדים בנסיעות עבודה לחו״ל, כולל ביטול טיסות, איחורים וכיסוי רפואי מלא</p>
+                    <a href="#contact" class="service-cta">
+                        <span>לפרטים נוספים</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                </div>
+
+                <div class="service-card tilt-card reveal-up" data-delay="100">
+                    <div class="service-card-bg"></div>
+                    <div class="service-icon-wrap si-2">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                    </div>
+                    <h3>פוליסה קבוצתית</h3>
+                    <p>פוליסת ביטוח קבוצתית לחברות עם מחירים מועדפים, ניהול מרכזי ודוחות מפורטים</p>
+                    <a href="#contact" class="service-cta">
+                        <span>לפרטים נוספים</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                </div>
+
+                <div class="service-card tilt-card reveal-up" data-delay="200">
+                    <div class="service-card-bg"></div>
+                    <div class="service-icon-wrap si-3">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+                    </div>
+                    <h3>ביטוח נסיעות פרטי</h3>
+                    <p>הטבות מיוחדות לעובדי חברות בנסיעות פרטיות - חופשות משפחתיות ונסיעות פנאי</p>
+                    <a href="#contact" class="service-cta">
+                        <span>לפרטים נוספים</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                </div>
+
+                <div class="service-card tilt-card reveal-up" data-delay="300">
+                    <div class="service-card-bg"></div>
+                    <div class="service-icon-wrap si-4">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                    </div>
+                    <h3>מוקד חירום 24/7</h3>
+                    <p>מוקד סיוע זמין 24 שעות ביממה עם רופאים ישראליים אונליין לייעוץ רפואי מיידי</p>
+                    <a href="#contact" class="service-cta">
+                        <span>לפרטים נוספים</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== PROCESS ===== -->
+    <section class="section section-dark" id="process">
+        <div class="container">
+            <div class="section-header reveal-up">
+                <div class="section-tag light">תהליך פשוט</div>
+                <h2 class="section-title light">איך זה <span class="gradient-text">עובד?</span></h2>
+                <p class="section-subtitle light">בשלושה צעדים פשוטים - החברה שלכם מבוטחת</p>
+            </div>
+
+            <div class="process-timeline">
+                <div class="timeline-line"></div>
+                <div class="process-step reveal-up" data-delay="0">
+                    <div class="step-number-ring">
+                        <span>01</span>
+                    </div>
+                    <div class="step-content">
+                        <div class="step-icon-float">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                        </div>
+                        <h3>פנו אלינו</h3>
+                        <p>מלאו טופס קצר או חייגו אלינו ונחזור אליכם תוך שעות</p>
+                    </div>
+                </div>
+                <div class="process-step reveal-up" data-delay="150">
+                    <div class="step-number-ring">
+                        <span>02</span>
+                    </div>
+                    <div class="step-content">
+                        <div class="step-icon-float">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        </div>
+                        <h3>הצעה מותאמת</h3>
+                        <p>נבנה עבורכם הצעת מחיר מותאמת אישית לצרכי החברה</p>
+                    </div>
+                </div>
+                <div class="process-step reveal-up" data-delay="300">
+                    <div class="step-number-ring">
+                        <span>03</span>
+                    </div>
+                    <div class="step-content">
+                        <div class="step-icon-float">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        </div>
+                        <h3>מבוטחים!</h3>
+                        <p>הפוליסה פעילה מיידית - העובדים מכוסים בכל נסיעה לחו״ל</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== WHY US ===== -->
+    <section class="section" id="why-us">
+        <div class="container">
+            <div class="why-layout">
+                <div class="why-visual-side reveal-up">
+                    <div class="experience-card">
+                        <div class="exp-glow"></div>
+                        <div class="exp-number" data-count="35" data-suffix="+">0</div>
+                        <div class="exp-label">שנות ניסיון</div>
+                        <div class="exp-sub">בביטוח נסיעות עסקי</div>
+                        <div class="exp-stats">
+                            <div class="exp-stat">
+                                <div class="es-number">500+</div>
+                                <div class="es-label">חברות</div>
+                            </div>
+                            <div class="exp-stat-divider"></div>
+                            <div class="exp-stat">
+                                <div class="es-number">98%</div>
+                                <div class="es-label">שביעות רצון</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="why-content-side">
+                    <div class="section-header right reveal-up">
+                        <div class="section-tag">למה לבחור בנו</div>
+                        <h2 class="section-title">היתרונות <span class="gradient-text">שלנו</span></h2>
+                        <p class="section-subtitle">ניסיון רב שנים בביטוח נסיעות עסקי מאפשר לנו שירות יוצא דופן</p>
+                    </div>
+
+                    <div class="advantages-list">
+                        <div class="advantage-item reveal-up" data-delay="0">
+                            <div class="adv-icon ai-1">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2z"/></svg>
+                            </div>
+                            <div class="adv-text">
+                                <h4>ניסיון וותק</h4>
+                                <p>שנים של ניסיון עם מאות חברות מרוצות בכל סדרי הגודל</p>
+                            </div>
+                            <div class="adv-arrow">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            </div>
+                        </div>
+                        <div class="advantage-item reveal-up" data-delay="100">
+                            <div class="adv-icon ai-2">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            </div>
+                            <div class="adv-text">
+                                <h4>שירות מהיר</h4>
+                                <p>טיפול מיידי בתביעות והחזרים מהירים - תשלום תוך שעות</p>
+                            </div>
+                            <div class="adv-arrow">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            </div>
+                        </div>
+                        <div class="advantage-item reveal-up" data-delay="200">
+                            <div class="adv-icon ai-3">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                            </div>
+                            <div class="adv-text">
+                                <h4>מחירים תחרותיים</h4>
+                                <p>הצעות מחיר מותאמות עם יחס עלות-תועלת מצוין</p>
+                            </div>
+                            <div class="adv-arrow">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            </div>
+                        </div>
+                        <div class="advantage-item reveal-up" data-delay="300">
+                            <div class="adv-icon ai-4">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                            </div>
+                            <div class="adv-text">
+                                <h4>ליווי אישי</h4>
+                                <p>מנהל לקוח ייעודי לכל חברה עם ליווי צמוד ודוחות</p>
+                            </div>
+                            <div class="adv-arrow">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== STATS COUNTER ===== -->
+    <section class="stats-section" id="stats">
+        <div class="container">
+            <div class="stats-row">
+                <div class="stat-box reveal-up" data-delay="0">
+                    <div class="stat-number-big" data-count="500" data-suffix="+">0</div>
+                    <div class="stat-desc">חברות מבוטחות</div>
+                </div>
+                <div class="stat-box reveal-up" data-delay="100">
+                    <div class="stat-number-big" data-count="10000" data-suffix="+">0</div>
+                    <div class="stat-desc">נוסעים בשנה</div>
+                </div>
+                <div class="stat-box reveal-up" data-delay="200">
+                    <div class="stat-number-big" data-count="24" data-suffix="/7">0</div>
+                    <div class="stat-desc">שעות שירות ביממה</div>
+                </div>
+                <div class="stat-box reveal-up" data-delay="300">
+                    <div class="stat-number-big" data-count="98" data-suffix="%">0</div>
+                    <div class="stat-desc">אחוז שביעות רצון</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== TESTIMONIALS ===== -->
+    <section class="section" id="testimonials">
+        <div class="container">
+            <div class="section-header reveal-up">
+                <div class="section-tag">מה אומרים עלינו</div>
+                <h2 class="section-title">לקוחות <span class="gradient-text">ממליצים</span></h2>
+                <p class="section-subtitle">חברות שכבר עובדות איתנו משתפות את החוויה שלהן</p>
+            </div>
+
+            <div class="testimonials-carousel reveal-up" id="testimonialsCarousel">
+                <div class="carousel-track" id="carouselTrack">
+                    <!-- Card 1 -->
+                    <div class="testimonial-card">
+                        <div class="tcard-quote">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" opacity="0.1"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/></svg>
+                        </div>
+                        <div class="tcard-stars">★★★★★</div>
+                        <p class="tcard-text">"שירות מעולה! העובדים שלנו מרגישים בטוחים בכל נסיעה. הטיפול בתביעות מהיר ויעיל - ממליצים בחום."</p>
+                        <div class="tcard-author">
+                            <div class="tcard-avatar">ד״כ</div>
+                            <div>
+                                <div class="tcard-name">דנה כהן</div>
+                                <div class="tcard-role">סמנכ״לית HR, TechVision</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="testimonial-card featured">
+                        <div class="tcard-quote">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" opacity="0.1"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/></svg>
+                        </div>
+                        <div class="tcard-stars">★★★★★</div>
+                        <p class="tcard-text">"עברנו ל-Travelbit לפני שנתיים ולא מתחרטים. החיסכון משמעותי, השירות ברמה אחרת לגמרי. הליווי האישי עושה את ההבדל."</p>
+                        <div class="tcard-author">
+                            <div class="tcard-avatar">א״ב</div>
+                            <div>
+                                <div class="tcard-name">אבי ברק</div>
+                                <div class="tcard-role">CFO, StartupNation</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="testimonial-card">
+                        <div class="tcard-quote">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" opacity="0.1"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/></svg>
+                        </div>
+                        <div class="tcard-stars">★★★★★</div>
+                        <p class="tcard-text">"המוקד הרפואי 24/7 הציל אותנו כשאחד העובדים נפגע בנסיעה. תוך דקות קיבלנו מענה והכוונה מלאה."</p>
+                        <div class="tcard-author">
+                            <div class="tcard-avatar">ר״ל</div>
+                            <div>
+                                <div class="tcard-name">רונית לוי</div>
+                                <div class="tcard-role">מנכ״לית, CloudBase</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="testimonial-card">
+                        <div class="tcard-quote">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" opacity="0.1"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/></svg>
+                        </div>
+                        <div class="tcard-stars">★★★★★</div>
+                        <p class="tcard-text">"הפלטפורמה הדיגיטלית של Travelbit פשוט מדהימה. ניהול כל הפוליסות במקום אחד, דוחות מפורטים ושליטה מלאה. חוסכים שעות עבודה."</p>
+                        <div class="tcard-author">
+                            <div class="tcard-avatar">מ״ש</div>
+                            <div>
+                                <div class="tcard-name">מיכאל שמעוני</div>
+                                <div class="tcard-role">מנהל תפעול, DataTech</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 5 -->
+                    <div class="testimonial-card featured">
+                        <div class="tcard-quote">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" opacity="0.1"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/></svg>
+                        </div>
+                        <div class="tcard-stars">★★★★★</div>
+                        <p class="tcard-text">"אחרי שעבדנו עם 3 חברות ביטוח שונות, Travelbit הם הראשונים שבאמת מבינים את הצרכים של חברת הייטק. פתרון מושלם לנסיעות עסקיות."</p>
+                        <div class="tcard-author">
+                            <div class="tcard-avatar">ע״ד</div>
+                            <div>
+                                <div class="tcard-name">עדי דביר</div>
+                                <div class="tcard-role">VP Operations, InnovateLab</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 6 -->
+                    <div class="testimonial-card">
+                        <div class="tcard-quote">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" opacity="0.1"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/></svg>
+                        </div>
+                        <div class="tcard-stars">★★★★★</div>
+                        <p class="tcard-text">"כיסוי רפואי ברמה הגבוהה ביותר, מחירים תחרותיים ושירות אדיב. מאז שעברנו ל-Travelbit אין לנו שום דאגה."</p>
+                        <div class="tcard-author">
+                            <div class="tcard-avatar">נ״א</div>
+                            <div>
+                                <div class="tcard-name">נועה אשכנזי</div>
+                                <div class="tcard-role">מנהלת רכש, GlobalTrade</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 7 -->
+                    <div class="testimonial-card">
+                        <div class="tcard-quote">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" opacity="0.1"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/></svg>
+                        </div>
+                        <div class="tcard-stars">★★★★★</div>
+                        <p class="tcard-text">"ב-Travelbit מתייחסים לכל לקוח כמו VIP. מנהל לקוח אישי שזמין תמיד, הצעות מחיר מותאמות ותהליך תביעות חלק ומהיר."</p>
+                        <div class="tcard-author">
+                            <div class="tcard-avatar">י״ר</div>
+                            <div>
+                                <div class="tcard-name">יוסי רוזנברג</div>
+                                <div class="tcard-role">סמנכ״ל כספים, TechFlow</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 8 -->
+                    <div class="testimonial-card featured">
+                        <div class="tcard-quote">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" opacity="0.1"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/></svg>
+                        </div>
+                        <div class="tcard-stars">★★★★★</div>
+                        <p class="tcard-text">"הפתרון הקבוצתי של Travelbit חסך לנו 40% בעלויות ביטוח נסיעות. התמיכה זמינה 24/7 וזה קריטי כשיש לך עובדים ב-3 יבשות."</p>
+                        <div class="tcard-author">
+                            <div class="tcard-avatar">ל״כ</div>
+                            <div>
+                                <div class="tcard-name">לירון כץ</div>
+                                <div class="tcard-role">CEO, ScaleUp</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 9 -->
+                    <div class="testimonial-card">
+                        <div class="tcard-quote">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" opacity="0.1"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151C7.563 6.068 6 8.789 6 11h4v10H0z"/></svg>
+                        </div>
+                        <div class="tcard-stars">★★★★★</div>
+                        <p class="tcard-text">"מעולם לא חווינו שירות כזה בתחום הביטוח. Travelbit שינו את הסטנדרט. תגובה מיידית, גישה אנושית ופתרונות יצירתיים."</p>
+                        <div class="tcard-author">
+                            <div class="tcard-avatar">ש״ג</div>
+                            <div>
+                                <div class="tcard-name">שרון גולדשטיין</div>
+                                <div class="tcard-role">מנכ״ל, BrightPath</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Carousel Navigation -->
+                <div class="carousel-nav">
+                    <button class="carousel-btn carousel-prev" id="carouselPrev" aria-label="הקודם">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    </button>
+                    <div class="carousel-dots" id="carouselDots"></div>
+                    <button class="carousel-btn carousel-next" id="carouselNext" aria-label="הבא">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== CTA ===== -->
+    <section class="cta-section">
+        <div class="cta-bg-pattern"></div>
+        <div class="container">
+            <div class="cta-inner reveal-up">
+                <h2>מוכנים לבטח את הנסיעות העסקיות שלכם?</h2>
+                <p>קבלו הצעת מחיר מותאמת אישית תוך 24 שעות - בלי התחייבות</p>
+                <div class="cta-actions">
+                    <a href="#contact" class="btn btn-white btn-lg btn-glow">
+                        <span>קבלו הצעת מחיר</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                    <a href="tel:03XXXXXXX" class="btn btn-ghost-white btn-lg">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                        <span>חייגו אלינו</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== CONTACT ===== -->
+    <section class="section" id="contact">
+        <div class="container">
+            <div class="section-header reveal-up">
+                <div class="section-tag">צרו קשר</div>
+                <h2 class="section-title">נשמח <span class="gradient-text">לשמוע מכם</span></h2>
+                <p class="section-subtitle">מלאו את הטופס ונחזור אליכם עם הצעת מחיר מותאמת אישית</p>
+            </div>
+
+            <div class="contact-layout">
+                <div class="contact-info-side reveal-up">
+                    <h3>דברו איתנו</h3>
+                    <p>צוות המומחים שלנו זמין לכל שאלה. נשמח לייעץ ולמצוא את הפתרון המושלם עבור החברה שלכם.</p>
+
+                    <div class="contact-cards">
+                        <div class="contact-card">
+                            <div class="cc-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6B2C" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                            </div>
+                            <div>
+                                <span class="cc-label">טלפון</span>
+                                <span class="cc-value">03-XXX-XXXX</span>
+                            </div>
+                        </div>
+                        <div class="contact-card">
+                            <div class="cc-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6B2C" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            </div>
+                            <div>
+                                <span class="cc-label">אימייל</span>
+                                <span class="cc-value">info@travelbit.co.il</span>
+                            </div>
+                        </div>
+                        <div class="contact-card">
+                            <div class="cc-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6B2C" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                            </div>
+                            <div>
+                                <span class="cc-label">וואטסאפ</span>
+                                <span class="cc-value">05X-XXX-XXXX</span>
+                            </div>
+                        </div>
+                        <div class="contact-card">
+                            <div class="cc-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF6B2C" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            </div>
+                            <div>
+                                <span class="cc-label">כתובת</span>
+                                <span class="cc-value">ישראל</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="contact-form-side reveal-up" data-delay="100">
+                    <div class="form-card">
+                        <form id="contactForm" novalidate>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="fullName">שם מלא *</label>
+                                    <input type="text" id="fullName" name="fullName" placeholder="הכניסו את שמכם" required>
+                                    <div class="error-msg">נא להזין שם מלא</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="phone">טלפון *</label>
+                                    <input type="tel" id="phone" name="phone" placeholder="05X-XXXXXXX" required>
+                                    <div class="error-msg">נא להזין מספר טלפון תקין</div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="email">אימייל *</label>
+                                    <input type="email" id="email" name="email" placeholder="your@email.com" required>
+                                    <div class="error-msg">נא להזין כתובת אימייל תקינה</div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="company">שם החברה</label>
+                                    <input type="text" id="company" name="company" placeholder="שם החברה (אופציונלי)">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="message">הודעה</label>
+                                <textarea id="message" name="message" placeholder="ספרו לנו במה נוכל לעזור..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-submit btn-glow">
+                                <span>שלחו הודעה</span>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                            </button>
+                        </form>
+                        <div class="form-success" id="formSuccess">
+                            <div class="success-checkmark">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#00B67A" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            </div>
+                            <h3>ההודעה נשלחה בהצלחה!</h3>
+                            <p>נחזור אליכם בהקדם האפשרי</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#home" class="logo">
+                        <div class="logo-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></div>
+                        <span class="logo-text">Travel<em>bit</em></span>
+                    </a>
+                    <p>פתרונות ביטוח נסיעות עסקי חכם לחברות. כיסוי מקיף, שירות מהיר ומחירים תחרותיים.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>קישורים מהירים</h4>
+                    <ul>
+                        <li><a href="#home">בית</a></li>
+                        <li><a href="#services">שירותים</a></li>
+                        <li><a href="#why-us">למה אנחנו</a></li>
+                        <li><a href="#contact">צור קשר</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact-col">
+                    <h4>צרו קשר</h4>
+                    <div class="fc-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg><span>03-XXX-XXXX</span></div>
+                    <div class="fc-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><span>info@travelbit.co.il</span></div>
+                    <div class="fc-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg><span>וואטסאפ: 05X-XXX-XXXX</span></div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Travelbit. כל הזכויות שמורות.</p>
+                <div class="social-links">
+                    <a href="#" aria-label="Facebook"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg></a>
+                    <a href="#" aria-label="LinkedIn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2zM4 6a2 2 0 100-4 2 2 0 000 4z"/></svg></a>
+                    <a href="#" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- WhatsApp Float -->
+    <a href="https://wa.me/972XXXXXXXXXX" class="whatsapp-float" target="_blank" rel="noopener" aria-label="WhatsApp">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        <div class="wa-pulse"></div>
+    </a>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
