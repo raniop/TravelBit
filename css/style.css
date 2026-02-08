@@ -976,7 +976,7 @@ button {
 .hero-card-stack {
   position: relative;
   width: 100%;
-  max-width: 420px;
+  max-width: 520px;
   perspective: 1000px;
   padding: 50px 60px;
 }
@@ -1014,13 +1014,14 @@ button {
 .card-inner {
   background: var(--white);
   border-radius: var(--border-radius-lg);
-  padding: var(--space-xl) var(--space-2xl);
+  padding: var(--space-2xl);
   position: relative;
   z-index: 1;
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
+  gap: var(--space-md);
   height: 100%;
 }
 
@@ -1028,8 +1029,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-lg);
-  padding-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
   border-bottom: 1px solid var(--gray-50);
 }
 
@@ -1057,7 +1057,6 @@ button {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  margin-bottom: var(--space-lg);
 }
 
 .card-logo-circle {
@@ -1088,8 +1087,7 @@ button {
 .card-benefits {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-lg);
+  gap: var(--space-xs);
 }
 
 .card-benefits .benefit-row,
@@ -2863,7 +2861,7 @@ textarea,
   }
 
   .hero-card-stack {
-    max-width: 400px;
+    max-width: 460px;
     margin: 0 auto;
     padding: 40px 50px;
   }
