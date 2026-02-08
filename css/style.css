@@ -952,6 +952,7 @@ button {
   overflow: hidden;
   transition: transform 0.6s var(--ease-out);
   transform-style: preserve-3d;
+  aspect-ratio: 1 / 1;
 }
 
 .hero-card:hover {
@@ -978,10 +979,14 @@ button {
 .card-inner {
   background: var(--white);
   border-radius: var(--border-radius-lg);
-  padding: var(--space-xl);
+  padding: var(--space-xl) var(--space-2xl);
   position: relative;
   z-index: 1;
   box-shadow: var(--shadow-xl);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .card-status-bar {
