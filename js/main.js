@@ -681,3 +681,387 @@ shakeStyle.textContent = `
     }
 `;
 document.head.appendChild(shakeStyle);
+
+// ===== i18n LANGUAGE SWITCH SYSTEM =====
+(function() {
+    const translations = {
+        he: {
+            // Navigation
+            'nav.home': 'בית',
+            'nav.services': 'שירותים',
+            'nav.process': 'איך זה עובד',
+            'nav.whyus': 'למה אנחנו',
+            'nav.clients': 'לקוחות',
+            'nav.contact': 'צור קשר',
+            'nav.cta': 'קבלו הצעת מחיר',
+
+            // Hero
+            'hero.badge': 'ביטוח נסיעות עסקי לחו״ל',
+            'hero.arrow': '\u2190',
+            'hero.title1': 'ככה חברות',
+            'hero.title2': 'מבטחות נסיעות',
+            'hero.title3': 'לחו״ל',
+            'hero.btn1': 'קבלו הצעת מחיר',
+            'hero.btn2': 'גלו את השירותים',
+            'hero.m1': 'חברות מבוטחות',
+            'hero.m2': 'שביעות רצון',
+            'hero.m3': 'זמינות מלאה',
+
+            // Hero card
+            'card.status': 'פוליסה פעילה',
+            'card.title': 'הפוליסה העסקית שלכם',
+            'card.desc': 'כיסוי מותאם לחברה',
+            'card.b1': 'כיסוי רפואי מלא בכל העולם',
+            'card.b2': 'ביטוח כבודה ומטען',
+            'card.b3': 'ביטול / עיכוב טיסה',
+            'card.b4': 'מוקד רפואי ישראלי 24/7',
+            'card.cta': 'לקבלת הצעת מחיר',
+
+            // Float notifications
+            'notif.1t': 'תביעה אושרה',
+            'notif.1d': 'תוך 3 שעות',
+            'notif.2t': 'כיסוי רפואי',
+            'notif.2d': '100% מלא',
+            'notif.3t': 'מוגנים בכל העולם',
+            'notif.3d': '180+ מדינות',
+
+            // Scroll
+            'scroll.text': 'גללו למטה',
+
+            // Marquee
+            'marquee.label': 'מעל <strong>500+</strong> חברות מובילות כבר סומכות עלינו',
+
+            // Services
+            'services.tag': 'השירותים שלנו',
+            'services.title': 'פתרונות ביטוח <span class="gradient-text">מותאמים אישית</span>',
+            'services.subtitle': 'מגוון פתרונות ביטוח נסיעות לחו״ל, מותאמים לצרכים הייחודיים של כל חברה',
+            's1.title': 'ביטוח נסיעות עסקי',
+            's1.desc': 'כיסוי ביטוחי מקיף לעובדים בנסיעות עבודה לחו״ל, כולל ביטול טיסות, איחורים וכיסוי רפואי מלא',
+            's2.title': 'פוליסה קבוצתית',
+            's2.desc': 'פוליסת ביטוח קבוצתית לחברות עם מחירים מועדפים, ניהול מרכזי ודוחות מפורטים',
+            's3.title': 'ביטוח נסיעות פרטי',
+            's3.desc': 'הטבות מיוחדות לעובדי חברות בנסיעות פרטיות - חופשות משפחתיות ונסיעות פנאי',
+            's4.title': 'מוקד חירום 24/7',
+            's4.desc': 'מוקד סיוע זמין 24 שעות ביממה עם רופאים ישראליים אונליין לייעוץ רפואי מיידי',
+            'services.cta': 'לפרטים נוספים',
+
+            // Process
+            'process.tag': 'תהליך פשוט',
+            'process.title': 'איך זה <span class="gradient-text">עובד?</span>',
+            'process.subtitle': 'בשלושה צעדים פשוטים - החברה שלכם מבוטחת',
+            'step1.title': 'פנו אלינו',
+            'step1.desc': 'מלאו טופס קצר או חייגו אלינו ונחזור אליכם תוך שעות',
+            'step2.title': 'הצעה מותאמת',
+            'step2.desc': 'נבנה עבורכם הצעת מחיר מותאמת אישית לצרכי החברה',
+            'step3.title': 'מבוטחים!',
+            'step3.desc': 'הפוליסה פעילה מיידית - העובדים מכוסים בכל נסיעה לחו״ל',
+
+            // Why Us
+            'why.tag': 'למה לבחור בנו',
+            'why.title': 'היתרונות <span class="gradient-text">שלנו</span>',
+            'why.subtitle': 'ניסיון רב שנים בביטוח נסיעות עסקי מאפשר לנו שירות יוצא דופן',
+            'why.exp': 'שנות ניסיון',
+            'why.expsub': 'בביטוח נסיעות עסקי',
+            'why.companies': 'חברות',
+            'why.satisfaction': 'שביעות רצון',
+            'adv1.title': 'ניסיון וותק',
+            'adv1.desc': 'שנים של ניסיון עם מאות חברות מרוצות בכל סדרי הגודל',
+            'adv2.title': 'שירות מהיר',
+            'adv2.desc': 'טיפול מיידי בתביעות והחזרים מהירים - תשלום תוך שעות',
+            'adv3.title': 'מחירים תחרותיים',
+            'adv3.desc': 'הצעות מחיר מותאמות עם יחס עלות-תועלת מצוין',
+            'adv4.title': 'ליווי אישי',
+            'adv4.desc': 'מנהל לקוח ייעודי לכל חברה עם ליווי צמוד ודוחות',
+
+            // Stats
+            'stat1': 'חברות מבוטחות',
+            'stat2': 'נוסעים בשנה',
+            'stat3': 'שעות שירות ביממה',
+            'stat4': 'אחוז שביעות רצון',
+
+            // Testimonials
+            'test.tag': 'מה אומרים עלינו',
+            'test.title': 'לקוחות <span class="gradient-text">ממליצים</span>',
+            'test.subtitle': 'חברות שכבר עובדות איתנו משתפות את החוויה שלהן',
+
+            // CTA
+            'cta.title': 'מוכנים לבטח את הנסיעות העסקיות שלכם?',
+            'cta.desc': 'קבלו הצעת מחיר מותאמת אישית תוך 24 שעות - בלי התחייבות',
+            'cta.btn1': 'קבלו הצעת מחיר',
+            'cta.btn2': 'חייגו אלינו',
+
+            // Contact
+            'contact.tag': 'צרו קשר',
+            'contact.title': 'נשמח <span class="gradient-text">לשמוע מכם</span>',
+            'contact.subtitle': 'מלאו את הטופס ונחזור אליכם עם הצעת מחיר מותאמת אישית',
+            'contact.h3': 'דברו איתנו',
+            'contact.p': 'צוות המומחים שלנו זמין לכל שאלה. נשמח לייעץ ולמצוא את הפתרון המושלם עבור החברה שלכם.',
+
+            // Form
+            'form.name': 'שם מלא *',
+            'form.phone': 'טלפון *',
+            'form.email': 'אימייל *',
+            'form.company': 'שם החברה',
+            'form.message': 'הודעה',
+            'form.submit': 'שלחו הודעה',
+            'form.name.ph': 'הכניסו את שמכם',
+            'form.phone.ph': '05X-XXXXXXX',
+            'form.email.ph': 'your@email.com',
+            'form.company.ph': 'שם החברה (אופציונלי)',
+            'form.message.ph': 'ספרו לנו במה נוכל לעזור...',
+            'form.success.title': 'ההודעה נשלחה בהצלחה!',
+            'form.success.desc': 'נחזור אליכם בהקדם האפשרי',
+
+            // Contact info
+            'ci.phone': 'טלפון',
+            'ci.email': 'אימייל',
+            'ci.whatsapp': 'וואטסאפ',
+            'ci.address': 'כתובת',
+            'ci.addressVal': 'ישראל',
+
+            // Footer
+            'footer.desc': 'פתרונות ביטוח נסיעות עסקי חכם לחברות. כיסוי מקיף, שירות מהיר ומחירים תחרותיים.',
+            'footer.links': 'קישורים מהירים',
+            'footer.contact': 'צרו קשר',
+            'footer.copy': '\u00A9 2026 Travelbit. כל הזכויות שמורות.'
+        },
+        en: {
+            // Navigation
+            'nav.home': 'Home',
+            'nav.services': 'Services',
+            'nav.process': 'How It Works',
+            'nav.whyus': 'Why Us',
+            'nav.clients': 'Clients',
+            'nav.contact': 'Contact',
+            'nav.cta': 'Get a Quote',
+
+            // Hero
+            'hero.badge': 'Business Travel Insurance',
+            'hero.arrow': '\u2192',
+            'hero.title1': 'This is how companies',
+            'hero.title2': 'insure business travel',
+            'hero.title3': 'abroad',
+            'hero.btn1': 'Get a Quote',
+            'hero.btn2': 'Discover Services',
+            'hero.m1': 'Insured Companies',
+            'hero.m2': 'Satisfaction',
+            'hero.m3': 'Full Availability',
+
+            // Hero card
+            'card.status': 'Active Policy',
+            'card.title': 'Your Business Policy',
+            'card.desc': 'Custom coverage for your company',
+            'card.b1': 'Full medical coverage worldwide',
+            'card.b2': 'Luggage & cargo insurance',
+            'card.b3': 'Flight cancellation / delay',
+            'card.b4': 'Israeli medical hotline 24/7',
+            'card.cta': 'Get a Quote',
+
+            // Float notifications
+            'notif.1t': 'Claim Approved',
+            'notif.1d': 'Within 3 hours',
+            'notif.2t': 'Medical Coverage',
+            'notif.2d': '100% Full',
+            'notif.3t': 'Protected Worldwide',
+            'notif.3d': '180+ Countries',
+
+            // Scroll
+            'scroll.text': 'Scroll Down',
+
+            // Marquee
+            'marquee.label': 'Over <strong>500+</strong> leading companies already trust us',
+
+            // Services
+            'services.tag': 'Our Services',
+            'services.title': 'Insurance Solutions <span class="gradient-text">Tailored for You</span>',
+            'services.subtitle': 'A variety of travel insurance solutions tailored to the unique needs of each company',
+            's1.title': 'Business Travel Insurance',
+            's1.desc': 'Comprehensive coverage for employees on business trips abroad, including flight cancellations, delays and full medical coverage',
+            's2.title': 'Group Policy',
+            's2.desc': 'Group insurance policy for companies with preferred pricing, centralized management and detailed reports',
+            's3.title': 'Private Travel Insurance',
+            's3.desc': 'Special benefits for company employees on personal trips \u2014 family vacations and leisure travel',
+            's4.title': '24/7 Emergency Hotline',
+            's4.desc': 'Support center available 24 hours a day with Israeli doctors online for immediate medical consultation',
+            'services.cta': 'Learn More',
+
+            // Process
+            'process.tag': 'Simple Process',
+            'process.title': 'How Does It <span class="gradient-text">Work?</span>',
+            'process.subtitle': 'In three simple steps \u2014 your company is insured',
+            'step1.title': 'Contact Us',
+            'step1.desc': 'Fill out a short form or call us and we\'ll get back to you within hours',
+            'step2.title': 'Custom Proposal',
+            'step2.desc': 'We\'ll build a personalized quote tailored to your company\'s needs',
+            'step3.title': 'You\'re Insured!',
+            'step3.desc': 'The policy is active immediately \u2014 employees are covered on every trip abroad',
+
+            // Why Us
+            'why.tag': 'Why Choose Us',
+            'why.title': 'Our <span class="gradient-text">Advantages</span>',
+            'why.subtitle': 'Years of experience in business travel insurance enable us to provide exceptional service',
+            'why.exp': 'Years of Experience',
+            'why.expsub': 'In business travel insurance',
+            'why.companies': 'Companies',
+            'why.satisfaction': 'Satisfaction',
+            'adv1.title': 'Experience & Seniority',
+            'adv1.desc': 'Years of experience with hundreds of satisfied companies of all sizes',
+            'adv2.title': 'Fast Service',
+            'adv2.desc': 'Immediate claim handling and fast refunds \u2014 payment within hours',
+            'adv3.title': 'Competitive Prices',
+            'adv3.desc': 'Custom quotes with excellent cost-benefit ratio',
+            'adv4.title': 'Personal Support',
+            'adv4.desc': 'A dedicated account manager for each company with close guidance and reports',
+
+            // Stats
+            'stat1': 'Insured Companies',
+            'stat2': 'Travelers per Year',
+            'stat3': 'Service Hours per Day',
+            'stat4': 'Satisfaction Rate',
+
+            // Testimonials
+            'test.tag': 'What They Say',
+            'test.title': 'Clients <span class="gradient-text">Recommend</span>',
+            'test.subtitle': 'Companies already working with us share their experience',
+
+            // CTA
+            'cta.title': 'Ready to insure your business trips?',
+            'cta.desc': 'Get a personalized quote within 24 hours \u2014 no commitment',
+            'cta.btn1': 'Get a Quote',
+            'cta.btn2': 'Call Us',
+
+            // Contact
+            'contact.tag': 'Contact Us',
+            'contact.title': 'We\'d Love to <span class="gradient-text">Hear From You</span>',
+            'contact.subtitle': 'Fill out the form and we\'ll get back to you with a personalized quote',
+            'contact.h3': 'Talk to Us',
+            'contact.p': 'Our expert team is available for any question. We\'d love to advise and find the perfect solution for your company.',
+
+            // Form
+            'form.name': 'Full Name *',
+            'form.phone': 'Phone *',
+            'form.email': 'Email *',
+            'form.company': 'Company Name',
+            'form.message': 'Message',
+            'form.submit': 'Send Message',
+            'form.name.ph': 'Enter your name',
+            'form.phone.ph': '05X-XXXXXXX',
+            'form.email.ph': 'your@email.com',
+            'form.company.ph': 'Company name (optional)',
+            'form.message.ph': 'Tell us how we can help...',
+            'form.success.title': 'Message Sent Successfully!',
+            'form.success.desc': 'We\'ll get back to you as soon as possible',
+
+            // Contact info
+            'ci.phone': 'Phone',
+            'ci.email': 'Email',
+            'ci.whatsapp': 'WhatsApp',
+            'ci.address': 'Address',
+            'ci.addressVal': 'Israel',
+
+            // Footer
+            'footer.desc': 'Smart business travel insurance solutions for companies. Comprehensive coverage, fast service, and competitive prices.',
+            'footer.links': 'Quick Links',
+            'footer.contact': 'Contact Us',
+            'footer.copy': '\u00A9 2026 Travelbit. All rights reserved.'
+        }
+    };
+
+    // Typing text per language
+    const typingTexts = {
+        he: 'הפלטפורמה החכמה לניהול ביטוח נסיעות עסקי. כיסוי מקיף, מחירים תחרותיים, שירות 24/7 ותשלום תביעות מהיר.',
+        en: 'The smart platform for managing business travel insurance. Comprehensive coverage, competitive prices, 24/7 service and fast claims payment.'
+    };
+
+    let currentLang = 'he';
+
+    function switchLang(lang) {
+        if (!translations[lang]) return;
+        currentLang = lang;
+
+        // Update document direction and language
+        document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+        document.documentElement.lang = lang;
+
+        // Update body text alignment and direction
+        document.body.style.textAlign = lang === 'he' ? 'right' : 'left';
+        document.body.style.direction = lang === 'he' ? 'rtl' : 'ltr';
+
+        // Update form inputs direction
+        var formInputs = document.querySelectorAll('.form-group input, .form-group textarea');
+        formInputs.forEach(function(input) {
+            input.style.direction = lang === 'he' ? 'rtl' : 'ltr';
+        });
+
+        // Update all translatable elements
+        var elements = document.querySelectorAll('[data-i18n]');
+        elements.forEach(function(el) {
+            var key = el.getAttribute('data-i18n');
+            if (translations[lang][key] !== undefined) {
+                el.innerHTML = translations[lang][key];
+            }
+        });
+
+        // Update placeholders
+        var phElements = document.querySelectorAll('[data-i18n-ph]');
+        phElements.forEach(function(el) {
+            var key = el.getAttribute('data-i18n-ph');
+            if (translations[lang][key] !== undefined) {
+                el.setAttribute('placeholder', translations[lang][key]);
+            }
+        });
+
+        // Update active class on lang buttons
+        var langBtns = document.querySelectorAll('.lang-btn');
+        langBtns.forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+        });
+
+        // Re-run typing effect with correct language
+        var typingEl = document.getElementById('typingText');
+        if (typingEl) {
+            typingEl.textContent = '';
+            var text = typingTexts[lang];
+            var charIndex = 0;
+
+            function typeChar() {
+                if (charIndex < text.length) {
+                    typingEl.textContent += text.charAt(charIndex);
+                    charIndex++;
+                    var delay = text.charAt(charIndex - 1) === '.' ? 300 :
+                                text.charAt(charIndex - 1) === ',' ? 150 :
+                                25 + Math.random() * 20;
+                    setTimeout(typeChar, delay);
+                }
+            }
+            typeChar();
+        }
+
+        // Store preference
+        try {
+            localStorage.setItem('travelbit-lang', lang);
+        } catch(e) {}
+    }
+
+    // Bind click events to lang buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        var langBtns = document.querySelectorAll('.lang-btn');
+        langBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var lang = btn.getAttribute('data-lang');
+                switchLang(lang);
+            });
+        });
+
+        // Check saved preference
+        try {
+            var saved = localStorage.getItem('travelbit-lang');
+            if (saved && saved !== 'he' && translations[saved]) {
+                switchLang(saved);
+            }
+        } catch(e) {}
+    });
+
+    // Expose globally if needed
+    window.switchLang = switchLang;
+})();

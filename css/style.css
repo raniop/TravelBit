@@ -652,6 +652,41 @@ button {
   transform: rotate(-45deg) translateY(-5.5px);
 }
 
+/* Language Switcher */
+.lang-switch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--gray-50);
+  border-radius: var(--border-radius-pill);
+  padding: 3px;
+  margin-inline-start: var(--space-md);
+}
+
+.lang-btn {
+  padding: 6px 12px;
+  border-radius: var(--border-radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--gray-400);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.lang-btn.active {
+  background: var(--white);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.lang-btn:hover:not(.active) {
+  color: var(--gray-600);
+}
+
 /* Header hidden on scroll */
 .header-hidden {
   transform: translateY(-100%);
@@ -952,7 +987,6 @@ button {
   overflow: hidden;
   transition: transform 0.6s var(--ease-out);
   transform-style: preserve-3d;
-  aspect-ratio: 1 / 1;
 }
 
 .hero-card:hover {
@@ -983,10 +1017,8 @@ button {
   position: relative;
   z-index: 1;
   box-shadow: var(--shadow-xl);
-  height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 
 .card-status-bar {
@@ -1986,7 +2018,7 @@ button {
 }
 
 .carousel-track .testimonial-card {
-  min-width: calc(33.333% - var(--space-xl) * 2 / 3);
+  min-width: calc((100% - var(--space-xl) * 2) / 3);
   flex-shrink: 0;
 }
 
@@ -2877,7 +2909,7 @@ textarea,
   }
 
   .carousel-track .testimonial-card {
-    min-width: calc(50% - var(--space-xl) / 2);
+    min-width: calc((100% - var(--space-xl)) / 2);
   }
 
   .contact-layout {
