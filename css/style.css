@@ -433,6 +433,11 @@ button {
   transform: translateY(-2px);
 }
 
+.btn-sm {
+  padding: 10px 24px;
+  font-size: var(--fs-sm);
+}
+
 .btn-lg {
   padding: 18px 48px;
   font-size: var(--fs-md);
@@ -1077,9 +1082,14 @@ button {
 .card-bottom {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding-top: var(--space-md);
   border-top: 1px solid var(--gray-50);
+}
+
+.card-bottom .btn-primary {
+  width: 100%;
+  text-align: center;
 }
 
 .card-price-tag {
