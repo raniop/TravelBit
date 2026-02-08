@@ -99,31 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ===== TYPING EFFECT =====
-    const typingEl = document.getElementById('typingText');
-    if (typingEl) {
-        const text = 'הפלטפורמה החכמה לניהול ביטוח נסיעות עסקי. כיסוי מקיף, מחירים תחרותיים, שירות 24/7 ותשלום תביעות מהיר.';
-        let charIndex = 0;
-        let typingStarted = false;
-
-        function typeChar() {
-            if (charIndex < text.length) {
-                typingEl.textContent += text.charAt(charIndex);
-                charIndex++;
-                const delay = text.charAt(charIndex - 1) === '.' ? 300 :
-                              text.charAt(charIndex - 1) === ',' ? 150 :
-                              25 + Math.random() * 20;
-                setTimeout(typeChar, delay);
-            }
-        }
-
-        // Start typing after hero animates in
-        setTimeout(() => {
-            if (!typingStarted) {
-                typingStarted = true;
-                typeChar();
-            }
-        }, 800);
-    }
+    // Typing is handled by the i18n system via window.startTyping
+    // Initial typing starts after switchLang('en') is called on load
 
     // ===== PARTICLE SYSTEM =====
     const canvas = document.getElementById('heroParticles');
@@ -1049,13 +1026,17 @@ document.head.appendChild(shakeStyle);
         });
 
         // Re-run typing effect with correct language
+        window._typingId = (window._typingId || 0) + 1;
         var typingEl = document.getElementById('typingText');
         if (typingEl) {
             typingEl.textContent = '';
             var text = typingTexts[lang];
             var charIndex = 0;
+            var myId = window._typingId;
 
             function typeChar() {
+                // Stop if a newer typing session started
+                if (window._typingId !== myId) return;
                 if (charIndex < text.length) {
                     typingEl.textContent += text.charAt(charIndex);
                     charIndex++;
@@ -1065,7 +1046,7 @@ document.head.appendChild(shakeStyle);
                     setTimeout(typeChar, delay);
                 }
             }
-            typeChar();
+            setTimeout(typeChar, 400);
         }
 
         // Store preference
