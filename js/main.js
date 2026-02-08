@@ -1004,7 +1004,7 @@ document.head.appendChild(shakeStyle);
         en: 'The smart platform for managing business travel insurance. Comprehensive coverage, competitive prices, 24/7 service and fast claims payment.'
     };
 
-    let currentLang = 'he';
+    let currentLang = 'en';
 
     function switchLang(lang) {
         if (!translations[lang]) return;
@@ -1087,8 +1087,10 @@ document.head.appendChild(shakeStyle);
         // Check saved preference
         try {
             var saved = localStorage.getItem('travelbit-lang');
-            if (saved && saved !== 'he' && translations[saved]) {
+            if (saved && translations[saved]) {
                 switchLang(saved);
+            } else {
+                switchLang('en');
             }
         } catch(e) {}
     });
