@@ -834,7 +834,7 @@ document.head.appendChild(shakeStyle);
             'nav.clients': 'Clients',
             'nav.contact': 'Contact',
             'nav.buy': 'Buy Travel Insurance',
-            'nav.cta': 'Employer Sign-Up',
+            'nav.cta': 'Join as a Company',
 
             // Hero
             'hero.badge': 'Business Travel Insurance',
@@ -858,7 +858,7 @@ document.head.appendChild(shakeStyle);
             'card.b4': 'Medical hotline 24/7 by AirDoctor',
             'card.b5': 'Search, locate & rescue',
             'card.b6': 'Third party liability',
-            'card.cta': 'Employer Sign-Up',
+            'card.cta': 'Join as a Company',
 
             // Float notifications
             'notif.1t': 'Claim Approved',
