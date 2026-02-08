@@ -2009,6 +2009,7 @@ button {
 .testimonials-carousel {
   position: relative;
   overflow: hidden;
+  margin: 0 -10px;
 }
 
 .carousel-track {
@@ -2021,7 +2022,7 @@ button {
   width: calc(100% / 3);
   min-width: calc(100% / 3);
   flex-shrink: 0;
-  padding: 0 12px;
+  padding: 0 10px;
   box-sizing: border-box;
 }
 
@@ -2089,11 +2090,13 @@ button {
 .testimonial-card {
   background: var(--white);
   border-radius: var(--border-radius);
-  padding: var(--space-2xl);
+  padding: var(--space-lg) var(--space-xl);
   border: 1px solid var(--gray-100);
   transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .testimonial-card::before {
@@ -2151,15 +2154,15 @@ button {
 }
 
 .tcard-quote {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(255, 107, 44, 0.08);
   color: var(--primary);
-  border-radius: 12px;
-  margin-bottom: var(--space-lg);
+  border-radius: 10px;
+  margin-bottom: var(--space-sm);
 }
 
 .tcard-quote svg {
@@ -2170,9 +2173,9 @@ button {
 .tcard-stars {
   display: flex;
   gap: 2px;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-xs);
   color: #FBBF24;
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
 }
 
 .tcard-stars svg {
@@ -2182,30 +2185,31 @@ button {
 }
 
 .tcard-text {
-  font-size: var(--fs-base);
+  font-size: var(--fs-sm);
   color: var(--gray-500);
-  line-height: 1.8;
-  margin-bottom: var(--space-xl);
+  line-height: 1.7;
+  margin-bottom: var(--space-md);
+  flex: 1;
 }
 
 .tcard-author {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  padding-top: var(--space-md);
+  gap: var(--space-sm);
+  padding-top: var(--space-sm);
   border-top: 1px solid var(--gray-50);
 }
 
 .tcard-avatar {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: var(--white);
   font-weight: 700;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   display: flex;
   align-items: center;
   justify-content: center;
