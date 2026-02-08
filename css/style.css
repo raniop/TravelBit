@@ -1311,19 +1311,21 @@ button {
 
 .marquee-track {
   display: flex;
-  width: max-content;
+  width: fit-content;
 }
 
 .marquee-content {
   display: flex;
   align-items: center;
-  gap: var(--space-3xl);
-  animation: marqueeScroll 30s linear infinite;
+  gap: var(--space-2xl);
+  animation: marqueeScroll 40s linear infinite;
+  flex-shrink: 0;
+  padding-left: var(--space-2xl);
 }
 
 @keyframes marqueeScroll {
   0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  100% { transform: translateX(-100%); }
 }
 
 .marquee-item {
