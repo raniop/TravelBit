@@ -2090,13 +2090,14 @@ button {
 .testimonial-card {
   background: var(--white);
   border-radius: var(--border-radius);
-  padding: var(--space-lg) var(--space-xl);
+  padding: var(--space-xl);
   border: 1px solid var(--gray-100);
   transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 320px;
 }
 
 .testimonial-card::before {
