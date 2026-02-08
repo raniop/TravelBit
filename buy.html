@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Travelbit - רכישת ביטוח נסיעות עסקי לחו״ל">
+    <title>Travelbit | רכישת ביטוח נסיעות</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        .buy-page-header {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-100);
+            padding: 16px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .buy-page-header .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .buy-page-header .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+        .buy-page-header .logo-text {
+            font-size: var(--fs-xl);
+            font-weight: 800;
+            color: var(--gray-800);
+        }
+        .buy-page-header .logo-text em {
+            font-style: normal;
+            color: var(--primary);
+        }
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 24px;
+            border-radius: var(--border-radius-sm);
+            border: 1px solid var(--gray-200);
+            color: var(--gray-600);
+            text-decoration: none;
+            font-size: var(--fs-sm);
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .back-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .buy-page-iframe {
+            width: 100%;
+            height: calc(100vh - 70px);
+            border: none;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header class="buy-page-header">
+        <div class="container">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF6B2C" stroke-width="2"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+                </div>
+                <span class="logo-text">Travel<em>bit</em></span>
+            </a>
+            <a href="index.html" class="back-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                חזרה לאתר
+            </a>
+        </div>
+    </header>
+    <iframe src="https://ophir.travelsure.co.il/buyinsnew" class="buy-page-iframe" title="רכישת ביטוח נסיעות" allowfullscreen></iframe>
+</body>
+</html>
