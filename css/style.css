@@ -611,8 +611,48 @@ button {
 }
 
 .header-cta {
-  padding: 10px 28px;
-  font-size: var(--fs-sm);
+  padding: 10px 24px;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+.header-cta-secondary {
+  padding: 10px 20px;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-sm);
+  color: var(--gray-600);
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.header-cta-secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Buy Section - Iframe */
+.buy-section {
+  background: var(--off-white);
+}
+
+.buy-iframe-wrapper {
+  width: 100%;
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+  background: var(--white);
+}
+
+.buy-iframe {
+  width: 100%;
+  height: 700px;
+  border: none;
+  display: block;
 }
 
 /* Hamburger menu toggle */
@@ -2992,8 +3032,13 @@ textarea,
     display: none;
   }
 
-  .header-cta {
+  .header-cta,
+  .header-cta-secondary {
     display: none;
+  }
+
+  .buy-iframe {
+    height: 500px;
   }
 
   /* Hero */

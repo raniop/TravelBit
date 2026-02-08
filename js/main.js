@@ -708,7 +708,8 @@ document.head.appendChild(shakeStyle);
             'nav.whyus': 'למה אנחנו',
             'nav.clients': 'לקוחות',
             'nav.contact': 'צור קשר',
-            'nav.cta': 'קבלו הצעת מחיר',
+            'nav.buy': 'רכישת ביטוח נסיעות',
+            'nav.cta': 'הצטרפות מעסיקים',
 
             // Hero
             'hero.badge': 'ביטוח נסיעות עסקי לחו״ל',
@@ -716,7 +717,7 @@ document.head.appendChild(shakeStyle);
             'hero.title1': 'ככה חברות',
             'hero.title2': 'מבטחות נסיעות',
             'hero.title3': 'לחו״ל',
-            'hero.btn1': 'קבלו הצעת מחיר',
+            'hero.btn1': 'הצטרפו אלינו',
             'hero.btn2': 'גלו את השירותים',
             'hero.m1': 'חברות מבוטחות',
             'hero.m2': 'שביעות רצון',
@@ -727,12 +728,12 @@ document.head.appendChild(shakeStyle);
             'card.title': 'הפוליסה העסקית שלכם',
             'card.desc': 'כיסוי מותאם לחברה',
             'card.b1': 'כיסוי רפואי מלא בכל העולם',
-            'card.b2': 'ביטוח כבודה ומטען',
+            'card.b2': 'ביטוח לכבודה (מטען אישי כמו מזוודה)',
             'card.b3': 'ביטול / קיצור נסיעה',
             'card.b4': 'מוקד רפואי 24/7 בשירות AirDoctor',
             'card.b5': 'חיפוש איתור וחילוץ',
             'card.b6': 'חבות כלפי צד ג׳',
-            'card.cta': 'לקבלת הצעת מחיר',
+            'card.cta': 'הצטרפות מעסיקים',
 
             // Float notifications
             'notif.1t': 'תביעה אושרה',
@@ -803,14 +804,14 @@ document.head.appendChild(shakeStyle);
 
             // CTA
             'cta.title': 'מוכנים לבטח את הנסיעות העסקיות שלכם?',
-            'cta.desc': 'קבלו הצעת מחיר מותאמת אישית תוך 24 שעות - בלי התחייבות',
-            'cta.btn1': 'קבלו הצעת מחיר',
+            'cta.desc': 'הצטרפו אלינו תוך 24 שעות - בלי התחייבות',
+            'cta.btn1': 'הצטרפו אלינו',
             'cta.btn2': 'חייגו אלינו',
 
             // Contact
             'contact.tag': 'צרו קשר',
             'contact.title': 'נשמח <span class="gradient-text">לשמוע מכם</span>',
-            'contact.subtitle': 'מלאו את הטופס ונחזור אליכם עם הצעת מחיר מותאמת אישית',
+            'contact.subtitle': 'מלאו את הטופס ונחזור אליכם בהקדם',
             'contact.h3': 'דברו איתנו',
             'contact.p': 'צוות המומחים שלנו זמין לכל שאלה. נשמח לייעץ ולמצוא את הפתרון המושלם עבור החברה שלכם.',
 
@@ -836,6 +837,11 @@ document.head.appendChild(shakeStyle);
             'ci.address': 'כתובת',
             'ci.addressVal': 'ישראל',
 
+            // Buy
+            'buy.tag': 'רכישה מהירה',
+            'buy.title': 'רכישת <span class="gradient-text">ביטוח נסיעות</span>',
+            'buy.subtitle': 'רכשו ביטוח נסיעות עסקי בקלות ובמהירות',
+
             // Footer
             'footer.desc': 'פתרונות ביטוח נסיעות עסקי חכם לחברות. כיסוי מקיף, שירות מהיר ומחירים תחרותיים.',
             'footer.links': 'קישורים מהירים',
@@ -850,7 +856,8 @@ document.head.appendChild(shakeStyle);
             'nav.whyus': 'Why Us',
             'nav.clients': 'Clients',
             'nav.contact': 'Contact',
-            'nav.cta': 'Get a Quote',
+            'nav.buy': 'Buy Travel Insurance',
+            'nav.cta': 'Employer Sign-Up',
 
             // Hero
             'hero.badge': 'Business Travel Insurance',
@@ -858,7 +865,7 @@ document.head.appendChild(shakeStyle);
             'hero.title1': 'This is how companies',
             'hero.title2': 'insure business travel',
             'hero.title3': 'abroad',
-            'hero.btn1': 'Get a Quote',
+            'hero.btn1': 'Join Us',
             'hero.btn2': 'Discover Services',
             'hero.m1': 'Insured Companies',
             'hero.m2': 'Satisfaction',
@@ -869,12 +876,12 @@ document.head.appendChild(shakeStyle);
             'card.title': 'Your Business Policy',
             'card.desc': 'Custom coverage for your company',
             'card.b1': 'Full medical coverage worldwide',
-            'card.b2': 'Luggage & cargo insurance',
+            'card.b2': 'Luggage insurance (personal baggage)',
             'card.b3': 'Trip cancellation / curtailment',
             'card.b4': 'Medical hotline 24/7 by AirDoctor',
             'card.b5': 'Search, locate & rescue',
             'card.b6': 'Third party liability',
-            'card.cta': 'Get a Quote',
+            'card.cta': 'Employer Sign-Up',
 
             // Float notifications
             'notif.1t': 'Claim Approved',
@@ -945,14 +952,14 @@ document.head.appendChild(shakeStyle);
 
             // CTA
             'cta.title': 'Ready to insure your business trips?',
-            'cta.desc': 'Get a personalized quote within 24 hours \u2014 no commitment',
-            'cta.btn1': 'Get a Quote',
+            'cta.desc': 'Join us within 24 hours \u2014 no commitment',
+            'cta.btn1': 'Join Us',
             'cta.btn2': 'Call Us',
 
             // Contact
             'contact.tag': 'Contact Us',
             'contact.title': 'We\'d Love to <span class="gradient-text">Hear From You</span>',
-            'contact.subtitle': 'Fill out the form and we\'ll get back to you with a personalized quote',
+            'contact.subtitle': 'Fill out the form and we\'ll get back to you shortly',
             'contact.h3': 'Talk to Us',
             'contact.p': 'Our expert team is available for any question. We\'d love to advise and find the perfect solution for your company.',
 
@@ -977,6 +984,11 @@ document.head.appendChild(shakeStyle);
             'ci.whatsapp': 'WhatsApp',
             'ci.address': 'Address',
             'ci.addressVal': 'Israel',
+
+            // Buy
+            'buy.tag': 'Quick Purchase',
+            'buy.title': 'Buy <span class="gradient-text">Travel Insurance</span>',
+            'buy.subtitle': 'Purchase business travel insurance easily and quickly',
 
             // Footer
             'footer.desc': 'Smart business travel insurance solutions for companies. Comprehensive coverage, fast service, and competitive prices.',
