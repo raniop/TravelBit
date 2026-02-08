@@ -1,5 +1,5 @@
 /* ============================================
-   Travelbit - WOW Edition JavaScript
+   Travelins - WOW Edition JavaScript
    Particles, Tilt, Typing, Counters, Animations
    ============================================ */
 
@@ -823,7 +823,7 @@ document.head.appendChild(shakeStyle);
             'footer.desc': 'פתרונות ביטוח נסיעות עסקי חכם לחברות. כיסוי מקיף, שירות מהיר ומחירים תחרותיים.',
             'footer.links': 'קישורים מהירים',
             'footer.contact': 'צרו קשר',
-            'footer.copy': '\u00A9 2026 Travelbit. כל הזכויות שמורות.'
+            'footer.copy': '\u00A9 2026 Travelins. כל הזכויות שמורות.'
         },
         en: {
             // Navigation
@@ -971,7 +971,7 @@ document.head.appendChild(shakeStyle);
             'footer.desc': 'Smart business travel insurance solutions for companies. Comprehensive coverage, fast service, and competitive prices.',
             'footer.links': 'Quick Links',
             'footer.contact': 'Contact Us',
-            'footer.copy': '\u00A9 2026 Travelbit. All rights reserved.'
+            'footer.copy': '\u00A9 2026 Travelins. All rights reserved.'
         }
     };
 
@@ -1051,7 +1051,7 @@ document.head.appendChild(shakeStyle);
 
         // Store preference
         try {
-            localStorage.setItem('travelbit-lang', lang);
+            localStorage.setItem('travelins-lang', lang);
         } catch(e) {}
     }
 
@@ -1067,7 +1067,7 @@ document.head.appendChild(shakeStyle);
 
         // Check saved preference
         try {
-            var saved = localStorage.getItem('travelbit-lang');
+            var saved = localStorage.getItem('travelins-lang');
             if (saved && translations[saved]) {
                 switchLang(saved);
             } else {
