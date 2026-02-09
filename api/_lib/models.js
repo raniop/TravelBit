@@ -1,0 +1,102 @@
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+// ===== USER =====
+const userSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true, trim: true, lowercase: true },
+    password: { type: String, required: true, minlength: 6 },
+    role: { type: String, enum: ['admin', 'company'], required: true },
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null },
+    name: { type: String, required: true },
+    email: { type: String, trim: true, lowercase: true },
+    lastLogin: { type: Date, default: null },
+    isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+userSchema.pre('save', async function() {
+    if (!this.isModified('password')) return;
+    this.password = await bcrypt.hash(this.password, 12);
+});
+
+userSchema.methods.comparePassword = async function(candidatePassword) {
+    return bcrypt.compare(candidatePassword, this.password);
+};
+
+// ===== COMPANY =====
+const companySchema = new mongoose.Schema({
+    name: { type: String, required: true, trim: true },
+    contactPerson: { type: String, required: true },
+    email: { type: String, required: true, trim: true, lowercase: true },
+    phone: { type: String, trim: true },
+    logo: { type: String, default: null },
+    employeeCount: { type: Number, default: 0 },
+    policyNumber: { type: String, trim: true },
+    subscriptionStart: { type: Date, default: Date.now },
+    subscriptionEnd: { type: Date },
+    isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+// ===== EMPLOYEE =====
+const employeeSchema = new mongoose.Schema({
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+    firstName: { type: String, required: true, trim: true },
+    lastName: { type: String, required: true, trim: true },
+    idNumber: { type: String, trim: true },
+    email: { type: String, trim: true, lowercase: true },
+    phone: { type: String, trim: true },
+    department: { type: String, trim: true },
+    position: { type: String, trim: true },
+    isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+employeeSchema.virtual('fullName').get(function() { return `${this.firstName} ${this.lastName}`; });
+employeeSchema.set('toJSON', { virtuals: true });
+
+// ===== TRIP =====
+const tripSchema = new mongoose.Schema({
+    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+    destination: { type: String, required: true, trim: true },
+    departureDate: { type: Date, required: true },
+    returnDate: { type: Date, required: true },
+    purpose: { type: String, trim: true },
+    status: { type: String, enum: ['planned', 'active', 'completed', 'cancelled'], default: 'planned' },
+    insurancePolicyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Policy', default: null },
+    cost: { type: Number, default: 0 },
+    currency: { type: String, default: 'ILS', enum: ['ILS', 'USD', 'EUR', 'GBP'] },
+    workdaysAbroad: { type: Number, default: 0 },
+    notes: { type: String, trim: true }
+}, { timestamps: true });
+tripSchema.virtual('duration').get(function() {
+    if (this.departureDate && this.returnDate) {
+        return Math.ceil((this.returnDate - this.departureDate) / (1000 * 60 * 60 * 24));
+    }
+    return 0;
+});
+tripSchema.set('toJSON', { virtuals: true });
+
+// ===== POLICY =====
+const policySchema = new mongoose.Schema({
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+    policyNumber: { type: String, required: true, trim: true },
+    type: { type: String, required: true, trim: true },
+    startDate: { type: Date, required: true },
+    expirationDate: { type: Date, required: true },
+    coverageDetails: { type: String, trim: true },
+    premium: { type: Number, default: 0 },
+    status: { type: String, enum: ['active', 'expiring', 'expired'], default: 'active' },
+    renewalAlertSent: { type: Boolean, default: false }
+}, { timestamps: true });
+policySchema.virtual('daysUntilExpiration').get(function() {
+    if (this.expirationDate) return Math.ceil((this.expirationDate - new Date()) / (1000 * 60 * 60 * 24));
+    return 0;
+});
+policySchema.set('toJSON', { virtuals: true });
+
+// Use existing models if already compiled (serverless caching)
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+const Company = mongoose.models.Company || mongoose.model('Company', companySchema);
+const Employee = mongoose.models.Employee || mongoose.model('Employee', employeeSchema);
+const Trip = mongoose.models.Trip || mongoose.model('Trip', tripSchema);
+const Policy = mongoose.models.Policy || mongoose.model('Policy', policySchema);
+
+module.exports = { User, Company, Employee, Trip, Policy };
