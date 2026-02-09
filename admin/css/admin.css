@@ -441,6 +441,9 @@ body {
     align-items: flex-start;
     gap: 16px;
     transition: all 0.2s;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
 }
 
 .stat-card:hover {
