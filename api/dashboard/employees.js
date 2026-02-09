@@ -7,7 +7,8 @@ module.exports = async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     const user = await verifyAuth(req);
-    if (!user || user.role !== 'company') return res.status(403).json({ message: 'אין הרשאה.' });
+    if (!user) return res.status(401).json({ message: 'אין הרשאת גישה.' });
+    if (user.role !== 'company') return res.status(403).json({ message: 'אין הרשאה.' });
 
     await connectDB();
     const companyId = user.companyId;
