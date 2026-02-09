@@ -7,7 +7,8 @@ module.exports = async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     const user = await verifyAuth(req);
-    if (!user || user.role !== 'admin') return res.status(403).json({ message: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05d4.' });
+    if (!user) return res.status(401).json({ message: 'אין הרשאת גישה.' });
+    if (user.role !== 'admin') return res.status(403).json({ message: 'אין הרשאה.' });
 
     await connectDB();
 
@@ -27,10 +28,62 @@ module.exports = async function handler(req, res) {
                     status: { $ne: 'expired' }
                 })
             ]);
-            return res.json({ companies, employees, activeTrips, expiringPolicies });
+            const result = { companies, employees, activeTrips, expiringPolicies };
+
+            // Optional: return detailed list based on ?details= param
+            const details = req.query.details;
+
+            if (details === 'employees') {
+                const employeesList = await Employee.find({ isActive: true }).sort({ firstName: 1 });
+                const companyIds = [...new Set(employeesList.map(e => e.companyId?.toString()).filter(Boolean))];
+                const companiesMap = {};
+                if (companyIds.length > 0) {
+                    const comps = await Company.find({ _id: { $in: companyIds } }).select('name');
+                    comps.forEach(c => { companiesMap[c._id.toString()] = c.name; });
+                }
+                result.employeesList = employeesList.map(e => ({
+                    ...e.toJSON(),
+                    companyName: companiesMap[e.companyId?.toString()] || '-'
+                }));
+            }
+
+            if (details === 'trips') {
+                const tripsList = await Trip.find({ status: 'active' })
+                    .populate('employeeId', 'firstName lastName')
+                    .sort({ departureDate: -1 });
+                const companyIds = [...new Set(tripsList.map(t => t.companyId?.toString()).filter(Boolean))];
+                const companiesMap = {};
+                if (companyIds.length > 0) {
+                    const comps = await Company.find({ _id: { $in: companyIds } }).select('name');
+                    comps.forEach(c => { companiesMap[c._id.toString()] = c.name; });
+                }
+                result.tripsList = tripsList.map(t => ({
+                    ...t.toJSON(),
+                    companyName: companiesMap[t.companyId?.toString()] || '-'
+                }));
+            }
+
+            if (details === 'policies') {
+                const policiesList = await Policy.find({
+                    expirationDate: { $lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+                    status: { $ne: 'expired' }
+                }).sort({ expirationDate: 1 });
+                const companyIds = [...new Set(policiesList.map(p => p.companyId?.toString()).filter(Boolean))];
+                const companiesMap = {};
+                if (companyIds.length > 0) {
+                    const comps = await Company.find({ _id: { $in: companyIds } }).select('name');
+                    comps.forEach(c => { companiesMap[c._id.toString()] = c.name; });
+                }
+                result.policiesList = policiesList.map(p => ({
+                    ...p.toJSON(),
+                    companyName: companiesMap[p.companyId?.toString()] || '-'
+                }));
+            }
+
+            return res.json(result);
         } catch (error) {
             console.error('Admin stats error:', error);
-            return res.status(500).json({ message: '\u05e9\u05d2\u05d9\u05d0\u05ea \u05e9\u05e8\u05ea.' });
+            return res.status(500).json({ message: 'שגיאת שרת.' });
         }
     }
 
