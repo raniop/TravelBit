@@ -35,10 +35,11 @@ module.exports = async function handler(req, res) {
                 return res.status(401).json({ message: '\u05e9\u05dd \u05de\u05e9\u05ea\u05de\u05e9 \u05d0\u05d5 \u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d9\u05dd.' });
             }
 
+            // Fire-and-forget lastLogin update (don't wait)
             user.lastLogin = new Date();
-            await user.save();
+            user.save().catch(() => {});
 
-            const tokens = generateTokens(user._id, user.role);
+            const tokens = generateTokens(user);
 
             return res.json({
                 ...tokens,
@@ -68,7 +69,7 @@ module.exports = async function handler(req, res) {
             const user = await User.findById(decoded.userId);
             if (!user || !user.isActive) return res.status(401).json({ message: '\u05de\u05e9\u05ea\u05de\u05e9 \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df.' });
 
-            const tokens = generateTokens(user._id, user.role);
+            const tokens = generateTokens(user);
             return res.json(tokens);
         } catch {
             return res.status(401).json({ message: 'Refresh token \u05dc\u05d0 \u05ea\u05e7\u05d9\u05df.' });

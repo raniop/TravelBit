@@ -16,6 +16,19 @@ async function verifyAuth(req) {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        // New token format: has companyId embedded - skip DB lookup
+        if (decoded.companyId) {
+            return {
+                _id: decoded.userId,
+                role: decoded.role,
+                companyId: decoded.companyId,
+                name: decoded.name,
+                isActive: decoded.isActive
+            };
+        }
+
+        // Old token format fallback: query DB
         await connectDB();
         const user = await User.findById(decoded.userId).select('-password');
         if (!user || !user.isActive) return null;
@@ -25,14 +38,20 @@ async function verifyAuth(req) {
     }
 }
 
-function generateTokens(userId, role) {
+function generateTokens(user) {
     const accessToken = jwt.sign(
-        { userId, role },
+        {
+            userId: user._id,
+            role: user.role,
+            companyId: user.companyId,
+            name: user.name,
+            isActive: user.isActive
+        },
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
     );
     const refreshToken = jwt.sign(
-        { userId, role },
+        { userId: user._id, role: user.role },
         process.env.JWT_REFRESH_SECRET,
         { expiresIn: '7d' }
     );

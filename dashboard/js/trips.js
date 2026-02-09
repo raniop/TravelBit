@@ -6,7 +6,7 @@ let employeesList = [];
 document.addEventListener('DOMContentLoaded', () => {
     initUser();
     loadTrips();
-    loadEmployeesForDropdown();
+    // Employees loaded lazily when modal opens (not on page load)
 });
 
 function initUser() {
@@ -129,21 +129,28 @@ function renderPagination(page, totalPages) {
 
 // === Modal Functions ===
 
-function openAddTripModal() {
+async function openAddTripModal() {
     editingTripId = null;
     document.getElementById('tripModalTitle').textContent = 'הוספת נסיעה חדשה';
     document.getElementById('tripForm').reset();
     document.getElementById('tripModalError').classList.remove('show');
     document.getElementById('tripSubmitBtn').textContent = 'הוספת נסיעה';
-    populateEmployeeDropdown(null);
     document.getElementById('tripModal').classList.add('show');
+
+    // Lazy load employees on first modal open
+    if (employeesList.length === 0) await loadEmployeesForDropdown();
+    populateEmployeeDropdown(null);
 }
 
-function openEditTripModal(trip) {
+async function openEditTripModal(trip) {
     editingTripId = trip._id;
     document.getElementById('tripModalTitle').textContent = 'עריכת נסיעה';
     document.getElementById('tripSubmitBtn').textContent = 'שמירת שינויים';
     document.getElementById('tripModalError').classList.remove('show');
+    document.getElementById('tripModal').classList.add('show');
+
+    // Lazy load employees on first modal open
+    if (employeesList.length === 0) await loadEmployeesForDropdown();
 
     // Populate employee dropdown
     const empId = trip.employeeId ? (trip.employeeId._id || trip.employeeId) : '';
