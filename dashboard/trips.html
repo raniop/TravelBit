@@ -39,6 +39,10 @@
                 </button>
                 <h1>נסיעות עובדים</h1>
                 <div class="page-header-actions">
+                    <button class="btn btn-primary btn-sm" onclick="openAddTripModal()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        הוספת נסיעה
+                    </button>
                     <button class="btn btn-secondary btn-sm" onclick="exportTrips()">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         ייצוא CSV
@@ -79,10 +83,11 @@
                                     <th>ימי עבודה</th>
                                     <th>עלות</th>
                                     <th>סטטוס</th>
+                                    <th>פעולות</th>
                                 </tr>
                             </thead>
                             <tbody id="tripsTable">
-                                <tr><td colspan="9" class="loading"><div class="spinner"></div></td></tr>
+                                <tr><td colspan="10" class="loading"><div class="spinner"></div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -92,6 +97,83 @@
                 <div id="pagination" style="display:flex; justify-content:center; gap:8px; margin-top:16px;"></div>
             </div>
         </main>
+    </div>
+
+    <!-- Trip Modal (Add / Edit) -->
+    <div class="modal-overlay" id="tripModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="tripModalTitle">הוספת נסיעה חדשה</h2>
+                <button class="modal-close" onclick="closeTripModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="tripForm">
+                    <div class="form-group">
+                        <label>עובד *</label>
+                        <select id="tripEmployee" class="filter-select" style="width:100%;" required>
+                            <option value="">-- בחר עובד --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>יעד *</label>
+                        <input type="text" name="destination" required placeholder="לדוגמה: לונדון, אנגליה">
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="form-group">
+                            <label>תאריך יציאה *</label>
+                            <input type="date" name="departureDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>תאריך חזרה *</label>
+                            <input type="date" name="returnDate" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>מטרת הנסיעה</label>
+                        <input type="text" name="purpose" placeholder="לדוגמה: כנס, פגישת לקוח">
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="form-group">
+                            <label>סטטוס</label>
+                            <select name="status" class="filter-select" style="width:100%;">
+                                <option value="planned">מתוכנן</option>
+                                <option value="active">פעיל</option>
+                                <option value="completed">הושלם</option>
+                                <option value="cancelled">בוטל</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>ימי עבודה בחו"ל</label>
+                            <input type="number" name="workdaysAbroad" min="0" placeholder="0">
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px;">
+                        <div class="form-group">
+                            <label>עלות</label>
+                            <input type="number" name="cost" min="0" step="0.01" placeholder="0" style="direction:ltr; text-align:left;">
+                        </div>
+                        <div class="form-group">
+                            <label>מטבע</label>
+                            <select name="currency" class="filter-select" style="width:100%;">
+                                <option value="ILS">ILS ₪</option>
+                                <option value="USD">USD $</option>
+                                <option value="EUR">EUR €</option>
+                                <option value="GBP">GBP £</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>הערות</label>
+                        <textarea name="notes" rows="2" style="width:100%; padding:8px; border:1px solid var(--gray-200); border-radius:8px; font-family:inherit; resize:vertical;"></textarea>
+                    </div>
+                    <div class="login-error" id="tripModalError"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-sm" id="tripSubmitBtn" onclick="submitTrip()">הוספת נסיעה</button>
+                <button class="btn btn-secondary btn-sm" onclick="closeTripModal()">ביטול</button>
+            </div>
+        </div>
     </div>
 
     <script src="js/auth.js"></script>
