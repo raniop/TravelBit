@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Employees loaded lazily when modal opens (not on page load)
 });
 
-function initUser() {
-    const user = getUser();
+async function initUser() {
+    let user = getUser();
     if (user) {
         const nameEl = document.getElementById('userName');
         const avatarEl = document.getElementById('userAvatar');
@@ -18,6 +18,13 @@ function initUser() {
         if (nameEl) nameEl.textContent = user.name || 'משתמש';
         if (avatarEl) avatarEl.textContent = (user.name || 'C').charAt(0);
         if (companyEl) companyEl.textContent = user.companyName || user.name || 'חברה';
+
+        if (!user.companyName) {
+            user = await syncCompanyName();
+            if (user && user.companyName && companyEl) {
+                companyEl.textContent = user.companyName;
+            }
+        }
     }
 }
 

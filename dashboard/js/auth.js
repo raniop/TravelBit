@@ -44,12 +44,23 @@ function getDefaultDashboard(user) {
         return;
     }
 
-    // If logged in and on a dashboard page, ensure companyName is synced
-    // and redirect to correct dashboard if needed
+    // If logged in and on a dashboard page, check redirect + sync companyName
     if (token && !currentPage.includes('login')) {
         let user = null;
         try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
 
+        // FIRST: Immediate redirect check (synchronous, no fetch needed)
+        // Works even without companyName because getDefaultDashboard
+        // falls back to user.name which may contain the company identifier
+        if (user) {
+            const correctPage = getDefaultDashboard(user);
+            if (!currentPage.includes('bituhofir') && correctPage.includes('bituhofir')) {
+                window.location.href = correctPage;
+                return;
+            }
+        }
+
+        // THEN: Background sync companyName for sidebar display
         if (user && !user.companyName) {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
@@ -60,13 +71,6 @@ function getDefaultDashboard(user) {
                     if (data.user && data.user.companyName) {
                         user.companyName = data.user.companyName;
                         localStorage.setItem('dash_user', JSON.stringify(user));
-
-                        // If user should be on a different dashboard, redirect
-                        const correctPage = getDefaultDashboard(user);
-                        if (!currentPage.includes('bituhofir') && correctPage.includes('bituhofir')) {
-                            window.location.href = correctPage;
-                            return;
-                        }
                     }
                 }
             } catch(_) {}
@@ -160,4 +164,27 @@ async function apiFetch(url, options = {}) {
     }
 
     return res;
+}
+
+// Sync companyName from server if missing in localStorage
+// Returns the (possibly updated) user object
+async function syncCompanyName() {
+    let user = getUser();
+    if (!user || user.companyName) return user;
+
+    try {
+        const token = getToken();
+        if (!token) return user;
+        const res = await fetch(`${API_BASE}/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.user && data.user.companyName) {
+                user.companyName = data.user.companyName;
+                localStorage.setItem('dash_user', JSON.stringify(user));
+            }
+        }
+    } catch(_) {}
+    return user;
 }
