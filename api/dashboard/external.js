@@ -168,6 +168,8 @@ module.exports = async function handler(req, res) {
     if (url.includes('/external/dashboard') || url.includes('/external/yoy')) pageType = 'dashboard';
     else if (url.includes('/external/policies') || url.includes('/external/policy-details') || url.includes('/external/site-policies')) pageType = 'policies';
     else if (url.includes('/external/daily-report')) pageType = 'dashboard';
+    else if (url.includes('/external/agents-report')) pageType = 'reports';
+    else if (url.includes('/external/agents')) pageType = 'agents';
 
     if (pageType && ip[pageType] === false) {
         return res.status(403).json({ message: 'אין הרשאה לדף זה.' });
@@ -341,6 +343,53 @@ module.exports = async function handler(req, res) {
                 }
             }
 
+            return res.json(data);
+        }
+
+        // Route: /api/dashboard/external/agents-report
+        if (url.includes('/external/agents-report')) {
+            const page = Number(req.query.page) || 1;
+            const pageSize = Number(req.query.pageSize) || 100;
+
+            const apiRes = await bituhOfirFetch(
+                `/api/Policy/GetAgentsReport?page=${page}&pageSize=${pageSize}`
+            );
+            let data = await apiRes.json();
+
+            // Filter by company's agentCodes if set
+            if (agentCodes) {
+                if (Array.isArray(data)) {
+                    data = data.filter(a => agentCodes.includes(String(a.agentCode || a.agentIndex)));
+                } else if (data && !Array.isArray(data) && Array.isArray(data.items)) {
+                    data.items = data.items.filter(a => agentCodes.includes(String(a.agentCode || a.agentIndex)));
+                }
+            }
+
+            return res.json(data);
+        }
+
+        // Route: /api/dashboard/external/agents (agent drill-down — policies by agent)
+        if (url.includes('/external/agents')) {
+            const { agentIndex, year, month, page, pageSize } = req.query;
+
+            if (!agentIndex) {
+                return res.status(400).json({ message: 'חובה לציין קוד סוכן (agentIndex).' });
+            }
+
+            // Verify agent belongs to company
+            if (agentCodes && !agentCodes.includes(String(agentIndex))) {
+                return res.status(403).json({ message: 'אין הרשאה לנתוני סוכן זה.' });
+            }
+
+            const bYear = Number(year) || new Date().getFullYear();
+            const bMonth = Number(month) || (new Date().getMonth() + 1);
+            const p = Number(page) || 1;
+            const ps = Number(pageSize) || 100;
+
+            const apiRes = await bituhOfirFetch(
+                `/api/Policy/GetPolicyDetailsByAgent?agentIndex=${agentIndex}&bYear=${bYear}&bMonth=${bMonth}&page=${p}&pageSize=${ps}`
+            );
+            const data = await apiRes.json();
             return res.json(data);
         }
 
