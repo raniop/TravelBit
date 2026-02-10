@@ -218,8 +218,28 @@ function updateSidebarVisibility() {
     if (!user) return;
     const modules = user.dashboardModules || 'management';
 
-    // Hide bituhofir section if no insurance access
     const bituhofirSection = document.getElementById('bituhofirSection');
+    const managementSection = document.getElementById('managementSection');
+
+    // First: reset everything to visible
+    if (managementSection) {
+        managementSection.style.display = '';
+        let el = managementSection.nextElementSibling;
+        while (el && el.id !== 'bituhofirSection') {
+            el.style.display = '';
+            el = el.nextElementSibling;
+        }
+    }
+    if (bituhofirSection) {
+        bituhofirSection.style.display = '';
+        let el = bituhofirSection.nextElementSibling;
+        while (el && el.tagName === 'A') {
+            el.style.display = '';
+            el = el.nextElementSibling;
+        }
+    }
+
+    // Then: hide what needs to be hidden
     if (bituhofirSection && modules === 'management') {
         bituhofirSection.style.display = 'none';
         let el = bituhofirSection.nextElementSibling;
@@ -229,16 +249,15 @@ function updateSidebarVisibility() {
         }
     }
 
-    // Hide management section if insurance-only
-    const managementSection = document.getElementById('managementSection');
     if (managementSection && modules === 'insurance') {
         managementSection.style.display = 'none';
         let el = managementSection.nextElementSibling;
-        // Hide links until we reach the bituhofirSection divider
         while (el && el.id !== 'bituhofirSection') {
             el.style.display = 'none';
             el = el.nextElementSibling;
         }
     }
 }
+// Run after server sync completes (called from the IIFE above)
+// Also run on DOMContentLoaded as fallback in case sync is slow
 document.addEventListener('DOMContentLoaded', updateSidebarVisibility);
