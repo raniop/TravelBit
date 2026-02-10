@@ -251,8 +251,12 @@ module.exports = async function handler(req, res) {
             const results = await Promise.all(promises);
 
             // Extract turnover (repType 1) for each month
+            // NOTE: GetDashboardCalcByData returns YTD (year-to-date) cumulative values,
+            // so we subtract previous month to get the individual monthly value.
             const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
             const yoyData = [];
+            let prevCurYTD = 0;
+            let prevPrevYTD = 0;
             for (let m = 1; m <= maxMonth; m++) {
                 const curResult = results.find(r => r.month === m && r.year === year);
                 const prevResult = results.find(r => r.month === m && r.year === prevYear);
@@ -260,12 +264,17 @@ module.exports = async function handler(req, res) {
                 const prevCalc = prevResult?.data?.dashboardCalcData || [];
                 const curTurnover = curCalc.find(c => c.repType === 1);
                 const prevTurnover = prevCalc.find(c => c.repType === 1);
+                const curYTD = curTurnover?.curYearValue || 0;
+                const prevYTD = prevTurnover?.curYearValue || 0;
+                // Subtract previous month's YTD to get this month only
                 yoyData.push({
                     month: monthNames[m - 1],
                     monthNum: m,
-                    currentYear: curTurnover?.curYearValue || 0,
-                    previousYear: prevTurnover?.curYearValue || 0
+                    currentYear: curYTD - prevCurYTD,
+                    previousYear: prevYTD - prevPrevYTD
                 });
+                prevCurYTD = curYTD;
+                prevPrevYTD = prevYTD;
             }
 
             return res.json({ year, prevYear, yoyData });
