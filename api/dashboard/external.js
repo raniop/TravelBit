@@ -244,6 +244,8 @@ module.exports = async function handler(req, res) {
             // Extract turnover (repType 1) for each month
             const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
             const yoyData = [];
+            let curCumulative = 0;
+            let prevCumulative = 0;
             for (let m = 1; m <= maxMonth; m++) {
                 const curResult = results.find(r => r.month === m && r.year === year);
                 const prevResult = results.find(r => r.month === m && r.year === prevYear);
@@ -251,11 +253,13 @@ module.exports = async function handler(req, res) {
                 const prevCalc = prevResult?.data?.dashboardCalcData || [];
                 const curTurnover = curCalc.find(c => c.repType === 1);
                 const prevTurnover = prevCalc.find(c => c.repType === 1);
+                curCumulative += (curTurnover?.curYearValue || 0);
+                prevCumulative += (prevTurnover?.curYearValue || 0);
                 yoyData.push({
                     month: monthNames[m - 1],
                     monthNum: m,
-                    currentYear: curTurnover?.curYearValue || 0,
-                    previousYear: prevTurnover?.curYearValue || 0
+                    currentYear: curCumulative,
+                    previousYear: prevCumulative
                 });
             }
 
