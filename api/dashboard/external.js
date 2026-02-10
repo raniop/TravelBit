@@ -104,21 +104,73 @@ module.exports = async function handler(req, res) {
             const month = req.query.month || (now.getMonth() + 1);
             const year = req.query.year || now.getFullYear();
 
-            // Fetch KPI data + available periods in parallel
-            const [calcRes, periodsRes] = await Promise.all([
+            // Fetch KPI data + periods + riders + top policies in parallel
+            const [calcRes, periodsRes, ridersRes, topPoliciesRes] = await Promise.all([
                 bituhOfirFetch(`/api/Dashboard/GetDashboardCalcByData?month=${month}&year=${year}`),
-                bituhOfirFetch('/api/Dashboard')
+                bituhOfirFetch('/api/Dashboard'),
+                bituhOfirFetch('/api/Policy/getDailyReportRiderList').catch(() => null),
+                bituhOfirFetch('/api/Policy/GetTopPolicies?top=500').catch(() => null)
             ]);
 
             const calcData = await calcRes.json();
             const periods = await periodsRes.json();
 
+            let riders = [];
+            try { if (ridersRes && ridersRes.ok) riders = await ridersRes.json(); } catch(_) {}
+
+            let topPolicies = [];
+            try { if (topPoliciesRes && topPoliciesRes.ok) topPolicies = await topPoliciesRes.json(); } catch(_) {}
+
             return res.json({
                 ...calcData,
                 periods: Array.isArray(periods) ? periods : [],
+                riders: Array.isArray(riders) ? riders : [],
+                topPolicies: Array.isArray(topPolicies) ? topPolicies : [],
                 requestedMonth: Number(month),
                 requestedYear: Number(year)
             });
+        }
+
+        // Route: /api/dashboard/external/yoy - Build YoY monthly comparison
+        if (url.includes('/external/yoy')) {
+            const year = Number(req.query.year) || new Date().getFullYear();
+            const prevYear = year - 1;
+            const maxMonth = Number(req.query.month) || 12;
+
+            // Fetch current year and previous year data for each month (up to maxMonth)
+            const promises = [];
+            for (let m = 1; m <= maxMonth; m++) {
+                promises.push(
+                    bituhOfirFetch(`/api/Dashboard/GetDashboardCalcByData?month=${m}&year=${year}`)
+                        .then(r => r.json()).then(d => ({ month: m, year, data: d })).catch(() => ({ month: m, year, data: null }))
+                );
+                promises.push(
+                    bituhOfirFetch(`/api/Dashboard/GetDashboardCalcByData?month=${m}&year=${prevYear}`)
+                        .then(r => r.json()).then(d => ({ month: m, year: prevYear, data: d })).catch(() => ({ month: m, year: prevYear, data: null }))
+                );
+            }
+
+            const results = await Promise.all(promises);
+
+            // Extract turnover (repType 1) for each month
+            const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+            const yoyData = [];
+            for (let m = 1; m <= maxMonth; m++) {
+                const curResult = results.find(r => r.month === m && r.year === year);
+                const prevResult = results.find(r => r.month === m && r.year === prevYear);
+                const curCalc = curResult?.data?.dashboardCalcData || [];
+                const prevCalc = prevResult?.data?.dashboardCalcData || [];
+                const curTurnover = curCalc.find(c => c.repType === 1);
+                const prevTurnover = prevCalc.find(c => c.repType === 1);
+                yoyData.push({
+                    month: monthNames[m - 1],
+                    monthNum: m,
+                    currentYear: curTurnover?.curYearValue || 0,
+                    previousYear: prevTurnover?.curYearValue || 0
+                });
+            }
+
+            return res.json({ year, prevYear, yoyData });
         }
 
         // Route: /api/dashboard/external/policies
