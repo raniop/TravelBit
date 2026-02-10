@@ -232,6 +232,10 @@ function readEmailFile(file) {
 }
 
 function parseEmlContent(raw, fileName) {
+    // DEBUG: log raw eml info
+    console.log('[EML DEBUG] raw length:', raw.length);
+    console.log('[EML DEBUG] raw first 500 chars:', raw.substring(0, 500));
+
     // Split headers from body (first empty line)
     // Try both \r\n\r\n and \n\n
     let headerBodySplit = raw.indexOf('\r\n\r\n');
@@ -240,16 +244,23 @@ function parseEmlContent(raw, fileName) {
         headerBodySplit = raw.indexOf('\n\n');
         bodySeparatorLen = 2;
     }
+    console.log('[EML DEBUG] headerBodySplit:', headerBodySplit);
     const headersPart = headerBodySplit > 0 ? raw.substring(0, headerBodySplit) : '';
     const bodyPart = headerBodySplit > 0 ? raw.substring(headerBodySplit + bodySeparatorLen) : raw;
+
+    console.log('[EML DEBUG] headers length:', headersPart.length);
+    console.log('[EML DEBUG] body length:', bodyPart.length);
+    console.log('[EML DEBUG] headers:', headersPart.substring(0, 1000));
 
     // Decode subject from headers (handle multi-line folded headers)
     let subject = '';
     const subjectMatch = headersPart.match(/^Subject:\s*([\s\S]*?)(?=\r?\n[^\s\t]|$)/mi);
     if (subjectMatch) {
+        console.log('[EML DEBUG] raw subject match:', subjectMatch[1].substring(0, 200));
         // Unfold header (remove line breaks followed by whitespace)
         subject = decodeEmlHeader(subjectMatch[1].replace(/\r?\n[\s\t]+/g, ' ').trim());
     }
+    console.log('[EML DEBUG] decoded subject:', subject);
 
     // Extract From header for insurance company detection
     let fromHeader = '';
@@ -257,16 +268,21 @@ function parseEmlContent(raw, fileName) {
     if (fromMatch) {
         fromHeader = decodeEmlHeader(fromMatch[1].replace(/\r?\n[\s\t]+/g, ' ').trim());
     }
+    console.log('[EML DEBUG] decoded from:', fromHeader);
 
     // Decode body: handle base64 and quoted-printable with proper charset
     let bodyText = decodeEmlBody(bodyPart, headersPart);
+    console.log('[EML DEBUG] decoded body (first 500):', bodyText.substring(0, 500));
+    console.log('[EML DEBUG] body contains Hebrew?', /[א-ת]/.test(bodyText));
 
     // Combine all text sources for extraction
     const combinedText = [subject, fromHeader, bodyText].join('\n');
+    console.log('[EML DEBUG] combined text (first 500):', combinedText.substring(0, 500));
 
     // Run enhanced extraction on the combined text
     const data = extractEmailDataEnhanced(combinedText, '');
     data.source = 'file';
+    console.log('[EML DEBUG] extracted data:', JSON.stringify(data, null, 2));
 
     // Override notes with readable decoded text (not raw garbled bytes)
     const readableNotes = [subject, bodyText.substring(0, 400)].filter(Boolean).join('\n');
