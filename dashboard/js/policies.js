@@ -1,6 +1,8 @@
-// Policies Search Page JS - v2
+// Policies Search Page JS - v3
 let allPolicies = [];
 let selectedPolicyIndex = null;
+let isSearching = false;
+let searchTimeout = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initUser();
@@ -47,49 +49,101 @@ async function loadPolicies() {
 
 // ==================== Search ====================
 function searchPolicies() {
-    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    const query = document.getElementById('searchInput').value.trim();
     if (!query) {
         renderPoliciesTable(allPolicies);
         document.getElementById('searchCount').textContent = '';
         return;
     }
 
-    const filtered = allPolicies.filter(p => {
-        const fields = [
-            p.fullPolicyID,
-            p.policyIndex,
-            p.clientName,
-            p.agentName,
-            p.doketNumber,
-            p.payerTz,
-            p.payerFirstName,
-            p.payerLastaName
-        ].filter(Boolean).map(v => String(v).toLowerCase());
+    // Check if query looks like a TZ / ID number (6+ digits)
+    const isNumericQuery = /^\d{5,}$/.test(query);
 
-        return fields.some(f => f.includes(query));
-    });
+    if (isNumericQuery) {
+        // Debounce server-side search
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => searchByIdServer(query), 400);
+    } else {
+        // Client-side search (instant)
+        const lowerQuery = query.toLowerCase();
+        const filtered = allPolicies.filter(p => {
+            const fields = [
+                p.fullPolicyID,
+                p.policyIndex,
+                p.clientName,
+                p.agentName,
+                p.doketNumber,
+                p.payerTz,
+                p.payerFirstName,
+                p.payerLastaName,
+                p.mnYear,
+                p.areaName
+            ].filter(Boolean).map(v => String(v).toLowerCase());
 
-    document.getElementById('searchCount').textContent = filtered.length + ' תוצאות מתוך ' + allPolicies.length;
-    renderPoliciesTable(filtered);
+            return fields.some(f => f.includes(lowerQuery));
+        });
+
+        document.getElementById('searchCount').textContent = filtered.length + ' תוצאות מתוך ' + allPolicies.length;
+        renderPoliciesTable(filtered);
+    }
+}
+
+// Server-side search by TZ / ID
+async function searchByIdServer(idQuery) {
+    if (isSearching) return;
+    isSearching = true;
+
+    const tbody = document.getElementById('policiesBody');
+    tbody.innerHTML = '<tr><td colspan="12"><div class="loading-overlay"><div class="spinner"></div> מחפש לפי ת.ז / מספר מזהה...</div></td></tr>';
+
+    try {
+        const res = await apiFetch('/dashboard/external/policies?id=' + encodeURIComponent(idQuery));
+        if (!res || !res.ok) {
+            document.getElementById('searchCount').textContent = 'שגיאה בחיפוש';
+            tbody.innerHTML = '<tr><td colspan="12"><div class="empty-msg"><p>שגיאה בחיפוש לפי ת.ז</p></div></td></tr>';
+            isSearching = false;
+            return;
+        }
+
+        const data = await res.json();
+        const results = Array.isArray(data) ? data : [];
+        document.getElementById('searchCount').textContent = results.length + ' פוליסות נמצאו עבור ת.ז ' + idQuery;
+        renderPoliciesTable(results);
+    } catch (err) {
+        console.error('Error searching by ID:', err);
+        tbody.innerHTML = '<tr><td colspan="12"><div class="empty-msg"><p>שגיאה בחיפוש</p></div></td></tr>';
+    }
+    isSearching = false;
 }
 
 // ==================== Render Table ====================
 function renderPoliciesTable(policies) {
     const tbody = document.getElementById('policiesBody');
     if (!policies || policies.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>לא נמצאו פוליסות</p></div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12"><div class="empty-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>לא נמצאו פוליסות</p></div></td></tr>';
         return;
     }
 
     tbody.innerHTML = policies.map(p => {
         const idx = p.policyIndex;
+        const issueDate = p.issueDate ? new Date(p.issueDate) : null;
+        const issueTime = issueDate && !isNaN(issueDate.getTime())
+            ? issueDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+            : '-';
+
         return `<tr onclick="selectPolicy(${idx}, this)" class="${selectedPolicyIndex === idx ? 'selected' : ''}">
             <td><strong>${esc(p.fullPolicyID || String(p.policyIndex))}</strong></td>
-            <td>${esc(p.clientName || '-')}</td>
             <td>${esc(p.agentName || '-')}</td>
+            <td class="td-center">${esc(p.agentCode ? String(p.agentCode) : '-')}</td>
+            <td>${esc(p.mnYear || '-')}</td>
+            <td>${esc(p.clientName || '-')}</td>
             <td>${formatDate(p.startDate)}</td>
             <td>${formatDate(p.endDate)}</td>
+            <td>${formatDate(p.issueDate)}</td>
+            <td class="td-center">${issueTime}</td>
+            <td class="td-center">${esc(p.policyDoc || '-')}</td>
             <td class="td-premium">$${formatNumber(p.total)}</td>
+            <td>${esc(p.doketNumber ? String(p.doketNumber) : '-')}</td>
         </tr>`;
     }).join('');
 }
@@ -156,6 +210,7 @@ function renderPolicyDetails(p) {
         ['סה"כ ימים', p.totalDays],
         ['מספר מבוטחים', p.customerCount],
         ['דוכת', p.doketNumber],
+        ['תוספת', p.policyDoc],
     ];
     policyFields.forEach(([label, value]) => {
         if (value !== null && value !== undefined && value !== '' && value !== 0) {
