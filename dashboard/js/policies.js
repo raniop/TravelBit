@@ -200,6 +200,7 @@ function renderPoliciesTable(policies) {
 async function selectPolicy(policyIndex) {
     if (!policyIndex) return;
 
+    closeSidebar(); // Close sidebar on mobile if open
     selectedPolicyIndex = policyIndex;
 
     // Highlight selected row
@@ -395,6 +396,21 @@ function closeModalOverlay(event) {
     if (event.target === event.currentTarget) {
         closeModal();
     }
+}
+
+// ==================== Sidebar Toggle (Mobile) ====================
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    sidebar.classList.toggle('open');
+    if (backdrop) backdrop.classList.toggle('show');
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    sidebar.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('show');
 }
 
 // ==================== Utilities ====================

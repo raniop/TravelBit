@@ -63,6 +63,7 @@
         }
         .policies-table .td-premium { font-weight: 700; color: #059669; }
         .policies-table .td-center { text-align: center; }
+        .policies-table tbody tr { touch-action: manipulation; }
 
         /* ===== Page Layout ===== */
         .page-body { display: flex; flex-direction: column; min-height: calc(100vh - 80px); }
@@ -233,11 +234,12 @@
                 </div>
             </div>
         </aside>
+        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
         <!-- Main Content -->
         <main class="main-content">
             <div class="page-header">
-                <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                <button class="mobile-menu-btn" onclick="toggleSidebar()">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                 </button>
                 <h1>חיפוש פוליסות</h1>
@@ -307,6 +309,6 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/policies.js?v=4"></script>
+    <script src="js/policies.js?v=5"></script>
 </body>
 </html>
