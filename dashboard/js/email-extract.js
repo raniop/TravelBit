@@ -96,49 +96,92 @@ function extractEmailDataEnhanced(text, html) {
         data._extractedFields.push('detectedType');
     }
 
-    // 3. Customer Name — Hebrew patterns
-    const namePatterns = [
-        /עבור\s+([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/,
-        /שם\s*(?:הלקוח|המבוטח|:)\s*:?\s*([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/,
-        /לכבוד\s+([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/,
-        /מבוטח\s*:?\s*([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/,
-        /(?:גב'|מר|גברת|אדון)\s+([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/
+    // 3+4. Customer Name + ID — try combined pattern first (name + number pair)
+    // Stopwords: common Hebrew words that are NOT person names
+    const NAME_STOPWORDS = ['על', 'את', 'כל', 'של', 'הם', 'עם', 'כי', 'גם', 'או', 'לא', 'זה', 'מה', 'אם', 'יש', 'לו', 'לה', 'הן', 'אל', 'רק', 'עד', 'בו', 'בה', 'כן', 'לי', 'לך', 'בי', 'זו', 'דף', 'פי'];
+    const NAME_STOP_LAST = ['המסמכים', 'הטופס', 'הפוליסה', 'התביעה', 'הביטוח', 'החברה', 'הלקוח', 'המבוטח', 'הסוכן', 'הבקשה', 'הכספים', 'הטיפול', 'התיק', 'המכתב', 'הנושא', 'האישור', 'השירות', 'הדוח'];
+
+    function isValidName(name) {
+        if (!name || name.length < 3 || name.length > 40) return false;
+        const parts = name.trim().split(/\s+/);
+        if (parts.length < 2) return false;
+        if (NAME_STOPWORDS.includes(parts[0])) return false;
+        if (NAME_STOP_LAST.includes(parts[parts.length - 1])) return false;
+        // Each part should be at least 2 chars
+        if (parts.some(p => p.length < 2)) return false;
+        return true;
+    }
+
+    // 3a. Try combined: name + optional ת.ז. + ID number (captures both at once)
+    const combinedPatterns = [
+        /עבור\s+([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)\s+(?:ת["\u0022\u201C\u201D]?\.?ז["\u0022\u201C\u201D]?\.?\s*:?\s*)?(\d{8,9})/g,
+        /מבוטח\s*:?\s*([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)\s+(?:ת["\u0022\u201C\u201D]?\.?ז["\u0022\u201C\u201D]?\.?\s*:?\s*)?(\d{8,9})/g,
+        /שם[^:]*:\s*([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)\s+(?:ת["\u0022\u201C\u201D]?\.?ז["\u0022\u201C\u201D]?\.?\s*:?\s*)?(\d{8,9})/g
     ];
-    for (const pattern of namePatterns) {
-        const match = searchText.match(pattern);
-        if (match) {
-            const name = match[1].trim();
-            // Validate: not too long, not a common word
-            if (name.length >= 3 && name.length <= 40) {
-                data.customerName = name;
+
+    for (const pattern of combinedPatterns) {
+        pattern.lastIndex = 0; // reset global regex
+        let match;
+        while ((match = pattern.exec(searchText)) !== null) {
+            const candidateName = match[1].trim();
+            const candidateId = match[2];
+            if (isValidName(candidateName)) {
+                data.customerName = candidateName;
                 data._extractedFields.push('customerName');
+                data.idNumber = candidateId;
+                data._extractedFields.push('idNumber');
+                break;
+            }
+        }
+        if (data.customerName) break;
+    }
+
+    // 3b. If no combined match, try name-only patterns (with matchAll to skip bad matches)
+    if (!data.customerName) {
+        const namePatterns = [
+            /עבור\s+([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/g,
+            /שם\s*(?:הלקוח|המבוטח|:)\s*:?\s*([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/g,
+            /לכבוד\s+([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/g,
+            /מבוטח\s*:?\s*([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/g,
+            /(?:גב'|מר|גברת|אדון)\s+([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/g
+        ];
+        for (const pattern of namePatterns) {
+            pattern.lastIndex = 0;
+            let match;
+            while ((match = pattern.exec(searchText)) !== null) {
+                if (isValidName(match[1])) {
+                    data.customerName = match[1].trim();
+                    data._extractedFields.push('customerName');
+                    break;
+                }
+            }
+            if (data.customerName) break;
+        }
+    }
+
+    // 4. ID Number (ת.ז.) — if not found via combined pattern above
+    if (!data.idNumber) {
+        const idPatterns = [
+            /ת["\u0022\u201C\u201D]?\.?\s*ז["\u0022\u201C\u201D]?\.?\s*:?\s*(\d{8,9})/,
+            /תעודת[\s\u00A0]*זהות\s*:?\s*(\d{8,9})/,
+            /ת[\s\u00A0]*\.[\s\u00A0]*ז[\s\u00A0]*\.?\s*:?\s*(\d{8,9})/
+        ];
+        for (const pattern of idPatterns) {
+            const match = searchText.match(pattern);
+            if (match) {
+                data.idNumber = match[1];
+                data._extractedFields.push('idNumber');
                 break;
             }
         }
     }
-
-    // 4. ID Number (ת.ז.) — with keyword context first, then fallback
-    const idPatterns = [
-        /ת"?\.?ז"?\.?\s*:?\s*(\d{8,9})/,
-        /תעודת\s*זהות\s*:?\s*(\d{8,9})/,
-        /ת\.ז\.\s*(\d{8,9})/,
-        /ת"ז\s*(\d{8,9})/
-    ];
-    for (const pattern of idPatterns) {
-        const match = searchText.match(pattern);
-        if (match) {
-            data.idNumber = match[1];
-            data._extractedFields.push('idNumber');
-            break;
-        }
-    }
-    // Fallback: any 9-digit number (if no keyword match found)
+    // Fallback: any 8-9 digit number near Hebrew name text (not a phone)
     if (!data.idNumber) {
-        const fallbackId = searchText.match(/\b(\d{9})\b/);
+        const fallbackId = searchText.match(/(?<!\d)(\d{8,9})(?!\d)/);
         if (fallbackId) {
-            // Make sure it's not a phone number
             const candidate = fallbackId[1];
-            if (!candidate.startsWith('05') && !candidate.startsWith('03') && !candidate.startsWith('02') && !candidate.startsWith('04') && !candidate.startsWith('08') && !candidate.startsWith('09') && !candidate.startsWith('07')) {
+            // Exclude phone numbers (start with 0)
+            if (!candidate.startsWith('0')) {
                 data.idNumber = candidate;
                 data._extractedFields.push('idNumber');
             }
@@ -232,31 +275,18 @@ function readEmailFile(file) {
 function parseEmlContent(raw, fileName) {
     // Extract ALL text from the .eml recursively (handles forwarded, multipart, nested)
     const allText = extractAllTextFromMime(raw, 0);
-    console.log('[EML] allText length:', allText.length, 'first 300:', allText.substring(0, 300));
 
     // Also extract subject and from from top-level headers
     const topHeaders = getHeaders(raw);
     let subject = decodeEmlHeader(topHeaders['subject'] || '');
     let fromHeader = decodeEmlHeader(topHeaders['from'] || '');
-    console.log('[EML] subject:', subject, 'from:', fromHeader);
 
     // Combine: subject + from + all extracted body text
     const combinedText = [subject, fromHeader, allText].filter(Boolean).join('\n');
-    console.log('[EML] combinedText length:', combinedText.length);
-    // Log more text to see what we have
-    console.log('[EML] combinedText 300-800:', combinedText.substring(300, 800));
-    console.log('[EML] combinedText 800-1300:', combinedText.substring(800, 1300));
-    console.log('[EML] combinedText 1300-1800:', combinedText.substring(1300, 1800));
-    console.log('[EML] has עבור:', combinedText.includes('עבור'));
-    console.log('[EML] has ת.ז:', combinedText.includes('ת.ז'));
-    console.log('[EML] has ת"ז:', combinedText.includes('ת"ז'));
-    console.log('[EML] has סיוון:', combinedText.includes('סיוון'));
-    console.log('[EML] has 32513145:', combinedText.includes('32513145'));
 
     // Run enhanced extraction
     const data = extractEmailDataEnhanced(combinedText, '');
     data.source = 'file';
-    console.log('[EML] extracted customerName:', data.customerName, 'idNumber:', data.idNumber);
 
     // Readable notes
     const readableNotes = [subject, allText.substring(0, 400)].filter(Boolean).join('\n');
@@ -302,8 +332,6 @@ function extractAllTextFromMime(rawMime, depth) {
     const charsetMatch = contentType.match(/charset="?([^"\s;]+)"?/i);
     const charset = charsetMatch ? charsetMatch[1] : 'utf-8';
 
-    console.log('[MIME d' + depth + '] ct:', contentType.substring(0, 80), 'enc:', encoding, 'bodyLen:', bodyPart.length);
-
     // Case 1: multipart/* — split by boundary and recurse into each part
     let boundary = null;
 
@@ -314,18 +342,14 @@ function extractAllTextFromMime(rawMime, depth) {
     else if (bUnquoted) boundary = bUnquoted[1];
 
     if (boundary) {
-        console.log('[MIME d' + depth + '] boundary from header:', boundary);
         let parts = bodyPart.split('--' + boundary);
-        console.log('[MIME d' + depth + '] parts count:', parts.length);
 
         // If boundary didn't work, try finding actual boundary from body
         if (parts.length <= 1 && bodyPart.includes('--')) {
             const bodyLine = bodyPart.match(/^(--[^\r\n]+)/m);
             if (bodyLine) {
                 const actualBoundary = bodyLine[1].substring(2); // remove leading --
-                console.log('[MIME d' + depth + '] trying body boundary:', actualBoundary);
                 parts = bodyPart.split('--' + actualBoundary);
-                console.log('[MIME d' + depth + '] parts count after retry:', parts.length);
             }
         }
 
