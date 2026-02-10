@@ -146,8 +146,11 @@
         .status-expired { background: #FEF2F2; color: #DC2626; }
         .status-pending { background: #FFF7ED; color: #F59E0B; }
 
-        /* Scrollable table */
-        .table-scroll { overflow-x: auto; max-height: 500px; overflow-y: auto; }
+        /* Scrollable table - fill remaining height */
+        .table-scroll { overflow-x: auto; overflow-y: auto; flex: 1; }
+        .policies-table-wrap { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+        .page-body { display: flex; flex-direction: column; min-height: calc(100vh - 80px); }
+        .policies-table thead th { position: sticky; top: 0; z-index: 1; }
     </style>
 </head>
 <body>
@@ -232,7 +235,7 @@
                 <!-- Search Bar -->
                 <div class="search-bar">
                     <label>חיפוש:</label>
-                    <input type="text" class="search-input" id="searchInput" placeholder="שם לקוח, מספר פוליסה, יעד..." oninput="searchPolicies()" autofocus>
+                    <input type="text" class="search-input" id="searchInput" placeholder="שם מבוטח, מספר פוליסה, ת.ז, סוכן..." oninput="searchPolicies()" autofocus>
                     <span class="search-count" id="searchCount"></span>
                 </div>
 
@@ -248,15 +251,14 @@
                                 <tr>
                                     <th>מס' פוליסה</th>
                                     <th>שם מבוטח</th>
-                                    <th>יעד</th>
+                                    <th>סוכן</th>
                                     <th>תאריך התחלה</th>
                                     <th>תאריך סיום</th>
                                     <th>פרמיה</th>
-                                    <th>סטטוס</th>
                                 </tr>
                             </thead>
                             <tbody id="policiesBody">
-                                <tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div> טוען פוליסות...</div></td></tr>
+                                <tr><td colspan="6"><div class="loading-overlay"><div class="spinner"></div> טוען פוליסות...</div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -277,6 +279,6 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/policies.js?v=1"></script>
+    <script src="js/policies.js?v=2"></script>
 </body>
 </html>

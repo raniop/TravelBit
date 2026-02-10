@@ -1,4 +1,4 @@
-// Policies Search Page JS - v1
+// Policies Search Page JS - v2
 let allPolicies = [];
 let selectedPolicyIndex = null;
 
@@ -36,9 +36,7 @@ async function loadPolicies() {
         }
 
         const data = await res.json();
-        console.log('Policies data:', data);
-
-        allPolicies = Array.isArray(data) ? data : (data.policies || data.items || []);
+        allPolicies = Array.isArray(data) ? data : [];
         document.getElementById('totalCount').textContent = allPolicies.length + ' פוליסות';
         renderPoliciesTable(allPolicies);
     } catch (err) {
@@ -57,14 +55,18 @@ function searchPolicies() {
     }
 
     const filtered = allPolicies.filter(p => {
-        const searchFields = [
-            p.policyNumber, p.policyIndex, p.polisa, p.policyNum,
-            p.customerName, p.insuredName, p.name, p.fullName, p.firstName, p.lastName,
-            p.destination, p.destinationName, p.yead, p.azor,
-            p.id, p.customerId, p.taz
+        const fields = [
+            p.fullPolicyID,
+            p.policyIndex,
+            p.clientName,
+            p.agentName,
+            p.doketNumber,
+            p.payerTz,
+            p.payerFirstName,
+            p.payerLastaName
         ].filter(Boolean).map(v => String(v).toLowerCase());
 
-        return searchFields.some(f => f.includes(query));
+        return fields.some(f => f.includes(query));
     });
 
     document.getElementById('searchCount').textContent = filtered.length + ' תוצאות מתוך ' + allPolicies.length;
@@ -75,64 +77,33 @@ function searchPolicies() {
 function renderPoliciesTable(policies) {
     const tbody = document.getElementById('policiesBody');
     if (!policies || policies.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>לא נמצאו פוליסות</p></div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>לא נמצאו פוליסות</p></div></td></tr>';
         return;
     }
 
     tbody.innerHTML = policies.map(p => {
-        const policyNum = p.policyNumber || p.policyIndex || p.polisa || p.policyNum || p.id || '-';
-        const name = p.customerName || p.insuredName || p.name || p.fullName || [p.firstName, p.lastName].filter(Boolean).join(' ') || '-';
-        const dest = p.destination || p.destinationName || p.yead || p.azor || '-';
-        const startDate = formatDate(p.startDate || p.fromDate || p.beginDate || p.policyStartDate);
-        const endDate = formatDate(p.endDate || p.toDate || p.policyEndDate);
-        const premium = p.premium || p.totalPremium || p.amount || 0;
-        const status = getPolicyStatus(p);
-        const idx = p.policyIndex || p.policyNumber || p.polisa || p.id;
-
-        return `<tr onclick="selectPolicy('${esc(String(idx))}')" class="${selectedPolicyIndex === String(idx) ? 'selected' : ''}">
-            <td><strong>${esc(String(policyNum))}</strong></td>
-            <td>${esc(name)}</td>
-            <td class="td-destination">${esc(dest)}</td>
-            <td>${startDate}</td>
-            <td>${endDate}</td>
-            <td class="td-premium">$${formatNumber(premium)}</td>
-            <td>${status}</td>
+        const idx = p.policyIndex;
+        return `<tr onclick="selectPolicy(${idx}, this)" class="${selectedPolicyIndex === idx ? 'selected' : ''}">
+            <td><strong>${esc(p.fullPolicyID || String(p.policyIndex))}</strong></td>
+            <td>${esc(p.clientName || '-')}</td>
+            <td>${esc(p.agentName || '-')}</td>
+            <td>${formatDate(p.startDate)}</td>
+            <td>${formatDate(p.endDate)}</td>
+            <td class="td-premium">$${formatNumber(p.total)}</td>
         </tr>`;
     }).join('');
 }
 
-function getPolicyStatus(p) {
-    const statusVal = p.status || p.policyStatus || '';
-    const endDate = p.endDate || p.toDate || p.policyEndDate;
-
-    if (endDate) {
-        const end = new Date(endDate);
-        const now = new Date();
-        if (end < now) return '<span class="status-badge status-expired">פג תוקף</span>';
-        const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-        if (daysLeft <= 30) return '<span class="status-badge status-pending">עומד לפוג</span>';
-        return '<span class="status-badge status-active">פעיל</span>';
-    }
-
-    if (typeof statusVal === 'string') {
-        const s = statusVal.toLowerCase();
-        if (s.includes('active') || s.includes('פעיל')) return '<span class="status-badge status-active">פעיל</span>';
-        if (s.includes('expired') || s.includes('פג')) return '<span class="status-badge status-expired">פג תוקף</span>';
-    }
-
-    return '<span class="status-badge status-active">פעיל</span>';
-}
-
 // ==================== Policy Details ====================
-async function selectPolicy(policyIndex) {
-    if (!policyIndex || policyIndex === 'undefined') return;
+async function selectPolicy(policyIndex, rowEl) {
+    if (!policyIndex) return;
 
-    selectedPolicyIndex = String(policyIndex);
+    selectedPolicyIndex = policyIndex;
 
     // Highlight selected row
     const rows = document.querySelectorAll('.policies-table tbody tr');
     rows.forEach(r => r.classList.remove('selected'));
-    event.currentTarget.classList.add('selected');
+    if (rowEl) rowEl.classList.add('selected');
 
     // Show panel with loading
     const panel = document.getElementById('policyDetailsPanel');
@@ -147,164 +118,148 @@ async function selectPolicy(policyIndex) {
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
     try {
-        // Fetch policy details and customer details in parallel
-        const [policyRes, customersRes] = await Promise.all([
-            apiFetch('/dashboard/external/policies?policyIndex=' + encodeURIComponent(policyIndex)),
-            apiFetch('/dashboard/external/policy-details?policyIndex=' + encodeURIComponent(policyIndex))
-        ]);
-
-        let policyData = null;
-        let customersData = null;
-
-        if (policyRes && policyRes.ok) {
-            policyData = await policyRes.json();
-            console.log('Policy details:', policyData);
+        const res = await apiFetch('/dashboard/external/policies?policyIndex=' + policyIndex);
+        if (!res || !res.ok) {
+            body.innerHTML = '<div class="empty-msg"><p>שגיאה בטעינת פרטי הפוליסה</p></div>';
+            return;
         }
 
-        if (customersRes && customersRes.ok) {
-            customersData = await customersRes.json();
-            console.log('Customer details:', customersData);
-        }
-
-        renderPolicyDetails(policyData, customersData);
+        const data = await res.json();
+        console.log('Policy details:', data);
+        renderPolicyDetails(data);
     } catch (err) {
         console.error('Error loading policy details:', err);
         body.innerHTML = '<div class="empty-msg"><p>שגיאה בטעינת פרטי הפוליסה</p></div>';
     }
 }
 
-function renderPolicyDetails(policy, customers) {
+function renderPolicyDetails(p) {
     const body = document.getElementById('detailsBody');
-
-    if (!policy && !customers) {
+    if (!p) {
         body.innerHTML = '<div class="empty-msg"><p>לא נמצאו פרטים לפוליסה זו</p></div>';
         return;
     }
-
-    // Normalize policy data (could be object or array)
-    const p = Array.isArray(policy) ? policy[0] : policy;
-    const custs = Array.isArray(customers) ? customers : (customers ? [customers] : []);
 
     let html = '<div class="details-grid">';
 
     // === Policy Info Section ===
     html += '<div class="details-section">';
     html += '<h3><span class="icon">📋</span> פרטי פוליסה</h3>';
-    if (p) {
-        const fields = [
-            ['מספר פוליסה', p.policyNumber || p.policyIndex || p.polisa || p.id],
-            ['סוג ביטוח', p.policyType || p.insuranceType || p.type || p.productName],
-            ['יעד', p.destination || p.destinationName || p.yead || p.azor],
-            ['תאריך התחלה', formatDate(p.startDate || p.fromDate || p.beginDate || p.policyStartDate)],
-            ['תאריך סיום', formatDate(p.endDate || p.toDate || p.policyEndDate)],
-            ['פרמיה', p.premium || p.totalPremium ? '$' + formatNumber(p.premium || p.totalPremium) : null],
-            ['מספר נוסעים', p.passengersCount || p.numOfPassengers || p.travelers],
-            ['סוכן', p.agentName || p.agent],
-            ['מספר סוכן', p.agentId || p.agentNumber],
-            ['חברת ביטוח', p.insuranceCompany || p.company],
-            ['סטטוס', p.status || p.policyStatus],
-        ];
-
-        fields.forEach(([label, value]) => {
-            if (value !== null && value !== undefined && value !== '') {
-                html += `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${esc(String(value))}</span></div>`;
-            }
-        });
-    } else {
-        html += '<div class="empty-msg"><p>אין פרטי פוליסה זמינים</p></div>';
-    }
-    html += '</div>';
-
-    // === Customer/Insured Section ===
-    html += '<div class="details-section">';
-    html += '<h3><span class="icon">👤</span> פרטי מבוטחים</h3>';
-    if (custs.length > 0) {
-        html += '<table class="customers-table"><thead><tr>';
-        // Determine columns from first customer
-        const firstCust = custs[0];
-        const custColumns = detectCustomerColumns(firstCust);
-        custColumns.forEach(col => {
-            html += `<th>${col.label}</th>`;
-        });
-        html += '</tr></thead><tbody>';
-
-        custs.forEach(c => {
-            html += '<tr>';
-            custColumns.forEach(col => {
-                let val = c[col.key] || '';
-                if (col.isDate && val) val = formatDate(val);
-                html += `<td>${esc(String(val))}</td>`;
-            });
-            html += '</tr>';
-        });
-
-        html += '</tbody></table>';
-    } else {
-        html += '<div class="empty-msg"><p>אין פרטי מבוטחים זמינים</p></div>';
-    }
-    html += '</div>';
-
-    html += '</div>'; // close details-grid
-
-    // === Additional raw data for debugging ===
-    if (p) {
-        const extraKeys = Object.keys(p).filter(k => {
-            const skip = ['policyNumber','policyIndex','polisa','id','policyType','insuranceType','type','productName',
-                'destination','destinationName','yead','azor','startDate','fromDate','beginDate','policyStartDate',
-                'endDate','toDate','policyEndDate','premium','totalPremium','passengersCount','numOfPassengers',
-                'travelers','agentName','agent','agentId','agentNumber','insuranceCompany','company','status','policyStatus'];
-            return !skip.includes(k) && p[k] !== null && p[k] !== undefined && p[k] !== '';
-        });
-
-        if (extraKeys.length > 0) {
-            html += '<div class="details-section" style="margin-top: 16px; grid-column: 1 / -1;">';
-            html += '<h3><span class="icon">📊</span> נתונים נוספים</h3>';
-            extraKeys.forEach(k => {
-                const val = typeof p[k] === 'object' ? JSON.stringify(p[k]) : String(p[k]);
-                html += `<div class="detail-row"><span class="detail-label">${esc(k)}</span><span class="detail-value">${esc(val)}</span></div>`;
-            });
-            html += '</div>';
-        }
-    }
-
-    body.innerHTML = html;
-}
-
-function detectCustomerColumns(customer) {
-    if (!customer) return [];
-    const possibleColumns = [
-        { key: 'firstName', label: 'שם פרטי', altKeys: ['name', 'custFirstName'] },
-        { key: 'lastName', label: 'שם משפחה', altKeys: ['custLastName', 'familyName'] },
-        { key: 'fullName', label: 'שם מלא', altKeys: ['customerName', 'insuredName'] },
-        { key: 'idNumber', label: 'ת.ז', altKeys: ['taz', 'customerId', 'passportNumber', 'id'] },
-        { key: 'birthDate', label: 'תאריך לידה', altKeys: ['dateOfBirth', 'dob'], isDate: true },
-        { key: 'phone', label: 'טלפון', altKeys: ['phoneNumber', 'mobile', 'tel'] },
-        { key: 'email', label: 'אימייל', altKeys: ['emailAddress', 'mail'] },
-        { key: 'age', label: 'גיל', altKeys: ['customerAge'] },
-        { key: 'riderName', label: 'ריידר', altKeys: ['rider', 'riderType', 'coverageName'] },
-        { key: 'riderPremium', label: 'פרמיה', altKeys: ['premium', 'amount'] },
+    const policyFields = [
+        ['מספר פוליסה', p.fullPolicyID],
+        ['אינדקס', p.policyIndex],
+        ['מוצר', p.branchName],
+        ['אזור', p.areaName],
+        ['תאריך הנפקה', formatDate(p.issueDate)],
+        ['תאריך התחלה', formatDate(p.startDate)],
+        ['תאריך סיום', formatDate(p.endDate)],
+        ['סה"כ ימים', p.totalDays],
+        ['מספר מבוטחים', p.customerCount],
+        ['דוכת', p.doketNumber],
     ];
+    policyFields.forEach(([label, value]) => {
+        if (value !== null && value !== undefined && value !== '' && value !== 0) {
+            html += `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${esc(String(value))}</span></div>`;
+        }
+    });
+    html += '</div>';
 
-    const columns = [];
-    const keys = Object.keys(customer);
-
-    possibleColumns.forEach(col => {
-        const foundKey = [col.key, ...(col.altKeys || [])].find(k => keys.includes(k) && customer[k] !== null && customer[k] !== undefined);
-        if (foundKey) {
-            columns.push({ key: foundKey, label: col.label, isDate: col.isDate || false });
+    // === Financial Section ===
+    html += '<div class="details-section">';
+    html += '<h3><span class="icon">💰</span> נתונים כספיים</h3>';
+    const finFields = [
+        ['סה"כ פרמיה', '$' + formatNumber(p.total)],
+        ['פרמיה בסיסית', p.basePolicyTotal ? '$' + formatNumber(p.basePolicyTotal) : null],
+        ['פרמיית ריידרים', p.riderTotal ? '$' + formatNumber(p.riderTotal) : null],
+        ['עמלת חתם', p.hatamTotal ? '$' + formatNumber(p.hatamTotal) : null],
+    ];
+    finFields.forEach(([label, value]) => {
+        if (value !== null && value !== undefined) {
+            html += `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value premium">${value}</span></div>`;
         }
     });
 
-    // If no known columns found, show all keys
-    if (columns.length === 0) {
-        keys.forEach(k => {
-            if (customer[k] !== null && customer[k] !== undefined && typeof customer[k] !== 'object') {
-                columns.push({ key: k, label: k, isDate: false });
-            }
+    // Agent info
+    const agentFields = [
+        ['סוכן', p.agentName],
+        ['קוד סוכן', p.agentCode || null],
+        ['סניף סוכן', p.snifAgentName],
+        ['מזהה הראל', p.harelAgentId],
+    ];
+    agentFields.forEach(([label, value]) => {
+        if (value !== null && value !== undefined && value !== '' && value !== 0) {
+            html += `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${esc(String(value))}</span></div>`;
+        }
+    });
+    html += '</div>';
+
+    // === Payer Section ===
+    if (p.payerFirstName || p.payerLastaName || p.payerTz) {
+        html += '<div class="details-section">';
+        html += '<h3><span class="icon">💳</span> פרטי משלם</h3>';
+        const payerFields = [
+            ['שם', [p.payerFirstName, p.payerLastaName].filter(Boolean).join(' ')],
+            ['ת.ז', p.payerTz],
+        ];
+        payerFields.forEach(([label, value]) => {
+            if (value) html += `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${esc(value)}</span></div>`;
         });
+        html += '</div>';
     }
 
-    return columns;
+    // === Customers / Insured ===
+    const custs = p.customers || [];
+    if (custs.length > 0) {
+        html += '<div class="details-section" style="grid-column: 1 / -1;">';
+        html += '<h3><span class="icon">👥</span> מבוטחים (' + custs.length + ')</h3>';
+
+        custs.forEach((c, i) => {
+            const name = [c.firstName, c.hebLname].filter(Boolean).join(' ') || c.clientName || '-';
+            const engName = [c.engFname, c.engLname].filter(Boolean).join(' ');
+
+            html += '<div style="' + (i > 0 ? 'margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-200);' : '') + '">';
+            html += '<div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--dark);">' + esc(name);
+            if (engName) html += ' <span style="color:var(--gray-400);font-weight:400;">(' + esc(engName) + ')</span>';
+            html += '</div>';
+
+            const custFields = [
+                ['ת.ז / דרכון', c.personId],
+                ['תאריך לידה', formatDate(c.birthDate)],
+                ['טלפון', c.phone || c.mobile],
+                ['אימייל', c.email],
+                ['כתובת', c.address],
+            ];
+            custFields.forEach(([label, value]) => {
+                if (value && value !== '-') {
+                    html += `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${esc(String(value))}</span></div>`;
+                }
+            });
+
+            // Riders for this customer
+            if (c.riders && c.riders.length > 0) {
+                html += '<div style="margin-top:10px;">';
+                html += '<div style="font-weight:600;font-size:12px;color:var(--gray-500);margin-bottom:6px;">כיסויים:</div>';
+                html += '<table class="customers-table"><thead><tr><th>כיסוי</th><th>תאריך התחלה</th><th>תאריך סיום</th><th>פרמיה</th></tr></thead><tbody>';
+                c.riders.forEach(r => {
+                    html += `<tr>
+                        <td>${esc(r.riderName)}</td>
+                        <td>${formatDate(r.startDate)}</td>
+                        <td>${formatDate(r.endDate)}</td>
+                        <td>$${formatNumber(r.riderTotal)}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                html += '</div>';
+            }
+
+            html += '</div>';
+        });
+
+        html += '</div>';
+    }
+
+    html += '</div>'; // close details-grid
+    body.innerHTML = html;
 }
 
 function closePolicyDetails() {
@@ -312,7 +267,6 @@ function closePolicyDetails() {
     panel.classList.remove('show');
     selectedPolicyIndex = null;
 
-    // Remove selection from rows
     const rows = document.querySelectorAll('.policies-table tbody tr');
     rows.forEach(r => r.classList.remove('selected'));
 }
