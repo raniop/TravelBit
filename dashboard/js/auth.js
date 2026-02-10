@@ -11,13 +11,30 @@ function getDefaultDashboard(user) {
 }
 
 // Check if already logged in
-(function() {
+(async function() {
     const token = localStorage.getItem('dash_token');
     const currentPage = window.location.pathname;
 
     if (token && currentPage.includes('login')) {
         let user = null;
         try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
+
+        // If user data is missing companyName, refresh from server
+        if (user && !user.companyName) {
+            try {
+                const res = await fetch(`${API_BASE}/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.user && data.user.companyName) {
+                        user.companyName = data.user.companyName;
+                        localStorage.setItem('dash_user', JSON.stringify(user));
+                    }
+                }
+            } catch(_) {}
+        }
+
         window.location.href = getDefaultDashboard(user);
         return;
     }
@@ -25,6 +42,35 @@ function getDefaultDashboard(user) {
     if (!token && !currentPage.includes('login')) {
         window.location.href = '/dashboard/login.html';
         return;
+    }
+
+    // If logged in and on a dashboard page, ensure companyName is synced
+    // and redirect to correct dashboard if needed
+    if (token && !currentPage.includes('login')) {
+        let user = null;
+        try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
+
+        if (user && !user.companyName) {
+            try {
+                const res = await fetch(`${API_BASE}/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.user && data.user.companyName) {
+                        user.companyName = data.user.companyName;
+                        localStorage.setItem('dash_user', JSON.stringify(user));
+
+                        // If user should be on a different dashboard, redirect
+                        const correctPage = getDefaultDashboard(user);
+                        if (!currentPage.includes('bituhofir') && correctPage.includes('bituhofir')) {
+                            window.location.href = correctPage;
+                            return;
+                        }
+                    }
+                }
+            } catch(_) {}
+        }
     }
 })();
 

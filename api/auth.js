@@ -86,9 +86,27 @@ module.exports = async function handler(req, res) {
 
     // === ME ===
     if (action === 'me') {
+        await connectDB();
         const user = await verifyAuth(req);
         if (!user) return res.status(401).json({ message: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05d2\u05d9\u05e9\u05d4.' });
-        return res.json({ user });
+
+        // Fetch company name
+        let companyName = null;
+        if (user.companyId) {
+            const company = await Company.findById(user.companyId).select('name').lean();
+            if (company) companyName = company.name;
+        }
+
+        return res.json({
+            user: {
+                id: user._id,
+                username: user.username,
+                name: user.name,
+                role: user.role,
+                companyId: user.companyId,
+                companyName: companyName
+            }
+        });
     }
 
     return res.status(404).json({ message: 'Not found' });
