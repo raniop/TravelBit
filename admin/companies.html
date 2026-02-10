@@ -225,6 +225,43 @@
         </div>
     </div>
 
+    <!-- Edit User Modal -->
+    <div class="modal-overlay" id="editUserModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>עריכת משתמש</h2>
+                <button class="modal-close" onclick="closeEditUserModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    <div class="form-group">
+                        <label>שם מלא</label>
+                        <input type="text" id="editUserName" placeholder="שם מלא">
+                    </div>
+                    <div class="form-group">
+                        <label>אימייל</label>
+                        <input type="email" id="editUserEmail" placeholder="email@example.com" style="direction: ltr; text-align: left;">
+                    </div>
+                    <div class="form-group">
+                        <label>שם משתמש</label>
+                        <input type="text" id="editUserUsername" disabled style="direction: ltr; text-align: left; background: var(--gray-100); color: var(--gray-400);">
+                    </div>
+                    <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--gray-200);">
+                    <div class="form-group">
+                        <label>סיסמה חדשה <span style="color:var(--gray-400);font-weight:400;">(השאר ריק אם לא רוצה לשנות)</span></label>
+                        <input type="text" id="editUserPassword" placeholder="לפחות 6 תווים" style="direction: ltr; text-align: left;">
+                    </div>
+                    <div class="login-error" id="editUserError"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-sm" onclick="submitEditUser()">שמור שינויים</button>
+                <button class="btn btn-secondary btn-sm" onclick="closeEditUserModal()">ביטול</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Import CSV Modal -->
     <div class="modal-overlay" id="importModal">
         <div class="modal">
