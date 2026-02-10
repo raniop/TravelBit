@@ -9,6 +9,10 @@ const userSchema = new mongoose.Schema({
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null },
     name: { type: String, required: true },
     email: { type: String, trim: true, lowercase: true },
+    phone: { type: String, trim: true },
+    otpCode: { type: String, default: null },
+    otpExpiresAt: { type: Date, default: null },
+    otpAttempts: { type: Number, default: 0 },
     lastLogin: { type: Date, default: null },
     isActive: { type: Boolean, default: true }
 }, { timestamps: true });

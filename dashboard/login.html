@@ -9,6 +9,46 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+    <style>
+        /* OTP Step Styles */
+        #otpStep { display: none; }
+        .otp-info {
+            text-align: center; margin-bottom: 20px; color: var(--gray-500); font-size: 14px; line-height: 1.6;
+        }
+        .otp-info .phone-mask {
+            font-weight: 700; color: var(--gray-700); direction: ltr; display: inline-block;
+        }
+        .otp-input-wrap {
+            display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; direction: ltr;
+        }
+        .otp-input-wrap input {
+            width: 46px; height: 54px; text-align: center; font-size: 22px; font-weight: 700;
+            border: 2px solid var(--gray-200); border-radius: 10px; outline: none;
+            font-family: 'Heebo', sans-serif; transition: border-color 0.2s;
+        }
+        .otp-input-wrap input:focus {
+            border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,107,44,0.15);
+        }
+        .otp-actions {
+            display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 13px;
+        }
+        .otp-actions .resend-btn {
+            background: none; border: none; color: var(--primary); cursor: pointer;
+            font-family: 'Heebo', sans-serif; font-size: 13px; font-weight: 500;
+            padding: 0; text-decoration: underline;
+        }
+        .otp-actions .resend-btn:disabled {
+            color: var(--gray-400); text-decoration: none; cursor: default;
+        }
+        .otp-actions .back-btn {
+            background: none; border: none; color: var(--gray-500); cursor: pointer;
+            font-family: 'Heebo', sans-serif; font-size: 13px;
+        }
+        .otp-timer { color: var(--gray-400); font-size: 12px; text-align: center; margin-top: 8px; }
+        .otp-lock-icon {
+            text-align: center; margin-bottom: 12px; font-size: 32px;
+        }
+    </style>
 </head>
 <body class="login-page">
     <div class="login-card">
@@ -20,22 +60,56 @@
         </div>
         <p class="login-subtitle">דשבורד חברה</p>
 
-        <h2>כניסה לדשבורד</h2>
-        <p class="login-subtitle">הזן את פרטי ההתחברות שקיבלת</p>
+        <!-- Step 1: Username + Password -->
+        <div id="loginStep">
+            <h2>כניסה לדשבורד</h2>
+            <p class="login-subtitle">הזן את פרטי ההתחברות שקיבלת</p>
 
-        <div class="login-error" id="loginError"></div>
+            <div class="login-error" id="loginError"></div>
 
-        <form id="loginForm">
-            <div class="form-group">
-                <label for="username">שם משתמש</label>
-                <input type="text" id="username" name="username" required autocomplete="username" placeholder="הזן שם משתמש">
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">שם משתמש</label>
+                    <input type="text" id="username" name="username" required autocomplete="username" placeholder="הזן שם משתמש">
+                </div>
+                <div class="form-group">
+                    <label for="password">סיסמה</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="הזן סיסמה">
+                </div>
+                <button type="submit" class="btn btn-primary" id="loginBtn">כניסה</button>
+            </form>
+        </div>
+
+        <!-- Step 2: OTP Verification -->
+        <div id="otpStep">
+            <div class="otp-lock-icon">🔐</div>
+            <h2>אימות דו-שלבי</h2>
+            <div class="otp-info">
+                קוד אימות נשלח לטלפון<br>
+                <span class="phone-mask" id="otpPhoneMask">****1234</span>
             </div>
-            <div class="form-group">
-                <label for="password">סיסמה</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="הזן סיסמה">
+
+            <div class="login-error" id="otpError"></div>
+
+            <form id="otpForm">
+                <div class="otp-input-wrap">
+                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="0" autofocus>
+                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="1">
+                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="2">
+                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="3">
+                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="4">
+                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" data-index="5">
+                </div>
+                <button type="submit" class="btn btn-primary" id="otpBtn">אימות</button>
+            </form>
+
+            <div class="otp-timer" id="otpTimer"></div>
+
+            <div class="otp-actions">
+                <button type="button" class="back-btn" id="otpBackBtn">חזרה להתחברות</button>
+                <button type="button" class="resend-btn" id="otpResendBtn" disabled>שלח קוד חדש</button>
             </div>
-            <button type="submit" class="btn btn-primary" id="loginBtn">כניסה</button>
-        </form>
+        </div>
 
         <p style="margin-top: 24px; font-size: 13px; color: var(--gray-400);">
             <a href="/" style="color: var(--primary); text-decoration: none;">חזרה לאתר הראשי</a>

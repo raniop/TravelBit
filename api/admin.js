@@ -223,7 +223,7 @@ module.exports = async function handler(req, res) {
         // POST - Create user for existing company
         if (req.method === 'POST') {
             try {
-                const { companyId, username, password, name, email } = req.body;
+                const { companyId, username, password, name, email, phone } = req.body;
                 if (!companyId || !username || !password || !name) {
                     return res.status(400).json({ message: 'נא למלא את כל השדות הנדרשים.' });
                 }
@@ -236,12 +236,12 @@ module.exports = async function handler(req, res) {
 
                 const newUser = await User.create({
                     username: username.toLowerCase(), password, role: 'company',
-                    companyId: company._id, name, email: email || ''
+                    companyId: company._id, name, email: email || '', phone: phone || ''
                 });
 
                 return res.status(201).json({
                     message: 'המשתמש נוצר בהצלחה!',
-                    user: { id: newUser._id, username: newUser.username, name: newUser.name, companyId: newUser.companyId }
+                    user: { id: newUser._id, username: newUser.username, name: newUser.name, phone: newUser.phone, companyId: newUser.companyId }
                 });
             } catch (error) {
                 console.error('Create user error:', error);
@@ -252,7 +252,7 @@ module.exports = async function handler(req, res) {
         // PUT - Update user (password reset, toggle active, edit name/email)
         if (req.method === 'PUT') {
             try {
-                const { userId, password, isActive, name, email } = req.body;
+                const { userId, password, isActive, name, email, phone } = req.body;
                 if (!userId) return res.status(400).json({ message: 'חסר מזהה משתמש.' });
 
                 const targetUser = await User.findById(userId);
@@ -265,6 +265,7 @@ module.exports = async function handler(req, res) {
                 if (isActive !== undefined) targetUser.isActive = isActive;
                 if (name !== undefined) targetUser.name = name;
                 if (email !== undefined) targetUser.email = email;
+                if (phone !== undefined) targetUser.phone = phone;
 
                 await targetUser.save();
                 return res.json({ message: 'המשתמש עודכן בהצלחה!' });

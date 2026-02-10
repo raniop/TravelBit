@@ -123,7 +123,11 @@ function isPageAllowed(user, currentPage) {
     }
 })();
 
-// Login form handler
+// ========== OTP Login Flow ==========
+let _otpToken = null; // stored in memory only, not localStorage
+let _otpResendTimer = null;
+
+// Login form handler (Step 1)
 const loginForm = document.getElementById('loginForm');
 if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
@@ -157,14 +161,15 @@ if (loginForm) {
                 throw new Error(data.message || 'שגיאה בהתחברות');
             }
 
-            if (data.user.role !== 'company') {
-                throw new Error('חשבון זה אינו חשבון חברה.');
+            // OTP required — show Step 2
+            if (data.otpRequired) {
+                _otpToken = data.otpToken;
+                showOtpStep(data.maskedPhone);
+                return;
             }
 
-            localStorage.setItem('dash_token', data.accessToken);
-            localStorage.setItem('dash_refresh', data.refreshToken);
-            localStorage.setItem('dash_user', JSON.stringify(data.user));
-            window.location.href = getDefaultDashboard(data.user);
+            // Admin or direct login — save tokens
+            completeLogin(data);
         } catch (err) {
             errorEl.textContent = err.message;
             errorEl.classList.add('show');
@@ -173,6 +178,178 @@ if (loginForm) {
             btn.textContent = 'כניסה';
         }
     });
+}
+
+// OTP form handler (Step 2)
+const otpForm = document.getElementById('otpForm');
+if (otpForm) {
+    otpForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorEl = document.getElementById('otpError');
+        const btn = document.getElementById('otpBtn');
+
+        const code = getOtpValue();
+        if (code.length !== 6) {
+            errorEl.textContent = 'נא להזין קוד בן 6 ספרות.';
+            errorEl.classList.add('show');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'מאמת...';
+        errorEl.classList.remove('show');
+
+        try {
+            const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ otpToken: _otpToken, otpCode: code })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || 'שגיאה באימות.');
+            }
+
+            completeLogin(data);
+        } catch (err) {
+            errorEl.textContent = err.message;
+            errorEl.classList.add('show');
+            clearOtpInputs();
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'אימות';
+        }
+    });
+
+    // OTP digit inputs — auto-advance + paste support
+    const digits = otpForm.querySelectorAll('.otp-digit');
+    digits.forEach((input, idx) => {
+        input.addEventListener('input', (e) => {
+            const val = e.target.value.replace(/[^0-9]/g, '');
+            e.target.value = val.slice(0, 1);
+            if (val && idx < 5) digits[idx + 1].focus();
+            // Auto-submit when all 6 digits filled
+            if (getOtpValue().length === 6) otpForm.requestSubmit();
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+                digits[idx - 1].focus();
+            }
+        });
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasted = (e.clipboardData.getData('text') || '').replace(/[^0-9]/g, '').slice(0, 6);
+            pasted.split('').forEach((ch, i) => {
+                if (digits[i]) digits[i].value = ch;
+            });
+            if (pasted.length > 0) digits[Math.min(pasted.length, 5)].focus();
+            if (pasted.length === 6) otpForm.requestSubmit();
+        });
+    });
+}
+
+// Back button
+const otpBackBtn = document.getElementById('otpBackBtn');
+if (otpBackBtn) {
+    otpBackBtn.addEventListener('click', () => {
+        _otpToken = null;
+        showLoginStep();
+    });
+}
+
+// Resend button
+const otpResendBtn = document.getElementById('otpResendBtn');
+if (otpResendBtn) {
+    otpResendBtn.addEventListener('click', async () => {
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value;
+        if (!username || !password) { showLoginStep(); return; }
+
+        otpResendBtn.disabled = true;
+        const errorEl = document.getElementById('otpError');
+        errorEl.classList.remove('show');
+
+        try {
+            const res = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+            if (data.otpRequired) {
+                _otpToken = data.otpToken;
+                clearOtpInputs();
+                startResendTimer();
+            }
+        } catch (err) {
+            errorEl.textContent = err.message;
+            errorEl.classList.add('show');
+        }
+    });
+}
+
+function showOtpStep(maskedPhone) {
+    const loginStep = document.getElementById('loginStep');
+    const otpStep = document.getElementById('otpStep');
+    const phoneMask = document.getElementById('otpPhoneMask');
+    if (loginStep) loginStep.style.display = 'none';
+    if (otpStep) otpStep.style.display = 'block';
+    if (phoneMask && maskedPhone) phoneMask.textContent = maskedPhone;
+    clearOtpInputs();
+    startResendTimer();
+    // Focus first digit
+    const firstDigit = document.querySelector('.otp-digit[data-index="0"]');
+    if (firstDigit) setTimeout(() => firstDigit.focus(), 100);
+}
+
+function showLoginStep() {
+    const loginStep = document.getElementById('loginStep');
+    const otpStep = document.getElementById('otpStep');
+    if (loginStep) loginStep.style.display = 'block';
+    if (otpStep) otpStep.style.display = 'none';
+    if (_otpResendTimer) { clearInterval(_otpResendTimer); _otpResendTimer = null; }
+}
+
+function getOtpValue() {
+    const digits = document.querySelectorAll('.otp-digit');
+    return Array.from(digits).map(d => d.value).join('');
+}
+
+function clearOtpInputs() {
+    document.querySelectorAll('.otp-digit').forEach(d => { d.value = ''; });
+}
+
+function startResendTimer() {
+    const resendBtn = document.getElementById('otpResendBtn');
+    const timerEl = document.getElementById('otpTimer');
+    if (_otpResendTimer) clearInterval(_otpResendTimer);
+
+    let seconds = 60;
+    if (resendBtn) resendBtn.disabled = true;
+    if (timerEl) timerEl.textContent = `שליחה חוזרת אפשרית בעוד ${seconds} שניות`;
+
+    _otpResendTimer = setInterval(() => {
+        seconds--;
+        if (timerEl) timerEl.textContent = seconds > 0 ? `שליחה חוזרת אפשרית בעוד ${seconds} שניות` : '';
+        if (seconds <= 0) {
+            clearInterval(_otpResendTimer);
+            _otpResendTimer = null;
+            if (resendBtn) resendBtn.disabled = false;
+        }
+    }, 1000);
+}
+
+function completeLogin(data) {
+    if (data.user && data.user.role !== 'admin' && data.user.role !== 'company') {
+        throw new Error('חשבון זה אינו חשבון חברה.');
+    }
+    localStorage.setItem('dash_token', data.accessToken);
+    localStorage.setItem('dash_refresh', data.refreshToken);
+    localStorage.setItem('dash_user', JSON.stringify(data.user));
+    window.location.href = getDefaultDashboard(data.user);
 }
 
 function getToken() {

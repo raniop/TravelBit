@@ -286,7 +286,7 @@ function renderCompanyUsers(users) {
                 <tr>
                     <th>שם</th>
                     <th>שם משתמש</th>
-                    <th>אימייל</th>
+                    <th>טלפון</th>
                     <th>התחברות אחרונה</th>
                     <th>סטטוס</th>
                     <th>פעולות</th>
@@ -294,10 +294,10 @@ function renderCompanyUsers(users) {
             </thead>
             <tbody>
                 ${users.map(u => `
-                    <tr style="cursor:pointer;" onclick="openEditUserModal('${u._id}','${escapeHtml(u.name)}','${escapeHtml(u.username)}','${escapeHtml(u.email || '')}')">
+                    <tr style="cursor:pointer;" onclick="openEditUserModal('${u._id}','${escapeHtml(u.name)}','${escapeHtml(u.username)}','${escapeHtml(u.email || '')}','${escapeHtml(u.phone || '')}')">
                         <td><strong style="color:var(--primary);border-bottom:1px dashed var(--gray-300);">${escapeHtml(u.name)}</strong></td>
                         <td style="direction:ltr;text-align:right;">${escapeHtml(u.username)}</td>
-                        <td>${escapeHtml(u.email || '-')}</td>
+                        <td style="direction:ltr;text-align:right;">${escapeHtml(u.phone || '-')}</td>
                         <td>${u.lastLogin ? new Date(u.lastLogin).toLocaleString('he-IL') : 'אף פעם'}</td>
                         <td><span class="badge ${u.isActive ? 'badge-active' : 'badge-cancelled'}">${u.isActive ? 'פעיל' : 'מושבת'}</span></td>
                         <td>
@@ -413,12 +413,13 @@ async function submitAddUser() {
 }
 
 // ==================== Edit User Modal ====================
-function openEditUserModal(userId, name, username, email) {
+function openEditUserModal(userId, name, username, email, phone) {
     document.getElementById('editUserModal').classList.add('show');
     document.getElementById('editUserId').value = userId;
     document.getElementById('editUserName').value = name;
     document.getElementById('editUserUsername').value = username;
     document.getElementById('editUserEmail').value = email;
+    document.getElementById('editUserPhone').value = phone || '';
     document.getElementById('editUserPassword').value = '';
     document.getElementById('editUserError').classList.remove('show');
 }
@@ -432,6 +433,7 @@ async function submitEditUser() {
     const userId = document.getElementById('editUserId').value;
     const name = document.getElementById('editUserName').value.trim();
     const email = document.getElementById('editUserEmail').value.trim();
+    const phone = document.getElementById('editUserPhone').value.trim();
     const password = document.getElementById('editUserPassword').value;
 
     if (!name) {
@@ -446,7 +448,7 @@ async function submitEditUser() {
         return;
     }
 
-    const body = { userId, name, email };
+    const body = { userId, name, email, phone };
     if (password) body.password = password;
 
     try {
