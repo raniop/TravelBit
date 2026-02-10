@@ -154,6 +154,43 @@
         </div>
     </div>
 
+    <!-- Add User Modal -->
+    <div class="modal-overlay" id="addUserModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>הוספת משתמש לחברה</h2>
+                <button class="modal-close" onclick="closeAddUserModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 14px; color: var(--gray-500); margin-bottom: 12px;">חברה: <strong id="addUserCompanyName"></strong></p>
+                <form id="addUserForm">
+                    <input type="hidden" name="companyId" id="addUserCompanyId">
+                    <div class="form-group">
+                        <label>שם מלא *</label>
+                        <input type="text" name="name" required placeholder="לדוגמה: ישראל ישראלי">
+                    </div>
+                    <div class="form-group">
+                        <label>אימייל</label>
+                        <input type="email" name="email" placeholder="email@example.com" style="direction: ltr; text-align: left;">
+                    </div>
+                    <div class="form-group">
+                        <label>שם משתמש *</label>
+                        <input type="text" name="username" required placeholder="לדוגמה: israel" style="direction: ltr; text-align: left;">
+                    </div>
+                    <div class="form-group">
+                        <label>סיסמה *</label>
+                        <input type="text" name="password" required placeholder="לפחות 6 תווים" style="direction: ltr; text-align: left;">
+                    </div>
+                    <div class="login-error" id="addUserError"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-sm" onclick="submitAddUser()">יצירת משתמש</button>
+                <button class="btn btn-secondary btn-sm" onclick="closeAddUserModal()">ביטול</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Import CSV Modal -->
     <div class="modal-overlay" id="importModal">
         <div class="modal">

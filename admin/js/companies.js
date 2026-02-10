@@ -78,7 +78,10 @@ function renderCompanies(companies) {
             <td>${c.totalTrips || 0}</td>
             <td><span class="badge ${c.isActive ? 'badge-active' : 'badge-cancelled'}">${c.isActive ? 'פעיל' : 'מושבת'}</span></td>
             <td>
-                <div style="display:flex; gap:6px;">
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button class="btn btn-secondary btn-sm" onclick="openAddUserModal('${c._id}', '${escapeHtml(c.name)}')" title="הוסף משתמש">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                    </button>
                     <button class="btn btn-secondary btn-sm" onclick="openImportModal('${c._id}')" title="ייבוא נסיעות">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     </button>
@@ -165,6 +168,57 @@ async function toggleCompany(id, isActive) {
         loadCompanies();
     } catch (err) {
         console.error('Toggle company error:', err);
+    }
+}
+
+// Add User Modal
+function openAddUserModal(companyId, companyName) {
+    document.getElementById('addUserModal').classList.add('show');
+    document.getElementById('addUserForm').reset();
+    document.getElementById('addUserError').classList.remove('show');
+    document.getElementById('addUserCompanyId').value = companyId;
+    document.getElementById('addUserCompanyName').textContent = companyName;
+}
+
+function closeAddUserModal() {
+    document.getElementById('addUserModal').classList.remove('show');
+}
+
+async function submitAddUser() {
+    const form = document.getElementById('addUserForm');
+    const errorEl = document.getElementById('addUserError');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    if (!data.name || !data.username || !data.password) {
+        errorEl.textContent = 'נא למלא שם מלא, שם משתמש וסיסמה.';
+        errorEl.classList.add('show');
+        return;
+    }
+
+    if (data.password.length < 6) {
+        errorEl.textContent = 'הסיסמה חייבת להכיל לפחות 6 תווים.';
+        errorEl.classList.add('show');
+        return;
+    }
+
+    try {
+        const res = await apiFetch('/admin/users', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+            throw new Error(result.message);
+        }
+
+        closeAddUserModal();
+        alert(`המשתמש נוצר בהצלחה!\n\nשם: ${data.name}\nשם משתמש: ${data.username}\nסיסמה: ${data.password}`);
+    } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.add('show');
     }
 }
 
