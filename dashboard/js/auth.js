@@ -34,8 +34,8 @@ function isPageAllowed(user, currentPage) {
         let user = null;
         try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
 
-        // If user data is missing companyName or dashboardModules, refresh from server
-        if (user && (!user.companyName || !user.dashboardModules)) {
+        // Always refresh user data from server to get latest dashboardModules
+        if (user) {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -72,8 +72,8 @@ function isPageAllowed(user, currentPage) {
             return;
         }
 
-        // Background sync companyName + dashboardModules for sidebar display
-        if (user && (!user.companyName || !user.dashboardModules)) {
+        // Always sync user data from server to get latest dashboardModules
+        if (user) {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -85,6 +85,13 @@ function isPageAllowed(user, currentPage) {
                         if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
                         if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
                         localStorage.setItem('dash_user', JSON.stringify(user));
+                        // Re-check access after sync - redirect if no longer allowed
+                        if (!isPageAllowed(user, currentPage)) {
+                            window.location.href = getDefaultDashboard(user);
+                            return;
+                        }
+                        // Update sidebar visibility with fresh data
+                        updateSidebarVisibility();
                     }
                 }
             } catch(_) {}
@@ -180,11 +187,11 @@ async function apiFetch(url, options = {}) {
     return res;
 }
 
-// Sync companyName + dashboardModules from server if missing in localStorage
+// Sync user data from server (companyName, dashboardModules, hasBituhOfir)
 // Returns the (possibly updated) user object
 async function syncCompanyName() {
     let user = getUser();
-    if (!user || (user.companyName && user.dashboardModules)) return user;
+    if (!user) return user;
 
     try {
         const token = getToken();
