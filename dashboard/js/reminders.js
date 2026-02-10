@@ -133,7 +133,7 @@ function handleEmailDrop(e) {
     const html = e.dataTransfer.getData('text/html') || '';
 
     if (text || html) {
-        const extracted = extractEmailData(text || html);
+        const extracted = extractEmailDataEnhanced(text, html);
         navigateToDetailWithEmail(extracted);
         return;
     }
@@ -142,41 +142,29 @@ function handleEmailDrop(e) {
     navigateToDetailWithEmail({ source: 'empty', notes: '' });
 }
 
-function extractEmailData(text) {
-    const data = { source: 'text', notes: text.substring(0, 500) };
-
-    // Try to extract phone number (Israeli format)
-    const phoneMatch = text.match(/0[2-9]\d[\s-]?\d{3}[\s-]?\d{4}|0[2-9]\d{7,8}/);
-    if (phoneMatch) data.phone = phoneMatch[0].replace(/[\s-]/g, '');
-
-    // Try to extract ID number (9 digits)
-    const idMatch = text.match(/\b\d{9}\b/);
-    if (idMatch && idMatch[0] !== (data.phone || '')) data.idNumber = idMatch[0];
-
-    // Try to extract email address
-    const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/);
-    if (emailMatch) data.email = emailMatch[0];
-
-    // Try to extract amount (number with ₪ or NIS or ש"ח)
-    const amountMatch = text.match(/(?:₪|NIS|ש"ח)\s*[\d,]+\.?\d*|\d[\d,]+\.?\d*\s*(?:₪|NIS|ש"ח)/);
-    if (amountMatch) {
-        data.amount = parseFloat(amountMatch[0].replace(/[^\d.]/g, ''));
-    }
-
-    return data;
-}
-
 function navigateToDetailWithEmail(emailData) {
     // Store in sessionStorage for the detail page to pick up
     sessionStorage.setItem('emailDraft', JSON.stringify(emailData));
 
-    // Navigate to first available type
+    // Smart routing: use detected type if available and allowed
     const user = getUser();
     const rp = user ? (user.reminderPages || {}) : {};
-    let targetType = 'agentAppointment';
-    for (const key of Object.keys(REMINDER_TYPES)) {
-        if (rp[key] !== false) { targetType = key; break; }
+
+    let targetType = null;
+
+    // If type was auto-detected, use it (if the page is enabled)
+    if (emailData.detectedType && rp[emailData.detectedType] !== false) {
+        targetType = emailData.detectedType;
     }
+
+    // Fallback: first available type
+    if (!targetType) {
+        for (const key of Object.keys(REMINDER_TYPES)) {
+            if (rp[key] !== false) { targetType = key; break; }
+        }
+    }
+
+    if (!targetType) targetType = 'agentAppointment';
 
     window.location.href = `reminder-detail.html?type=${targetType}&fromEmail=1`;
 }

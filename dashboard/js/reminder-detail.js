@@ -202,12 +202,40 @@ function openAddModal() {
 
 function openAddModalWithData(data) {
     openAddModal();
-    // Pre-fill from email data
-    if (data.phone) document.getElementById('formPhone').value = data.phone;
-    if (data.idNumber) document.getElementById('formIdNumber').value = data.idNumber;
-    if (data.amount) document.getElementById('formAmount').value = data.amount;
-    if (data.notes) document.getElementById('formNotes').value = data.notes;
-    if (data.customerName) document.getElementById('formCustomerName').value = data.customerName;
+
+    // Map of data fields to form element IDs
+    const fieldMap = {
+        customerName: 'formCustomerName',
+        idNumber: 'formIdNumber',
+        phone: 'formPhone',
+        policyNumber: 'formPolicyNumber',
+        insuranceCompany: 'formInsuranceCompany',
+        date: 'formDate',
+        amount: 'formAmount',
+        notes: 'formNotes'
+    };
+
+    let filledCount = 0;
+
+    // Pre-fill all available fields
+    for (const [key, elId] of Object.entries(fieldMap)) {
+        if (data[key]) {
+            const el = document.getElementById(elId);
+            if (el) {
+                el.value = data[key];
+                // Mark as auto-filled with visual feedback
+                if (data._extractedFields && data._extractedFields.includes(key)) {
+                    markAutoFilled(elId);
+                    filledCount++;
+                }
+            }
+        }
+    }
+
+    // Show toast with count of auto-filled fields
+    if (filledCount > 0) {
+        showExtractionToast(filledCount);
+    }
 }
 
 function openEditModal(id) {
@@ -344,31 +372,11 @@ function handleEmailDrop(e) {
     const html = e.dataTransfer.getData('text/html') || '';
 
     if (text || html) {
-        const extracted = extractEmailData(text || html);
+        const extracted = extractEmailDataEnhanced(text, html);
         openAddModalWithData(extracted);
         return;
     }
 
     // 3. Fallback: open empty modal
     openAddModal();
-}
-
-function extractEmailData(text) {
-    const data = { source: 'text', notes: text.substring(0, 500) };
-
-    // Try to extract phone number (Israeli format)
-    const phoneMatch = text.match(/0[2-9]\d[\s-]?\d{3}[\s-]?\d{4}|0[2-9]\d{7,8}/);
-    if (phoneMatch) data.phone = phoneMatch[0].replace(/[\s-]/g, '');
-
-    // Try to extract ID number (9 digits)
-    const idMatch = text.match(/\b\d{9}\b/);
-    if (idMatch && idMatch[0] !== (data.phone || '')) data.idNumber = idMatch[0];
-
-    // Try to extract amount (number with ₪ or NIS or ש"ח)
-    const amountMatch = text.match(/(?:₪|NIS|ש"ח)\s*[\d,]+\.?\d*|\d[\d,]+\.?\d*\s*(?:₪|NIS|ש"ח)/);
-    if (amountMatch) {
-        data.amount = parseFloat(amountMatch[0].replace(/[^\d.]/g, ''));
-    }
-
-    return data;
 }

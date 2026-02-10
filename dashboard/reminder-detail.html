@@ -97,6 +97,24 @@
         .empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3; }
         .empty-state p { font-size: 15px; margin: 0; }
 
+        /* ===== Auto-filled fields (email extraction) ===== */
+        .auto-filled {
+            background: #EBF5FF !important;
+            border-color: #3B82F6 !important;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+        .extract-toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: #1E3A5F; color: white; padding: 12px 24px; border-radius: 8px;
+            font-size: 14px; font-weight: 600; z-index: 9999;
+            animation: toastIn 0.3s ease; direction: rtl;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
         /* ===== Modal ===== */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -325,6 +343,7 @@
     </div>
 
     <script src="js/auth.js"></script>
+    <script src="js/email-extract.js"></script>
     <script src="js/reminder-detail.js"></script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
