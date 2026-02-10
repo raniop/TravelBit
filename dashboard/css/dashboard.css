@@ -791,6 +791,7 @@ table tr:last-child td {
 
 @media (max-width: 768px) {
     .sidebar {
+        width: 280px;
         transform: translateX(100%);
     }
 
@@ -803,9 +804,16 @@ table tr:last-child td {
     }
 
     .mobile-menu-btn {
-        display: flex;
+        display: flex !important;
         align-items: center;
         justify-content: center;
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        border-radius: 8px;
+        background: var(--gray-100);
+        color: var(--dark);
+        flex-shrink: 0;
     }
 
     /* Sidebar backdrop overlay */
@@ -821,7 +829,12 @@ table tr:last-child td {
     }
 
     .page-header {
-        padding: 16px 20px;
+        padding: 12px 16px;
+        gap: 12px;
+    }
+
+    .page-header h1 {
+        font-size: 18px;
     }
 
     .page-body {
