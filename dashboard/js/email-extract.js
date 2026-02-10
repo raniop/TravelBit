@@ -233,25 +233,32 @@ function readEmailFile(file) {
 
 function parseEmlContent(raw, fileName) {
     // Split headers from body (first empty line)
-    const headerBodySplit = raw.indexOf('\r\n\r\n');
+    // Try both \r\n\r\n and \n\n
+    let headerBodySplit = raw.indexOf('\r\n\r\n');
+    let bodySeparatorLen = 4;
+    if (headerBodySplit < 0) {
+        headerBodySplit = raw.indexOf('\n\n');
+        bodySeparatorLen = 2;
+    }
     const headersPart = headerBodySplit > 0 ? raw.substring(0, headerBodySplit) : '';
-    const bodyPart = headerBodySplit > 0 ? raw.substring(headerBodySplit + 4) : raw;
+    const bodyPart = headerBodySplit > 0 ? raw.substring(headerBodySplit + bodySeparatorLen) : raw;
 
-    // Decode subject from headers
+    // Decode subject from headers (handle multi-line folded headers)
     let subject = '';
-    const subjectMatch = headersPart.match(/^Subject:\s*(.+?)(?:\r?\n(?!\s)|$)/mi);
+    const subjectMatch = headersPart.match(/^Subject:\s*([\s\S]*?)(?=\r?\n[^\s\t]|$)/mi);
     if (subjectMatch) {
-        subject = decodeEmlHeader(subjectMatch[1].trim());
+        // Unfold header (remove line breaks followed by whitespace)
+        subject = decodeEmlHeader(subjectMatch[1].replace(/\r?\n[\s\t]+/g, ' ').trim());
     }
 
     // Extract From header for insurance company detection
     let fromHeader = '';
-    const fromMatch = headersPart.match(/^From:\s*(.+?)(?:\r?\n(?!\s)|$)/mi);
+    const fromMatch = headersPart.match(/^From:\s*([\s\S]*?)(?=\r?\n[^\s\t]|$)/mi);
     if (fromMatch) {
-        fromHeader = decodeEmlHeader(fromMatch[1].trim());
+        fromHeader = decodeEmlHeader(fromMatch[1].replace(/\r?\n[\s\t]+/g, ' ').trim());
     }
 
-    // Decode body: handle base64 and quoted-printable
+    // Decode body: handle base64 and quoted-printable with proper charset
     let bodyText = decodeEmlBody(bodyPart, headersPart);
 
     // Combine all text sources for extraction
@@ -261,10 +268,23 @@ function parseEmlContent(raw, fileName) {
     const data = extractEmailDataEnhanced(combinedText, '');
     data.source = 'file';
 
-    // If subject contains useful info, also try extracting from filename
+    // Override notes with readable decoded text (not raw garbled bytes)
+    const readableNotes = [subject, bodyText.substring(0, 400)].filter(Boolean).join('\n');
+    if (readableNotes.trim()) {
+        data.notes = readableNotes.substring(0, 500);
+    } else {
+        data.notes = 'יובא מקובץ: ' + fileName;
+    }
+
+    // If type not detected from content, try from filename
     if (!data.detectedType) {
         const fnData = extractFromFileName(fileName);
-        if (fnData.detectedType) data.detectedType = fnData.detectedType;
+        if (fnData.detectedType) {
+            data.detectedType = fnData.detectedType;
+            if (!data._extractedFields.includes('detectedType')) {
+                data._extractedFields.push('detectedType');
+            }
+        }
     }
 
     return data;
@@ -272,27 +292,71 @@ function parseEmlContent(raw, fileName) {
 
 function decodeEmlHeader(header) {
     // Decode RFC 2047 encoded-words: =?charset?encoding?text?=
-    return header.replace(/=\?([^?]+)\?(B|Q)\?([^?]+)\?=/gi, function(match, charset, encoding, text) {
+    // Handle consecutive encoded words (join them)
+    let decoded = header.replace(/=\?([^?]+)\?(B|Q)\?([^?]+)\?=(\s*=\?[^?]+\?(B|Q)\?[^?]+\?=)*/gi, function(fullMatch) {
+        // Split into individual encoded words
+        const words = fullMatch.match(/=\?([^?]+)\?(B|Q)\?([^?]+)\?=/gi) || [];
+        const allBytes = [];
+        let detectedCharset = 'utf-8';
+
+        for (const word of words) {
+            const parts = word.match(/=\?([^?]+)\?(B|Q)\?([^?]+)\?=/i);
+            if (!parts) continue;
+            const charset = parts[1].toLowerCase();
+            const enc = parts[2].toUpperCase();
+            const text = parts[3];
+            detectedCharset = charset;
+
+            try {
+                if (enc === 'B') {
+                    // Base64 → bytes
+                    const binary = atob(text);
+                    for (let i = 0; i < binary.length; i++) {
+                        allBytes.push(binary.charCodeAt(i));
+                    }
+                } else {
+                    // Quoted-Printable → bytes
+                    const qpText = text.replace(/_/g, ' ');
+                    let i = 0;
+                    while (i < qpText.length) {
+                        if (qpText[i] === '=' && i + 2 < qpText.length) {
+                            allBytes.push(parseInt(qpText.substring(i + 1, i + 3), 16));
+                            i += 3;
+                        } else {
+                            allBytes.push(qpText.charCodeAt(i));
+                            i++;
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (allBytes.length === 0) return fullMatch;
+
+        // Decode bytes using TextDecoder with the correct charset
         try {
-            if (encoding.toUpperCase() === 'B') {
-                // Base64
-                return atob(text);
-            } else {
-                // Quoted-Printable
-                return text.replace(/_/g, ' ').replace(/=([0-9A-F]{2})/gi, function(m, hex) {
-                    return String.fromCharCode(parseInt(hex, 16));
-                });
-            }
+            const uint8 = new Uint8Array(allBytes);
+            return new TextDecoder(detectedCharset).decode(uint8);
         } catch (e) {
-            return text;
+            try {
+                return new TextDecoder('utf-8').decode(new Uint8Array(allBytes));
+            } catch (e2) {
+                return fullMatch;
+            }
         }
     });
+
+    return decoded;
 }
 
 function decodeEmlBody(bodyPart, headersPart) {
     // Check Content-Transfer-Encoding
     const encodingMatch = headersPart.match(/Content-Transfer-Encoding:\s*(\S+)/i);
     const encoding = encodingMatch ? encodingMatch[1].toLowerCase() : '';
+
+    // Check charset from Content-Type
+    const charsetMatch = headersPart.match(/charset="?([^"\s;]+)"?/i);
+    const mainCharset = charsetMatch ? charsetMatch[1].toLowerCase() : 'utf-8';
 
     // Check if multipart
     const boundaryMatch = headersPart.match(/boundary="?([^"\r\n;]+)"?/i);
@@ -302,43 +366,91 @@ function decodeEmlBody(bodyPart, headersPart) {
         const boundary = boundaryMatch[1];
         const parts = bodyPart.split('--' + boundary);
         for (const part of parts) {
-            if (part.includes('text/plain') || (!part.includes('text/html') && part.length > 50)) {
+            // Prefer text/plain parts
+            const partHeaders = part.substring(0, Math.max(part.indexOf('\r\n\r\n'), 0));
+            const isTextPlain = partHeaders.match(/Content-Type:\s*text\/plain/i);
+            const isTextHtml = partHeaders.match(/Content-Type:\s*text\/html/i);
+
+            if (isTextPlain || (!isTextHtml && part.length > 50)) {
                 // Get the body of this part (after headers)
                 const partBodyIdx = part.indexOf('\r\n\r\n');
                 if (partBodyIdx > 0) {
                     let partBody = part.substring(partBodyIdx + 4);
-                    // Check part encoding
-                    const partEncMatch = part.substring(0, partBodyIdx).match(/Content-Transfer-Encoding:\s*(\S+)/i);
+                    // Check part encoding and charset
+                    const partEncMatch = partHeaders.match(/Content-Transfer-Encoding:\s*(\S+)/i);
                     const partEnc = partEncMatch ? partEncMatch[1].toLowerCase() : '';
-                    partBody = decodeBodyContent(partBody, partEnc);
+                    const partCharsetMatch = partHeaders.match(/charset="?([^"\s;]+)"?/i);
+                    const partCharset = partCharsetMatch ? partCharsetMatch[1].toLowerCase() : mainCharset;
+                    partBody = decodeBodyContent(partBody, partEnc, partCharset);
                     if (partBody.trim()) return partBody;
+                }
+            }
+        }
+
+        // If no text/plain found, try text/html and strip tags
+        for (const part of parts) {
+            const partHeaders = part.substring(0, Math.max(part.indexOf('\r\n\r\n'), 0));
+            if (partHeaders.match(/Content-Type:\s*text\/html/i)) {
+                const partBodyIdx = part.indexOf('\r\n\r\n');
+                if (partBodyIdx > 0) {
+                    let partBody = part.substring(partBodyIdx + 4);
+                    const partEncMatch = partHeaders.match(/Content-Transfer-Encoding:\s*(\S+)/i);
+                    const partEnc = partEncMatch ? partEncMatch[1].toLowerCase() : '';
+                    const partCharsetMatch = partHeaders.match(/charset="?([^"\s;]+)"?/i);
+                    const partCharset = partCharsetMatch ? partCharsetMatch[1].toLowerCase() : mainCharset;
+                    partBody = decodeBodyContent(partBody, partEnc, partCharset);
+                    if (partBody.trim()) return stripHtml(partBody);
                 }
             }
         }
     }
 
     // Single part
-    return decodeBodyContent(bodyPart, encoding);
+    return decodeBodyContent(bodyPart, encoding, mainCharset);
 }
 
-function decodeBodyContent(text, encoding) {
+function decodeBodyContent(text, encoding, charset) {
+    charset = charset || 'utf-8';
     try {
         if (encoding === 'base64') {
-            // Remove line breaks and decode
+            // Remove line breaks and decode base64 to bytes
             const cleaned = text.replace(/[\r\n\s]/g, '');
-            // Try UTF-8 decode
-            const bytes = atob(cleaned);
+            const binary = atob(cleaned);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            // Decode bytes with TextDecoder for proper UTF-8/Hebrew support
             try {
-                return decodeURIComponent(escape(bytes));
+                return new TextDecoder(charset).decode(bytes);
             } catch (e) {
-                return bytes;
+                return new TextDecoder('utf-8').decode(bytes);
             }
         } else if (encoding === 'quoted-printable') {
-            return text
-                .replace(/=\r?\n/g, '') // soft line breaks
-                .replace(/=([0-9A-F]{2})/gi, function(m, hex) {
-                    return String.fromCharCode(parseInt(hex, 16));
-                });
+            // First remove soft line breaks
+            const cleaned = text.replace(/=\r?\n/g, '');
+            // Convert QP hex codes to bytes
+            const bytes = [];
+            let i = 0;
+            while (i < cleaned.length) {
+                if (cleaned[i] === '=' && i + 2 < cleaned.length && /[0-9A-Fa-f]{2}/.test(cleaned.substring(i + 1, i + 3))) {
+                    bytes.push(parseInt(cleaned.substring(i + 1, i + 3), 16));
+                    i += 3;
+                } else if (cleaned[i] === '\r' || cleaned[i] === '\n') {
+                    // Keep line breaks as-is
+                    bytes.push(cleaned.charCodeAt(i));
+                    i++;
+                } else {
+                    bytes.push(cleaned.charCodeAt(i));
+                    i++;
+                }
+            }
+            // Decode bytes with TextDecoder
+            try {
+                return new TextDecoder(charset).decode(new Uint8Array(bytes));
+            } catch (e) {
+                return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+            }
         }
     } catch (e) {}
     return text;
