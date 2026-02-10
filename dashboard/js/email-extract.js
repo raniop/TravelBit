@@ -204,6 +204,156 @@ function extractEmailDataEnhanced(text, html) {
     return data;
 }
 
+// ===== Read .eml / .msg file =====
+function readEmailFile(file) {
+    return new Promise((resolve) => {
+        const name = file.name || '';
+        const ext = name.split('.').pop().toLowerCase();
+
+        // .eml files are plain text (RFC 822) — readable with FileReader
+        if (ext === 'eml') {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const raw = e.target.result || '';
+                // Parse .eml: extract subject, from, and body text
+                const parsed = parseEmlContent(raw, name);
+                resolve(parsed);
+            };
+            reader.onerror = function() {
+                // Fallback: extract what we can from filename
+                resolve(extractFromFileName(name));
+            };
+            reader.readAsText(file, 'utf-8');
+        } else {
+            // .msg or unknown: can't read in browser, extract from filename
+            resolve(extractFromFileName(name));
+        }
+    });
+}
+
+function parseEmlContent(raw, fileName) {
+    // Split headers from body (first empty line)
+    const headerBodySplit = raw.indexOf('\r\n\r\n');
+    const headersPart = headerBodySplit > 0 ? raw.substring(0, headerBodySplit) : '';
+    const bodyPart = headerBodySplit > 0 ? raw.substring(headerBodySplit + 4) : raw;
+
+    // Decode subject from headers
+    let subject = '';
+    const subjectMatch = headersPart.match(/^Subject:\s*(.+?)(?:\r?\n(?!\s)|$)/mi);
+    if (subjectMatch) {
+        subject = decodeEmlHeader(subjectMatch[1].trim());
+    }
+
+    // Extract From header for insurance company detection
+    let fromHeader = '';
+    const fromMatch = headersPart.match(/^From:\s*(.+?)(?:\r?\n(?!\s)|$)/mi);
+    if (fromMatch) {
+        fromHeader = decodeEmlHeader(fromMatch[1].trim());
+    }
+
+    // Decode body: handle base64 and quoted-printable
+    let bodyText = decodeEmlBody(bodyPart, headersPart);
+
+    // Combine all text sources for extraction
+    const combinedText = [subject, fromHeader, bodyText].join('\n');
+
+    // Run enhanced extraction on the combined text
+    const data = extractEmailDataEnhanced(combinedText, '');
+    data.source = 'file';
+
+    // If subject contains useful info, also try extracting from filename
+    if (!data.detectedType) {
+        const fnData = extractFromFileName(fileName);
+        if (fnData.detectedType) data.detectedType = fnData.detectedType;
+    }
+
+    return data;
+}
+
+function decodeEmlHeader(header) {
+    // Decode RFC 2047 encoded-words: =?charset?encoding?text?=
+    return header.replace(/=\?([^?]+)\?(B|Q)\?([^?]+)\?=/gi, function(match, charset, encoding, text) {
+        try {
+            if (encoding.toUpperCase() === 'B') {
+                // Base64
+                return atob(text);
+            } else {
+                // Quoted-Printable
+                return text.replace(/_/g, ' ').replace(/=([0-9A-F]{2})/gi, function(m, hex) {
+                    return String.fromCharCode(parseInt(hex, 16));
+                });
+            }
+        } catch (e) {
+            return text;
+        }
+    });
+}
+
+function decodeEmlBody(bodyPart, headersPart) {
+    // Check Content-Transfer-Encoding
+    const encodingMatch = headersPart.match(/Content-Transfer-Encoding:\s*(\S+)/i);
+    const encoding = encodingMatch ? encodingMatch[1].toLowerCase() : '';
+
+    // Check if multipart
+    const boundaryMatch = headersPart.match(/boundary="?([^"\r\n;]+)"?/i);
+
+    if (boundaryMatch) {
+        // Multipart: extract text/plain part
+        const boundary = boundaryMatch[1];
+        const parts = bodyPart.split('--' + boundary);
+        for (const part of parts) {
+            if (part.includes('text/plain') || (!part.includes('text/html') && part.length > 50)) {
+                // Get the body of this part (after headers)
+                const partBodyIdx = part.indexOf('\r\n\r\n');
+                if (partBodyIdx > 0) {
+                    let partBody = part.substring(partBodyIdx + 4);
+                    // Check part encoding
+                    const partEncMatch = part.substring(0, partBodyIdx).match(/Content-Transfer-Encoding:\s*(\S+)/i);
+                    const partEnc = partEncMatch ? partEncMatch[1].toLowerCase() : '';
+                    partBody = decodeBodyContent(partBody, partEnc);
+                    if (partBody.trim()) return partBody;
+                }
+            }
+        }
+    }
+
+    // Single part
+    return decodeBodyContent(bodyPart, encoding);
+}
+
+function decodeBodyContent(text, encoding) {
+    try {
+        if (encoding === 'base64') {
+            // Remove line breaks and decode
+            const cleaned = text.replace(/[\r\n\s]/g, '');
+            // Try UTF-8 decode
+            const bytes = atob(cleaned);
+            try {
+                return decodeURIComponent(escape(bytes));
+            } catch (e) {
+                return bytes;
+            }
+        } else if (encoding === 'quoted-printable') {
+            return text
+                .replace(/=\r?\n/g, '') // soft line breaks
+                .replace(/=([0-9A-F]{2})/gi, function(m, hex) {
+                    return String.fromCharCode(parseInt(hex, 16));
+                });
+        }
+    } catch (e) {}
+    return text;
+}
+
+function extractFromFileName(name) {
+    // Try to extract info from the email file name
+    // Outlook names files like "Subject.eml" or "Fw- Subject.eml"
+    const cleanName = name.replace(/\.(eml|msg)$/i, '').replace(/^(Fw|Fwd|Re)-?\s*/i, '').trim();
+    const data = extractEmailDataEnhanced(cleanName, '');
+    data.source = 'file';
+    data.notes = 'יובא מקובץ: ' + name;
+    return data;
+}
+
 // Helper: strip HTML tags
 function stripHtml(html) {
     const tmp = document.createElement('div');

@@ -113,17 +113,13 @@ function setupEmailDropZone() {
     });
 }
 
-function handleEmailDrop(e) {
-    // 1. Try to get files (.msg from Outlook Desktop)
+async function handleEmailDrop(e) {
+    // 1. Try to get files (.eml / .msg from Outlook Desktop)
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
         const file = files[0];
-        const name = file.name || '';
-        const emailData = {
-            source: 'file',
-            fileName: name,
-            notes: 'יובא מקובץ: ' + name
-        };
+        // Read file content and extract data
+        const emailData = await readEmailFile(file);
         navigateToDetailWithEmail(emailData);
         return;
     }
