@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travelins | חיפוש פוליסות</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+    <style>
+        /* ===== Search Bar ===== */
+        .search-bar {
+            display: flex; gap: 12px; margin-bottom: 24px; align-items: center; flex-wrap: wrap;
+            background: white; padding: 16px 20px; border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-100);
+        }
+        .search-bar label { font-weight: 700; font-size: 14px; color: var(--gray-700); white-space: nowrap; }
+        .search-input {
+            flex: 1; min-width: 200px; padding: 10px 16px; border-radius: 8px;
+            border: 2px solid var(--gray-200); font-family: 'Heebo', sans-serif; font-size: 14px;
+            transition: all 0.2s;
+        }
+        .search-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,107,44,0.1); }
+        .search-input::placeholder { color: var(--gray-400); }
+        .search-count { font-size: 13px; color: var(--gray-400); font-weight: 500; }
+
+        /* ===== Policies Table ===== */
+        .policies-table-wrap {
+            background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid var(--gray-100); margin-bottom: 24px; overflow: hidden;
+        }
+        .policies-table-header {
+            padding: 16px 20px; border-bottom: 1px solid var(--gray-100);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .policies-table-header h2 { font-size: 16px; font-weight: 700; color: var(--dark); margin: 0; }
+        .policies-table-header .count-badge {
+            background: var(--gray-100); color: var(--gray-500); font-size: 12px;
+            font-weight: 600; padding: 4px 10px; border-radius: 20px;
+        }
+
+        .policies-table { width: 100%; border-collapse: collapse; }
+        .policies-table thead th {
+            background: var(--gray-50); padding: 12px 16px; font-size: 12px;
+            font-weight: 700; color: var(--gray-500); text-transform: uppercase;
+            letter-spacing: 0.5px; text-align: right; border-bottom: 2px solid var(--gray-100);
+            white-space: nowrap;
+        }
+        .policies-table tbody tr {
+            cursor: pointer; transition: background 0.15s;
+        }
+        .policies-table tbody tr:hover { background: #FFF7ED; }
+        .policies-table tbody tr.selected { background: #FFF1E6; border-right: 3px solid var(--primary); }
+        .policies-table tbody td {
+            padding: 12px 16px; font-size: 13px; color: var(--gray-700);
+            border-bottom: 1px solid var(--gray-100); white-space: nowrap;
+        }
+        .policies-table .td-premium { font-weight: 700; color: var(--dark); }
+        .policies-table .td-destination { color: #0EA5E9; font-weight: 600; }
+
+        /* ===== Policy Details Panel ===== */
+        .policy-details-panel {
+            background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid var(--gray-100); margin-bottom: 24px;
+            display: none; animation: slideDown 0.3s ease;
+        }
+        .policy-details-panel.show { display: block; }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .details-header {
+            padding: 16px 20px; border-bottom: 1px solid var(--gray-100);
+            display: flex; align-items: center; justify-content: space-between;
+            background: linear-gradient(135deg, #FF6B2C 0%, #FF8F5E 100%);
+            border-radius: 12px 12px 0 0; color: white;
+        }
+        .details-header h2 { font-size: 16px; font-weight: 700; margin: 0; }
+        .details-close {
+            background: rgba(255,255,255,0.2); border: none; color: white;
+            width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+            font-size: 18px; display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .details-close:hover { background: rgba(255,255,255,0.3); }
+
+        .details-body { padding: 20px; }
+        .details-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+        }
+        @media (max-width: 768px) { .details-grid { grid-template-columns: 1fr; } }
+
+        .details-section {
+            background: var(--gray-50); border-radius: 10px; padding: 16px;
+            border: 1px solid var(--gray-100);
+        }
+        .details-section h3 {
+            font-size: 14px; font-weight: 700; color: var(--dark);
+            margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 1px solid var(--gray-200);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .details-section h3 .icon { font-size: 16px; }
+
+        .detail-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 0; font-size: 13px;
+        }
+        .detail-row:not(:last-child) { border-bottom: 1px solid var(--gray-100); }
+        .detail-label { color: var(--gray-500); font-weight: 500; }
+        .detail-value { color: var(--dark); font-weight: 600; }
+        .detail-value.premium { color: #059669; font-size: 15px; }
+
+        /* Customers sub-table */
+        .customers-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        .customers-table th {
+            background: var(--gray-100); padding: 8px 12px; font-size: 11px;
+            font-weight: 700; color: var(--gray-500); text-align: right;
+        }
+        .customers-table td {
+            padding: 8px 12px; font-size: 12px; color: var(--gray-700);
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        /* Loading states */
+        .loading-overlay {
+            display: flex; align-items: center; justify-content: center;
+            padding: 40px; color: var(--gray-400);
+        }
+        .loading-overlay .spinner { margin-left: 10px; }
+
+        /* Empty state */
+        .empty-msg {
+            text-align: center; padding: 40px 20px; color: var(--gray-400); font-size: 14px;
+        }
+        .empty-msg svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.4; }
+
+        /* Badge */
+        .status-badge {
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: 11px; font-weight: 700;
+        }
+        .status-active { background: #ECFDF5; color: #059669; }
+        .status-expired { background: #FEF2F2; color: #DC2626; }
+        .status-pending { background: #FFF7ED; color: #F59E0B; }
+
+        /* Scrollable table */
+        .table-scroll { overflow-x: auto; max-height: 500px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+                </div>
+                <div>
+                    <div class="logo-text">Travel<em>ins</em></div>
+                    <span class="sidebar-badge" id="companyName">חברה</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="sidebar-section">ניהול</div>
+                <a href="/dashboard/">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    סקירה כללית
+                </a>
+                <a href="/dashboard/trips.html">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+                    נסיעות עובדים
+                </a>
+                <a href="/dashboard/employees.html">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                    ניהול עובדים
+                </a>
+                <a href="/dashboard/expenses.html">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                    ניתוח הוצאות
+                </a>
+                <a href="/dashboard/workdays.html">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    ימי עבודה בחו"ל
+                </a>
+                <a href="/dashboard/alerts.html">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                    התראות ביטוח
+                </a>
+                <div class="sidebar-section">ביטוח אופיר</div>
+                <a href="/dashboard/bituhofir.html">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    דשבורד ביטוח
+                </a>
+                <a href="/dashboard/policies.html" class="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    חיפוש פוליסות
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="sidebar-user-avatar" id="userAvatar">C</div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name" id="userName">חברה</div>
+                        <div class="sidebar-user-role">דשבורד חברה</div>
+                    </div>
+                    <button class="sidebar-logout" onclick="logout()" title="יציאה">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <h1>חיפוש פוליסות</h1>
+                <div class="page-header-actions"></div>
+            </div>
+
+            <div class="page-body">
+                <!-- Error Banner -->
+                <div class="error-banner" id="errorBanner"></div>
+
+                <!-- Search Bar -->
+                <div class="search-bar">
+                    <label>חיפוש:</label>
+                    <input type="text" class="search-input" id="searchInput" placeholder="שם לקוח, מספר פוליסה, יעד..." oninput="searchPolicies()" autofocus>
+                    <span class="search-count" id="searchCount"></span>
+                </div>
+
+                <!-- Policies Table -->
+                <div class="policies-table-wrap">
+                    <div class="policies-table-header">
+                        <h2>רשימת פוליסות</h2>
+                        <span class="count-badge" id="totalCount">טוען...</span>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="policies-table">
+                            <thead>
+                                <tr>
+                                    <th>מס' פוליסה</th>
+                                    <th>שם מבוטח</th>
+                                    <th>יעד</th>
+                                    <th>תאריך התחלה</th>
+                                    <th>תאריך סיום</th>
+                                    <th>פרמיה</th>
+                                    <th>סטטוס</th>
+                                </tr>
+                            </thead>
+                            <tbody id="policiesBody">
+                                <tr><td colspan="7"><div class="loading-overlay"><div class="spinner"></div> טוען פוליסות...</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Policy Details Panel (hidden by default) -->
+                <div class="policy-details-panel" id="policyDetailsPanel">
+                    <div class="details-header">
+                        <h2 id="detailsTitle">פרטי פוליסה</h2>
+                        <button class="details-close" onclick="closePolicyDetails()">&times;</button>
+                    </div>
+                    <div class="details-body" id="detailsBody">
+                        <div class="loading-overlay"><div class="spinner"></div> טוען פרטים...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/policies.js?v=1"></script>
+</body>
+</html>
