@@ -170,7 +170,10 @@ module.exports = async function handler(req, res) {
                 if (policyNumber !== undefined) company.policyNumber = policyNumber;
                 if (agentCodes !== undefined) company.agentCodes = Array.isArray(agentCodes) ? agentCodes : [];
                 if (dashboardModules !== undefined) company.dashboardModules = dashboardModules;
-                if (insurancePages !== undefined) company.insurancePages = insurancePages;
+                if (insurancePages !== undefined) {
+                    company.insurancePages = insurancePages;
+                    company.markModified('insurancePages');
+                }
                 if (isActive !== undefined) company.isActive = isActive;
 
                 await company.save();
