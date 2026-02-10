@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const connectDB = require('./_lib/db');
-const { User, Company } = require('./_lib/models');
+const { User, Company, normalizeDashboardModules } = require('./_lib/models');
 const { verifyAuth, generateTokens, cors } = require('./_lib/auth');
 
 const SMS_BASE = process.env.BITUHOFIR_API_BASE || 'http://109.226.23.217:5000';
@@ -36,19 +36,23 @@ function maskPhone(phone) {
 // Fetch company metadata for user response
 async function getCompanyMeta(companyId) {
     let companyName = null;
-    let dashboardModules = 'management';
+    let dashboardModules = { management: true, insurance: false, reminders: false };
     let insurancePages = { dashboard: true, policies: true, agents: true, reports: true };
+    let reminderPages = { agentAppointment: true, policyCancellations: true, newProductions: true,
+                          claims: true, firstDeposit: true, completingDeficiencies: true };
 
     if (companyId) {
-        const company = await Company.findById(companyId).select('name agentCodes dashboardModules insurancePages').lean();
+        const company = await Company.findById(companyId).select('name agentCodes dashboardModules insurancePages reminderPages').lean();
         if (company) {
             companyName = company.name;
-            dashboardModules = company.dashboardModules || 'management';
+            dashboardModules = normalizeDashboardModules(company.dashboardModules);
             if (company.insurancePages) insurancePages = company.insurancePages;
+            if (company.reminderPages) reminderPages = company.reminderPages;
         }
     }
-    const hasBituhOfir = dashboardModules === 'insurance' || dashboardModules === 'both';
-    return { companyName, dashboardModules, insurancePages, hasBituhOfir };
+    const hasBituhOfir = dashboardModules.insurance === true;
+    const hasReminders = dashboardModules.reminders === true;
+    return { companyName, dashboardModules, insurancePages, reminderPages, hasBituhOfir, hasReminders };
 }
 
 // Build user response object
@@ -61,8 +65,10 @@ function buildUserResponse(user, meta) {
         companyId: user.companyId,
         companyName: meta.companyName,
         hasBituhOfir: meta.hasBituhOfir,
+        hasReminders: meta.hasReminders,
         dashboardModules: meta.dashboardModules,
-        insurancePages: meta.insurancePages
+        insurancePages: meta.insurancePages,
+        reminderPages: meta.reminderPages
     };
 }
 

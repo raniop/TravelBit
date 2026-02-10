@@ -1,6 +1,6 @@
 const { verifyAuth, cors } = require('../_lib/auth');
 const connectDB = require('../_lib/db');
-const { Company } = require('../_lib/models');
+const { Company, normalizeDashboardModules } = require('../_lib/models');
 
 // Module-level token cache (survives warm invocations)
 let bituhOfirToken = {
@@ -150,8 +150,8 @@ module.exports = async function handler(req, res) {
     await connectDB();
     const company = await Company.findById(user.companyId).select('agentCodes dashboardModules insurancePages').lean();
     if (!company) return res.status(403).json({ message: 'אין הרשאה לנתוני ביטוח.' });
-    const modules = company.dashboardModules || 'management';
-    if (modules !== 'insurance' && modules !== 'both') {
+    const dm = normalizeDashboardModules(company.dashboardModules);
+    if (!dm.insurance) {
         return res.status(403).json({ message: 'אין הרשאה לנתוני ביטוח.' });
     }
     // If agentCodes exist → filter by them; if empty → show all (no filtering)

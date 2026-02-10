@@ -139,12 +139,12 @@
                             <input type="text" id="cdAgentCodes" placeholder="לדוגמה: 1234, 5678" style="padding:6px 10px;font-size:13px;border-radius:6px;border:1px solid var(--gray-200);direction:ltr;text-align:left;width:100%;box-sizing:border-box;">
                         </div>
                         <div class="form-group" style="margin:0;">
-                            <label style="font-size:12px;color:var(--gray-500);font-weight:600;margin-bottom:4px;">פאנלים בדשבורד</label>
-                            <select id="cdDashboardModules" style="padding:6px 10px;font-size:13px;border-radius:6px;border:1px solid var(--gray-200);width:100%;box-sizing:border-box;">
-                                <option value="management">ניהול בלבד</option>
-                                <option value="insurance">ביטוח בלבד</option>
-                                <option value="both">ניהול + ביטוח</option>
-                            </select>
+                            <label style="font-size:12px;color:var(--gray-500);font-weight:600;margin-bottom:4px;">מודולים בדשבורד</label>
+                            <div style="display:flex; gap:16px; flex-wrap:wrap; padding-top:4px;">
+                                <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdModManagement" checked> ניהול</label>
+                                <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdModInsurance"> ביטוח</label>
+                                <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdModReminders"> תזכורות</label>
+                            </div>
                         </div>
                     </div>
                     <div id="cdInsurancePagesWrap" style="margin-top:12px; display:none;">
@@ -154,6 +154,17 @@
                             <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdIpPolicies" checked> חיפוש פוליסות</label>
                             <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdIpAgents" checked> סוכנים</label>
                             <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdIpReports" checked> דוחות</label>
+                        </div>
+                    </div>
+                    <div id="cdReminderPagesWrap" style="margin-top:12px; display:none;">
+                        <label style="font-size:12px;color:var(--gray-500);font-weight:600;margin-bottom:6px;display:block;">דפי תזכורות מוצגים</label>
+                        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdRpAgentAppointment" checked> מינוי סוכן</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdRpPolicyCancellations" checked> ביטולי פוליסות</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdRpNewProductions" checked> הפקות חדשות</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdRpClaims" checked> תביעות</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdRpFirstDeposit" checked> הפקדה ראשונה</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="cdRpCompletingDeficiencies" checked> השלמת חוסרים</label>
                         </div>
                     </div>
                     <div style="margin-top:12px;text-align:left;">
@@ -213,12 +224,12 @@
                         <input type="text" name="agentCodes" placeholder="לדוגמה: 1234, 5678" style="direction: ltr; text-align: left;">
                     </div>
                     <div class="form-group">
-                        <label>פאנלים בדשבורד</label>
-                        <select name="dashboardModules" onchange="toggleAddInsurancePages(this.value)">
-                            <option value="management">ניהול בלבד</option>
-                            <option value="insurance">ביטוח בלבד</option>
-                            <option value="both">ניהול + ביטוח</option>
-                        </select>
+                        <label>מודולים בדשבורד</label>
+                        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="addModManagement" checked onchange="toggleAddSubPages()"> ניהול</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="addModInsurance" onchange="toggleAddSubPages()"> ביטוח</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="addModReminders" onchange="toggleAddSubPages()"> תזכורות</label>
+                        </div>
                     </div>
                     <div class="form-group" id="addInsurancePagesWrap" style="display:none;">
                         <label>דפי ביטוח מוצגים</label>
@@ -227,6 +238,17 @@
                             <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="ipPolicies" checked> חיפוש פוליסות</label>
                             <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="ipAgents" checked> סוכנים</label>
                             <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="ipReports" checked> דוחות</label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="addReminderPagesWrap" style="display:none;">
+                        <label>דפי תזכורות מוצגים</label>
+                        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="rpAgentAppointment" checked> מינוי סוכן</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="rpPolicyCancellations" checked> ביטולי פוליסות</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="rpNewProductions" checked> הפקות חדשות</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="rpClaims" checked> תביעות</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="rpFirstDeposit" checked> הפקדה ראשונה</label>
+                            <label style="font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" name="rpCompletingDeficiencies" checked> השלמת חוסרים</label>
                         </div>
                     </div>
                     <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--gray-200);">

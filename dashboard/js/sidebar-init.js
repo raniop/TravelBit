@@ -4,12 +4,20 @@
     try {
         var user = JSON.parse(localStorage.getItem('dash_user'));
         if (!user) return;
-        var modules = user.dashboardModules || 'management';
+        var modules = user.dashboardModules;
+        // Backward compatibility: normalize string format to object
+        if (typeof modules === 'string') {
+            if (modules === 'insurance') modules = { management: false, insurance: true, reminders: false };
+            else if (modules === 'both') modules = { management: true, insurance: true, reminders: false };
+            else modules = { management: true, insurance: false, reminders: false };
+        }
+        if (!modules) modules = { management: true, insurance: false, reminders: false };
+
         var ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
         var rules = [];
 
-        // Hide management section if insurance-only
-        if (modules === 'insurance') {
+        // Hide management section if not enabled
+        if (!modules.management) {
             rules.push('#managementSection { display: none !important; }');
             rules.push('.sidebar-nav a[href="/dashboard/"] { display: none !important; }');
             rules.push('.sidebar-nav a[href*="trips"] { display: none !important; }');
@@ -19,8 +27,8 @@
             rules.push('.sidebar-nav a[href*="alerts"] { display: none !important; }');
         }
 
-        // Hide insurance section if management-only
-        if (modules === 'management') {
+        // Hide insurance section if not enabled
+        if (!modules.insurance) {
             rules.push('#bituhofirSection { display: none !important; }');
             rules.push('.sidebar-nav a[href*="bituhofir"] { display: none !important; }');
             rules.push('.sidebar-nav a[href*="policies"] { display: none !important; }');
@@ -28,8 +36,14 @@
             rules.push('.sidebar-nav a[href*="reports"] { display: none !important; }');
         }
 
+        // Hide reminders section if not enabled
+        if (!modules.reminders) {
+            rules.push('#remindersSection { display: none !important; }');
+            rules.push('.sidebar-nav a[href*="reminders"] { display: none !important; }');
+        }
+
         // Granular insurance page hiding
-        if (modules === 'insurance' || modules === 'both') {
+        if (modules.insurance) {
             if (ip.dashboard === false) rules.push('.sidebar-nav a[href*="bituhofir"] { display: none !important; }');
             if (ip.policies === false) rules.push('.sidebar-nav a[href*="policies"] { display: none !important; }');
             if (ip.agents === false) rules.push('.sidebar-nav a[href*="agents"] { display: none !important; }');

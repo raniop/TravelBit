@@ -36,12 +36,20 @@ const companySchema = new mongoose.Schema({
     employeeCount: { type: Number, default: 0 },
     policyNumber: { type: String, trim: true },
     agentCodes: [{ type: String, trim: true }],
-    dashboardModules: { type: String, enum: ['management', 'insurance', 'both'], default: 'management' },
+    dashboardModules: { type: mongoose.Schema.Types.Mixed, default: { management: true, insurance: false, reminders: false } },
     insurancePages: {
         dashboard: { type: Boolean, default: true },
         policies: { type: Boolean, default: true },
         agents: { type: Boolean, default: true },
         reports: { type: Boolean, default: true }
+    },
+    reminderPages: {
+        agentAppointment: { type: Boolean, default: true },
+        policyCancellations: { type: Boolean, default: true },
+        newProductions: { type: Boolean, default: true },
+        claims: { type: Boolean, default: true },
+        firstDeposit: { type: Boolean, default: true },
+        completingDeficiencies: { type: Boolean, default: true }
     },
     subscriptionStart: { type: Date, default: Date.now },
     subscriptionEnd: { type: Date },
@@ -104,11 +112,48 @@ policySchema.virtual('daysUntilExpiration').get(function() {
 });
 policySchema.set('toJSON', { virtuals: true });
 
+// ===== REMINDER =====
+const reminderSchema = new mongoose.Schema({
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+    type: {
+        type: String,
+        enum: ['agentAppointment', 'policyCancellations', 'newProductions',
+               'claims', 'firstDeposit', 'completingDeficiencies'],
+        required: true
+    },
+    agentCode: { type: String, trim: true },
+    customerName: { type: String, trim: true },
+    idNumber: { type: String, trim: true },
+    phone: { type: String, trim: true },
+    policyNumber: { type: String, trim: true },
+    insuranceCompany: { type: String, trim: true },
+    date: { type: Date },
+    amount: { type: Number, default: 0 },
+    status: { type: String, enum: ['open', 'inProgress', 'completed', 'cancelled'], default: 'open' },
+    notes: { type: String, trim: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+}, { timestamps: true });
+
+// Normalize dashboardModules: supports both old string format and new object format
+function normalizeDashboardModules(raw) {
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        return {
+            management: raw.management !== false,
+            insurance: raw.insurance === true,
+            reminders: raw.reminders === true
+        };
+    }
+    if (raw === 'insurance') return { management: false, insurance: true, reminders: false };
+    if (raw === 'both') return { management: true, insurance: true, reminders: false };
+    return { management: true, insurance: false, reminders: false };
+}
+
 // Use existing models if already compiled (serverless caching)
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Company = mongoose.models.Company || mongoose.model('Company', companySchema);
 const Employee = mongoose.models.Employee || mongoose.model('Employee', employeeSchema);
 const Trip = mongoose.models.Trip || mongoose.model('Trip', tripSchema);
 const Policy = mongoose.models.Policy || mongoose.model('Policy', policySchema);
+const Reminder = mongoose.models.Reminder || mongoose.model('Reminder', reminderSchema);
 
-module.exports = { User, Company, Employee, Trip, Policy };
+module.exports = { User, Company, Employee, Trip, Policy, Reminder, normalizeDashboardModules };

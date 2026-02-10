@@ -1,46 +1,60 @@
 // Dashboard Auth Module
 const API_BASE = '/api';
 
+// Normalize dashboardModules: supports both old string format and new object format
+function normModules(raw) {
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        return { management: raw.management !== false, insurance: raw.insurance === true, reminders: raw.reminders === true };
+    }
+    if (raw === 'insurance') return { management: false, insurance: true, reminders: false };
+    if (raw === 'both') return { management: true, insurance: true, reminders: false };
+    return { management: true, insurance: false, reminders: false };
+}
+
 // Determine default landing page based on company's dashboardModules + insurancePages
 function getDefaultDashboard(user) {
     if (!user) return '/dashboard/';
-    const modules = user.dashboardModules || 'management';
+    const modules = normModules(user.dashboardModules);
     const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
 
-    if (modules === 'insurance') {
-        // Find first allowed insurance page
+    if (modules.management) return '/dashboard/';
+
+    if (modules.insurance) {
         if (ip.dashboard !== false) return '/dashboard/bituhofir.html';
         if (ip.policies !== false) return '/dashboard/policies.html';
         if (ip.agents !== false) return '/dashboard/agents.html';
         if (ip.reports !== false) return '/dashboard/reports.html';
-        return '/dashboard/'; // fallback
     }
-    // management or both → go to general dashboard
+
+    if (modules.reminders) return '/dashboard/reminders.html';
+
     return '/dashboard/';
 }
 
 // Check which pages this user is allowed to visit
 function isPageAllowed(user, currentPage) {
     if (!user) return true; // let auth check handle it
-    const modules = user.dashboardModules || 'management';
+    const modules = normModules(user.dashboardModules);
     const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
+    const rp = user.reminderPages || { agentAppointment: true, policyCancellations: true, newProductions: true, claims: true, firstDeposit: true, completingDeficiencies: true };
 
-    // Map current page to insurance page type
+    // Determine page category
     let insurancePageType = null;
     if (currentPage.includes('bituhofir')) insurancePageType = 'dashboard';
     else if (currentPage.includes('policies')) insurancePageType = 'policies';
     else if (currentPage.includes('agents')) insurancePageType = 'agents';
     else if (currentPage.includes('reports')) insurancePageType = 'reports';
 
-    const isManagementPage = !insurancePageType && !currentPage.includes('login');
+    const isRemindersPage = currentPage.includes('reminders');
+    const isManagementPage = !insurancePageType && !isRemindersPage && !currentPage.includes('login');
 
-    // Management-only: no insurance pages
-    if (modules === 'management' && insurancePageType) return false;
-    // Insurance-only: no management pages
-    if (modules === 'insurance' && isManagementPage) return false;
+    // Check module-level access
+    if (isManagementPage && !modules.management) return false;
+    if (insurancePageType && !modules.insurance) return false;
+    if (isRemindersPage && !modules.reminders) return false;
 
     // Granular insurance page check
-    if (insurancePageType && (modules === 'insurance' || modules === 'both')) {
+    if (insurancePageType && modules.insurance) {
         if (ip[insurancePageType] === false) return false;
     }
 
@@ -56,7 +70,7 @@ function isPageAllowed(user, currentPage) {
         let user = null;
         try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
 
-        // Always refresh user data from server to get latest dashboardModules + insurancePages
+        // Always refresh user data from server to get latest dashboardModules + insurancePages + reminderPages
         if (user) {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
@@ -67,8 +81,10 @@ function isPageAllowed(user, currentPage) {
                     if (data.user) {
                         if (data.user.companyName) user.companyName = data.user.companyName;
                         if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
+                        if (data.user.hasReminders !== undefined) user.hasReminders = data.user.hasReminders;
                         if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
                         if (data.user.insurancePages) user.insurancePages = data.user.insurancePages;
+                        if (data.user.reminderPages) user.reminderPages = data.user.reminderPages;
                         localStorage.setItem('dash_user', JSON.stringify(user));
                     }
                 }
@@ -95,7 +111,7 @@ function isPageAllowed(user, currentPage) {
             return;
         }
 
-        // Always sync user data from server to get latest dashboardModules + insurancePages
+        // Always sync user data from server to get latest dashboardModules + insurancePages + reminderPages
         if (user) {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
@@ -106,8 +122,10 @@ function isPageAllowed(user, currentPage) {
                     if (data.user) {
                         if (data.user.companyName) user.companyName = data.user.companyName;
                         if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
+                        if (data.user.hasReminders !== undefined) user.hasReminders = data.user.hasReminders;
                         if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
                         if (data.user.insurancePages) user.insurancePages = data.user.insurancePages;
+                        if (data.user.reminderPages) user.reminderPages = data.user.reminderPages;
                         localStorage.setItem('dash_user', JSON.stringify(user));
                         // Re-check access after sync - redirect if no longer allowed
                         if (!isPageAllowed(user, currentPage)) {
@@ -388,7 +406,7 @@ async function apiFetch(url, options = {}) {
     return res;
 }
 
-// Sync user data from server (companyName, dashboardModules, hasBituhOfir)
+// Sync user data from server (companyName, dashboardModules, hasBituhOfir, hasReminders, reminderPages)
 // Returns the (possibly updated) user object
 async function syncCompanyName() {
     let user = getUser();
@@ -405,8 +423,10 @@ async function syncCompanyName() {
             if (data.user) {
                 if (data.user.companyName) user.companyName = data.user.companyName;
                 if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
+                if (data.user.hasReminders !== undefined) user.hasReminders = data.user.hasReminders;
                 if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
                 if (data.user.insurancePages) user.insurancePages = data.user.insurancePages;
+                if (data.user.reminderPages) user.reminderPages = data.user.reminderPages;
                 localStorage.setItem('dash_user', JSON.stringify(user));
             }
         }
@@ -414,44 +434,43 @@ async function syncCompanyName() {
     return user;
 }
 
-// Hide/show sidebar sections based on dashboardModules + insurancePages
+// Hide/show sidebar sections based on dashboardModules + insurancePages + reminderPages
 function updateSidebarVisibility() {
     const user = getUser();
     if (!user) return;
-    const modules = user.dashboardModules || 'management';
+    const modules = normModules(user.dashboardModules);
     const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
 
     // Remove the head-injected init CSS (sidebar-init.js) so inline styles take over
     const initCss = document.getElementById('sidebar-init-css');
     if (initCss) initCss.remove();
 
-    const bituhofirSection = document.getElementById('bituhofirSection');
     const managementSection = document.getElementById('managementSection');
-    const showManagement = (modules === 'management' || modules === 'both');
-    const showInsurance = (modules === 'insurance' || modules === 'both');
+    const bituhofirSection = document.getElementById('bituhofirSection');
+    const remindersSection = document.getElementById('remindersSection');
 
     // Management section: show/hide
     if (managementSection) {
-        managementSection.style.display = showManagement ? '' : 'none';
+        managementSection.style.display = modules.management ? '' : 'none';
         let el = managementSection.nextElementSibling;
-        while (el && el.id !== 'bituhofirSection') {
-            el.style.display = showManagement ? '' : 'none';
+        while (el && el.id !== 'bituhofirSection' && el.id !== 'remindersSection') {
+            el.style.display = modules.management ? '' : 'none';
             el = el.nextElementSibling;
         }
     }
 
-    // Bituhofir section header + all insurance links: first set all based on showInsurance
+    // Bituhofir section header + all insurance links
     if (bituhofirSection) {
-        bituhofirSection.style.display = showInsurance ? '' : 'none';
+        bituhofirSection.style.display = modules.insurance ? '' : 'none';
         let el = bituhofirSection.nextElementSibling;
-        while (el && el.tagName === 'A') {
-            el.style.display = showInsurance ? '' : 'none';
+        while (el && el.tagName === 'A' && el.id !== 'remindersSection') {
+            el.style.display = modules.insurance ? '' : 'none';
             el = el.nextElementSibling;
         }
     }
 
     // Granular: hide individual insurance pages based on insurancePages
-    if (showInsurance) {
+    if (modules.insurance) {
         const nav = document.querySelector('.sidebar-nav');
         if (nav) {
             const pageMap = { 'bituhofir': 'dashboard', 'policies': 'policies', 'agents': 'agents', 'reports': 'reports' };
@@ -468,10 +487,19 @@ function updateSidebarVisibility() {
                     }
                 }
             });
-            // If all insurance pages hidden, hide section header too
             if (bituhofirSection && visibleCount === 0) {
                 bituhofirSection.style.display = 'none';
             }
+        }
+    }
+
+    // Reminders section: show/hide
+    if (remindersSection) {
+        remindersSection.style.display = modules.reminders ? '' : 'none';
+        let el = remindersSection.nextElementSibling;
+        while (el && el.tagName === 'A') {
+            el.style.display = modules.reminders ? '' : 'none';
+            el = el.nextElementSibling;
         }
     }
 }

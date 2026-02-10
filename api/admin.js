@@ -1,5 +1,5 @@
 const connectDB = require('./_lib/db');
-const { Company, User, Employee, Trip, Policy } = require('./_lib/models');
+const { Company, User, Employee, Trip, Policy, Reminder } = require('./_lib/models');
 const { verifyAuth, cors } = require('./_lib/auth');
 
 module.exports = async function handler(req, res) {
@@ -122,19 +122,20 @@ module.exports = async function handler(req, res) {
         // POST - Create company
         if (req.method === 'POST') {
             try {
-                const { name, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, subscriptionEnd, username, password } = req.body;
+                const { name, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, reminderPages, subscriptionEnd, username, password } = req.body;
                 if (!name || !contactPerson || !email || !username || !password) {
-                    return res.status(400).json({ message: '\u05e0\u05d0 \u05dc\u05de\u05dc\u05d0 \u05d0\u05ea \u05db\u05dc \u05d4\u05e9\u05d3\u05d5\u05ea \u05d4\u05e0\u05d3\u05e8\u05e9\u05d9\u05dd.' });
+                    return res.status(400).json({ message: 'נא למלא את כל השדות הנדרשים.' });
                 }
 
                 const existingUser = await User.findOne({ username: username.toLowerCase() });
-                if (existingUser) return res.status(400).json({ message: '\u05e9\u05dd \u05d4\u05de\u05e9\u05ea\u05de\u05e9 \u05db\u05d1\u05e8 \u05e7\u05d9\u05d9\u05dd \u05d1\u05de\u05e2\u05e8\u05db\u05ea.' });
+                if (existingUser) return res.status(400).json({ message: 'שם המשתמש כבר קיים במערכת.' });
 
                 const company = await Company.create({
                     name, contactPerson, email, phone, policyNumber,
                     agentCodes: Array.isArray(agentCodes) ? agentCodes : [],
-                    dashboardModules: dashboardModules || 'management',
+                    dashboardModules: dashboardModules || { management: true, insurance: false, reminders: false },
                     insurancePages: insurancePages || { dashboard: true, policies: true, agents: true, reports: true },
+                    reminderPages: reminderPages || { agentAppointment: true, policyCancellations: true, newProductions: true, claims: true, firstDeposit: true, completingDeficiencies: true },
                     subscriptionEnd: subscriptionEnd || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
                 });
 
@@ -158,7 +159,7 @@ module.exports = async function handler(req, res) {
         if (req.method === 'PUT') {
             try {
                 const companyId = url.split('/').pop();
-                const { name, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, isActive } = req.body;
+                const { name, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, reminderPages, isActive } = req.body;
 
                 const company = await Company.findById(companyId);
                 if (!company) return res.status(404).json({ message: 'החברה לא נמצאה.' });
@@ -169,10 +170,17 @@ module.exports = async function handler(req, res) {
                 if (phone !== undefined) company.phone = phone;
                 if (policyNumber !== undefined) company.policyNumber = policyNumber;
                 if (agentCodes !== undefined) company.agentCodes = Array.isArray(agentCodes) ? agentCodes : [];
-                if (dashboardModules !== undefined) company.dashboardModules = dashboardModules;
+                if (dashboardModules !== undefined) {
+                    company.dashboardModules = dashboardModules;
+                    company.markModified('dashboardModules');
+                }
                 if (insurancePages !== undefined) {
                     company.insurancePages = insurancePages;
                     company.markModified('insurancePages');
+                }
+                if (reminderPages !== undefined) {
+                    company.reminderPages = reminderPages;
+                    company.markModified('reminderPages');
                 }
                 if (isActive !== undefined) company.isActive = isActive;
 
@@ -201,6 +209,7 @@ module.exports = async function handler(req, res) {
                         Employee.deleteMany({ companyId: company._id }),
                         Trip.deleteMany({ companyId: company._id }),
                         Policy.deleteMany({ companyId: company._id }),
+                        Reminder.deleteMany({ companyId: company._id }),
                         Company.findByIdAndDelete(company._id)
                     ]);
                     return res.json({ message: 'החברה וכל הנתונים שלה נמחקו לצמיתות.' });

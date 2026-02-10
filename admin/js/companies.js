@@ -142,16 +142,34 @@ async function submitAddCompany() {
         data.agentCodes = [];
     }
 
-    // Insurance pages checkboxes (FormData uses 'on' for checked, missing for unchecked)
+    // dashboardModules from checkboxes
     const form2 = document.getElementById('addCompanyForm');
+    data.dashboardModules = {
+        management: form2.querySelector('[name="addModManagement"]').checked,
+        insurance: form2.querySelector('[name="addModInsurance"]').checked,
+        reminders: form2.querySelector('[name="addModReminders"]').checked
+    };
+    // Insurance pages checkboxes
     data.insurancePages = {
         dashboard: form2.querySelector('[name="ipDashboard"]').checked,
         policies: form2.querySelector('[name="ipPolicies"]').checked,
         agents: form2.querySelector('[name="ipAgents"]').checked,
         reports: form2.querySelector('[name="ipReports"]').checked
     };
+    // Reminder pages checkboxes
+    data.reminderPages = {
+        agentAppointment: form2.querySelector('[name="rpAgentAppointment"]').checked,
+        policyCancellations: form2.querySelector('[name="rpPolicyCancellations"]').checked,
+        newProductions: form2.querySelector('[name="rpNewProductions"]').checked,
+        claims: form2.querySelector('[name="rpClaims"]').checked,
+        firstDeposit: form2.querySelector('[name="rpFirstDeposit"]').checked,
+        completingDeficiencies: form2.querySelector('[name="rpCompletingDeficiencies"]').checked
+    };
     // Remove checkbox fields from data (they came as 'on' strings)
     delete data.ipDashboard; delete data.ipPolicies; delete data.ipAgents; delete data.ipReports;
+    delete data.addModManagement; delete data.addModInsurance; delete data.addModReminders;
+    delete data.rpAgentAppointment; delete data.rpPolicyCancellations; delete data.rpNewProductions;
+    delete data.rpClaims; delete data.rpFirstDeposit; delete data.rpCompletingDeficiencies;
 
     try {
         const res = await apiFetch('/admin/companies', {
@@ -226,14 +244,26 @@ async function openCompanyDetail(companyId) {
     document.getElementById('cdPhone').value = company.phone || '';
     document.getElementById('cdPolicy').value = company.policyNumber || '';
     document.getElementById('cdAgentCodes').value = Array.isArray(company.agentCodes) ? company.agentCodes.join(', ') : '';
-    document.getElementById('cdDashboardModules').value = company.dashboardModules || 'management';
+    // dashboardModules checkboxes — normalize old string format
+    const dm = normalizeDM(company.dashboardModules);
+    document.getElementById('cdModManagement').checked = dm.management;
+    document.getElementById('cdModInsurance').checked = dm.insurance;
+    document.getElementById('cdModReminders').checked = dm.reminders;
     // Insurance pages checkboxes
     const ip = company.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
     document.getElementById('cdIpDashboard').checked = ip.dashboard !== false;
     document.getElementById('cdIpPolicies').checked = ip.policies !== false;
     document.getElementById('cdIpAgents').checked = ip.agents !== false;
     document.getElementById('cdIpReports').checked = ip.reports !== false;
-    toggleDetailInsurancePages(company.dashboardModules || 'management');
+    // Reminder pages checkboxes
+    const rp = company.reminderPages || { agentAppointment: true, policyCancellations: true, newProductions: true, claims: true, firstDeposit: true, completingDeficiencies: true };
+    document.getElementById('cdRpAgentAppointment').checked = rp.agentAppointment !== false;
+    document.getElementById('cdRpPolicyCancellations').checked = rp.policyCancellations !== false;
+    document.getElementById('cdRpNewProductions').checked = rp.newProductions !== false;
+    document.getElementById('cdRpClaims').checked = rp.claims !== false;
+    document.getElementById('cdRpFirstDeposit').checked = rp.firstDeposit !== false;
+    document.getElementById('cdRpCompletingDeficiencies').checked = rp.completingDeficiencies !== false;
+    toggleDetailSubPages();
     document.getElementById('companyUsersArea').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     document.getElementById('companyDetailModal').classList.add('show');
 
@@ -262,18 +292,30 @@ async function saveCompanyDetails() {
     const policyNumber = document.getElementById('cdPolicy').value.trim();
     const agentCodesStr = document.getElementById('cdAgentCodes').value.trim();
     const agentCodes = agentCodesStr ? agentCodesStr.split(',').map(s => s.trim()).filter(Boolean) : [];
-    const dashboardModules = document.getElementById('cdDashboardModules').value;
+    const dashboardModules = {
+        management: document.getElementById('cdModManagement').checked,
+        insurance: document.getElementById('cdModInsurance').checked,
+        reminders: document.getElementById('cdModReminders').checked
+    };
     const insurancePages = {
         dashboard: document.getElementById('cdIpDashboard').checked,
         policies: document.getElementById('cdIpPolicies').checked,
         agents: document.getElementById('cdIpAgents').checked,
         reports: document.getElementById('cdIpReports').checked
     };
+    const reminderPages = {
+        agentAppointment: document.getElementById('cdRpAgentAppointment').checked,
+        policyCancellations: document.getElementById('cdRpPolicyCancellations').checked,
+        newProductions: document.getElementById('cdRpNewProductions').checked,
+        claims: document.getElementById('cdRpClaims').checked,
+        firstDeposit: document.getElementById('cdRpFirstDeposit').checked,
+        completingDeficiencies: document.getElementById('cdRpCompletingDeficiencies').checked
+    };
 
     try {
         const res = await apiFetch(`/admin/companies/${currentDetailCompanyId}`, {
             method: 'PUT',
-            body: JSON.stringify({ contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages })
+            body: JSON.stringify({ contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, reminderPages })
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.message);
@@ -288,6 +330,7 @@ async function saveCompanyDetails() {
             allCompanies[idx].agentCodes = agentCodes;
             allCompanies[idx].dashboardModules = dashboardModules;
             allCompanies[idx].insurancePages = insurancePages;
+            allCompanies[idx].reminderPages = reminderPages;
             renderCompanies(allCompanies);
         }
         alert('פרטי החברה עודכנו בהצלחה!');
@@ -549,19 +592,37 @@ async function submitImport() {
     }
 }
 
-// Toggle insurance pages checkboxes visibility
-function toggleAddInsurancePages(val) {
-    const wrap = document.getElementById('addInsurancePagesWrap');
-    if (wrap) wrap.style.display = (val === 'insurance' || val === 'both') ? '' : 'none';
+// Normalize dashboardModules (backward compat: string → object)
+function normalizeDM(raw) {
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        return { management: raw.management !== false, insurance: raw.insurance === true, reminders: raw.reminders === true };
+    }
+    if (raw === 'insurance') return { management: false, insurance: true, reminders: false };
+    if (raw === 'both') return { management: true, insurance: true, reminders: false };
+    return { management: true, insurance: false, reminders: false };
 }
 
-function toggleDetailInsurancePages(val) {
-    const wrap = document.getElementById('cdInsurancePagesWrap');
-    if (wrap) wrap.style.display = (val === 'insurance' || val === 'both') ? '' : 'none';
+// Toggle sub-page checkboxes visibility in Add Company form
+function toggleAddSubPages() {
+    const form = document.getElementById('addCompanyForm');
+    const insWrap = document.getElementById('addInsurancePagesWrap');
+    const remWrap = document.getElementById('addReminderPagesWrap');
+    if (insWrap) insWrap.style.display = form.querySelector('[name="addModInsurance"]').checked ? '' : 'none';
+    if (remWrap) remWrap.style.display = form.querySelector('[name="addModReminders"]').checked ? '' : 'none';
 }
 
-// Attach onchange to detail modal dropdown
+// Toggle sub-page checkboxes visibility in Detail modal
+function toggleDetailSubPages() {
+    const insWrap = document.getElementById('cdInsurancePagesWrap');
+    const remWrap = document.getElementById('cdReminderPagesWrap');
+    if (insWrap) insWrap.style.display = document.getElementById('cdModInsurance').checked ? '' : 'none';
+    if (remWrap) remWrap.style.display = document.getElementById('cdModReminders').checked ? '' : 'none';
+}
+
+// Attach onchange to detail modal checkboxes
 document.addEventListener('DOMContentLoaded', () => {
-    const sel = document.getElementById('cdDashboardModules');
-    if (sel) sel.addEventListener('change', () => toggleDetailInsurancePages(sel.value));
+    const modIns = document.getElementById('cdModInsurance');
+    const modRem = document.getElementById('cdModReminders');
+    if (modIns) modIns.addEventListener('change', toggleDetailSubPages);
+    if (modRem) modRem.addEventListener('change', toggleDetailSubPages);
 });
