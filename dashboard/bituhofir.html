@@ -39,13 +39,14 @@
         .kpi-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;
         }
-        @media (max-width: 768px) { .kpi-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 480px) { .kpi-grid { gap: 8px; } }
 
         .kpi-card {
             background: white; border-radius: 10px; padding: 16px 20px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-100);
             transition: all 0.15s; position: relative; overflow: hidden;
         }
+        @media (max-width: 480px) { .kpi-card { padding: 12px 10px; } }
         .kpi-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.08); transform: translateY(-1px); }
 
         /* Color top border */
@@ -63,29 +64,36 @@
             font-size: 13px; font-weight: 700; color: var(--gray-500); margin-bottom: 10px;
             text-align: center;
         }
+        @media (max-width: 480px) { .kpi-header { font-size: 11px; margin-bottom: 6px; } }
         .kpi-body {
-            display: flex; align-items: center; gap: 12px;
+            display: flex; flex-direction: column; align-items: center; position: relative;
         }
         .kpi-arrow {
-            width: 32px; height: 32px; flex-shrink: 0;
+            position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+            width: 28px; height: 28px;
             display: flex; align-items: center; justify-content: center;
         }
+        @media (max-width: 480px) { .kpi-arrow { width: 20px; height: 20px; } }
         .kpi-arrow svg { width: 28px; height: 28px; }
+        @media (max-width: 480px) { .kpi-arrow svg { width: 20px; height: 20px; } }
         .kpi-arrow.up svg { color: #059669; }
         .kpi-arrow.down svg { color: #DC2626; }
 
-        .kpi-data { flex: 1; text-align: center; }
+        .kpi-data { text-align: center; }
         .kpi-value {
             font-size: 24px; font-weight: 800; color: var(--dark); line-height: 1.2; margin-bottom: 3px;
         }
+        @media (max-width: 480px) { .kpi-value { font-size: 18px; } }
         .kpi-pct {
             font-size: 13px; font-weight: 700; margin-bottom: 2px;
         }
+        @media (max-width: 480px) { .kpi-pct { font-size: 11px; } }
         .kpi-pct.positive { color: #059669; }
         .kpi-pct.negative { color: #DC2626; }
         .kpi-prev {
             font-size: 12px; color: var(--gray-400); font-weight: 500;
         }
+        @media (max-width: 480px) { .kpi-prev { font-size: 10px; } }
 
         /* ===== Charts ===== */
         .charts-row {
