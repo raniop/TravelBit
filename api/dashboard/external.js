@@ -1,4 +1,6 @@
 const { verifyAuth, cors } = require('../_lib/auth');
+const connectDB = require('../_lib/db');
+const { Company } = require('../_lib/models');
 
 // Module-level token cache (survives warm invocations)
 let bituhOfirToken = {
@@ -90,10 +92,13 @@ module.exports = async function handler(req, res) {
     if (!user) return res.status(401).json({ message: 'אין הרשאת גישה.' });
     if (user.role !== 'company') return res.status(403).json({ message: 'אין הרשאה.' });
 
-    // Access control: only Ophir company can access BituhOfir data
-    if (process.env.OPHIR_COMPANY_ID && user.companyId.toString() !== process.env.OPHIR_COMPANY_ID) {
-        return res.status(403).json({ message: 'אין הרשאה לנתוני ביטוח אופיר.' });
+    // Access control: company must have agentCodes to access BituhOfir data
+    await connectDB();
+    const company = await Company.findById(user.companyId).select('agentCodes').lean();
+    if (!company || !Array.isArray(company.agentCodes) || company.agentCodes.length === 0) {
+        return res.status(403).json({ message: 'אין הרשאה לנתוני ביטוח.' });
     }
+    const agentCodes = company.agentCodes.map(String);
 
     const url = req.url.split('?')[0];
 
@@ -120,6 +125,11 @@ module.exports = async function handler(req, res) {
 
             let topPolicies = [];
             try { if (topPoliciesRes && topPoliciesRes.ok) topPolicies = await topPoliciesRes.json(); } catch(_) {}
+
+            // Filter topPolicies by company's agentCodes
+            if (Array.isArray(topPolicies)) {
+                topPolicies = topPolicies.filter(p => agentCodes.includes(String(p.agentCode)));
+            }
 
             return res.json({
                 ...calcData,
@@ -181,7 +191,15 @@ module.exports = async function handler(req, res) {
             else if (policyIndex) path = `/api/Policy/GetPolicyDetailsById?policyIndex=${policyIndex}`;
             else if (id) path = `/api/Policy/GetById?id=${id}`;
             const apiRes = await bituhOfirFetch(path);
-            const data = await apiRes.json();
+            let data = await apiRes.json();
+
+            // Filter by company's agentCodes
+            if (Array.isArray(data)) {
+                data = data.filter(p => agentCodes.includes(String(p.agentCode)));
+            } else if (data && data.agentCode && !agentCodes.includes(String(data.agentCode))) {
+                return res.status(403).json({ message: 'אין הרשאה לפוליסה זו.' });
+            }
+
             return res.json(data);
         }
 
@@ -190,6 +208,12 @@ module.exports = async function handler(req, res) {
             const { policyIndex } = req.query;
             const apiRes = await bituhOfirFetch(`/api/Policy/GetPolicyCustomersDetailsByIndex?policyIndex=${policyIndex}`);
             const data = await apiRes.json();
+
+            // Verify policy belongs to this company's agents
+            if (data && data.agentCode && !agentCodes.includes(String(data.agentCode))) {
+                return res.status(403).json({ message: 'אין הרשאה לפוליסה זו.' });
+            }
+
             return res.json(data);
         }
 
@@ -207,13 +231,21 @@ module.exports = async function handler(req, res) {
             if (top) path = `/api/SitePolicy/GetTopPolicies?top=${top}`;
             else if (id) path = `/api/SitePolicy/GetById?id=${id}`;
             const apiRes = await bituhOfirFetch(path);
-            const data = await apiRes.json();
+            let data = await apiRes.json();
+
+            // Filter by company's agentCodes
+            if (Array.isArray(data)) {
+                data = data.filter(p => agentCodes.includes(String(p.agentCode)));
+            } else if (data && data.agentCode && !agentCodes.includes(String(data.agentCode))) {
+                return res.status(403).json({ message: 'אין הרשאה לפוליסה זו.' });
+            }
+
             return res.json(data);
         }
 
         return res.status(404).json({ message: 'Not found' });
     } catch (error) {
         console.error('External API error:', error.message || error);
-        return res.status(502).json({ message: 'שגיאת תקשורת עם מערכת ביטוח אופיר.' });
+        return res.status(502).json({ message: 'שגיאת תקשורת עם מערכת הביטוח.' });
     }
 };

@@ -72,12 +72,12 @@ async function loadBituhOfirDashboard(month, year) {
         if (!res) return;
 
         if (res.status === 403) {
-            showError('אין הרשאה לצפות בנתוני ביטוח אופיר.');
+            showError('אין הרשאה לצפות בנתוני ביטוח.');
             return;
         }
 
         if (!res.ok) {
-            showError('שגיאה בטעינת נתונים מביטוח אופיר (קוד: ' + res.status + ')');
+            showError('שגיאה בטעינת נתונים מהביטוח (קוד: ' + res.status + ')');
             return;
         }
 
@@ -104,7 +104,7 @@ async function loadBituhOfirDashboard(month, year) {
 
     } catch (err) {
         console.error('Error loading BituhOfir data:', err);
-        showError('שגיאת תקשורת עם מערכת ביטוח אופיר.');
+        showError('שגיאת תקשורת עם מערכת הביטוח.');
     }
 }
 

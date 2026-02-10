@@ -41,11 +41,15 @@ module.exports = async function handler(req, res) {
 
             const tokens = generateTokens(user);
 
-            // Fetch company name if user has a company
+            // Fetch company name and check for BituhOfir access
             let companyName = null;
+            let hasBituhOfir = false;
             if (user.companyId) {
-                const company = await Company.findById(user.companyId).select('name').lean();
-                if (company) companyName = company.name;
+                const company = await Company.findById(user.companyId).select('name agentCodes').lean();
+                if (company) {
+                    companyName = company.name;
+                    hasBituhOfir = Array.isArray(company.agentCodes) && company.agentCodes.length > 0;
+                }
             }
 
             return res.json({
@@ -56,7 +60,8 @@ module.exports = async function handler(req, res) {
                     name: user.name,
                     role: user.role,
                     companyId: user.companyId,
-                    companyName: companyName
+                    companyName: companyName,
+                    hasBituhOfir
                 }
             });
         } catch (error) {
@@ -90,11 +95,15 @@ module.exports = async function handler(req, res) {
         const user = await verifyAuth(req);
         if (!user) return res.status(401).json({ message: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05d2\u05d9\u05e9\u05d4.' });
 
-        // Fetch company name
+        // Fetch company name and check for BituhOfir access
         let companyName = null;
+        let hasBituhOfir = false;
         if (user.companyId) {
-            const company = await Company.findById(user.companyId).select('name').lean();
-            if (company) companyName = company.name;
+            const company = await Company.findById(user.companyId).select('name agentCodes').lean();
+            if (company) {
+                companyName = company.name;
+                hasBituhOfir = Array.isArray(company.agentCodes) && company.agentCodes.length > 0;
+            }
         }
 
         return res.json({
@@ -104,7 +113,8 @@ module.exports = async function handler(req, res) {
                 name: user.name,
                 role: user.role,
                 companyId: user.companyId,
-                companyName: companyName
+                companyName: companyName,
+                hasBituhOfir
             }
         });
     }

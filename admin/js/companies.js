@@ -131,6 +131,13 @@ async function submitAddCompany() {
         return;
     }
 
+    // Convert agentCodes comma-separated string to array
+    if (data.agentCodes) {
+        data.agentCodes = data.agentCodes.split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+        data.agentCodes = [];
+    }
+
     try {
         const res = await apiFetch('/admin/companies', {
             method: 'POST',
@@ -183,6 +190,7 @@ async function openCompanyDetail(companyId) {
     document.getElementById('cdEmail').value = company.email || '';
     document.getElementById('cdPhone').value = company.phone || '';
     document.getElementById('cdPolicy').value = company.policyNumber || '';
+    document.getElementById('cdAgentCodes').value = Array.isArray(company.agentCodes) ? company.agentCodes.join(', ') : '';
     document.getElementById('companyUsersArea').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     document.getElementById('companyDetailModal').classList.add('show');
 
@@ -209,11 +217,13 @@ async function saveCompanyDetails() {
     const email = document.getElementById('cdEmail').value.trim();
     const phone = document.getElementById('cdPhone').value.trim();
     const policyNumber = document.getElementById('cdPolicy').value.trim();
+    const agentCodesStr = document.getElementById('cdAgentCodes').value.trim();
+    const agentCodes = agentCodesStr ? agentCodesStr.split(',').map(s => s.trim()).filter(Boolean) : [];
 
     try {
         const res = await apiFetch(`/admin/companies/${currentDetailCompanyId}`, {
             method: 'PUT',
-            body: JSON.stringify({ contactPerson, email, phone, policyNumber })
+            body: JSON.stringify({ contactPerson, email, phone, policyNumber, agentCodes })
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.message);
@@ -225,6 +235,7 @@ async function saveCompanyDetails() {
             allCompanies[idx].email = email;
             allCompanies[idx].phone = phone;
             allCompanies[idx].policyNumber = policyNumber;
+            allCompanies[idx].agentCodes = agentCodes;
             renderCompanies(allCompanies);
         }
         alert('פרטי החברה עודכנו בהצלחה!');

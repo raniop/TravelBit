@@ -41,7 +41,7 @@ async function loadPolicies() {
         if (!res) return;
 
         if (res.status === 403) {
-            showError('אין הרשאה לצפות בנתוני ביטוח אופיר.');
+            showError('אין הרשאה לצפות בנתוני ביטוח.');
             return;
         }
         if (!res.ok) {
@@ -55,7 +55,7 @@ async function loadPolicies() {
         renderPoliciesTable(allPolicies);
     } catch (err) {
         console.error('Error loading policies:', err);
-        showError('שגיאת תקשורת עם מערכת ביטוח אופיר.');
+        showError('שגיאת תקשורת עם מערכת הביטוח.');
     }
 }
 

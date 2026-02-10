@@ -3,8 +3,7 @@ const API_BASE = '/api';
 
 // Determine default landing page based on company
 function getDefaultDashboard(user) {
-    const cName = user && (user.companyName || user.name || '');
-    if (cName.includes('אופיר')) {
+    if (user && user.hasBituhOfir) {
         return '/dashboard/bituhofir.html';
     }
     return '/dashboard/';
@@ -19,16 +18,17 @@ function getDefaultDashboard(user) {
         let user = null;
         try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
 
-        // If user data is missing companyName, refresh from server
-        if (user && !user.companyName) {
+        // If user data is missing companyName or hasBituhOfir, refresh from server
+        if (user && (!user.companyName || user.hasBituhOfir === undefined)) {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.user && data.user.companyName) {
-                        user.companyName = data.user.companyName;
+                    if (data.user) {
+                        if (data.user.companyName) user.companyName = data.user.companyName;
+                        if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
                         localStorage.setItem('dash_user', JSON.stringify(user));
                     }
                 }
@@ -49,27 +49,26 @@ function getDefaultDashboard(user) {
         let user = null;
         try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
 
-        // FIRST: Immediate redirect check (synchronous, no fetch needed)
-        // Works even without companyName because getDefaultDashboard
-        // falls back to user.name which may contain the company identifier
+        // FIRST: Immediate redirect check
         if (user) {
             const correctPage = getDefaultDashboard(user);
-            if (!currentPage.includes('bituhofir') && correctPage.includes('bituhofir')) {
+            if (!currentPage.includes('bituhofir') && !currentPage.includes('policies') && correctPage.includes('bituhofir')) {
                 window.location.href = correctPage;
                 return;
             }
         }
 
-        // THEN: Background sync companyName for sidebar display
-        if (user && !user.companyName) {
+        // THEN: Background sync companyName + hasBituhOfir for sidebar display
+        if (user && (!user.companyName || user.hasBituhOfir === undefined)) {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.user && data.user.companyName) {
-                        user.companyName = data.user.companyName;
+                    if (data.user) {
+                        if (data.user.companyName) user.companyName = data.user.companyName;
+                        if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
                         localStorage.setItem('dash_user', JSON.stringify(user));
                     }
                 }
@@ -166,11 +165,11 @@ async function apiFetch(url, options = {}) {
     return res;
 }
 
-// Sync companyName from server if missing in localStorage
+// Sync companyName + hasBituhOfir from server if missing in localStorage
 // Returns the (possibly updated) user object
 async function syncCompanyName() {
     let user = getUser();
-    if (!user || user.companyName) return user;
+    if (!user || (user.companyName && user.hasBituhOfir !== undefined)) return user;
 
     try {
         const token = getToken();
@@ -180,11 +179,29 @@ async function syncCompanyName() {
         });
         if (res.ok) {
             const data = await res.json();
-            if (data.user && data.user.companyName) {
-                user.companyName = data.user.companyName;
+            if (data.user) {
+                if (data.user.companyName) user.companyName = data.user.companyName;
+                if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
                 localStorage.setItem('dash_user', JSON.stringify(user));
             }
         }
     } catch(_) {}
     return user;
 }
+
+// Hide bituhofir sidebar section for companies without access
+function updateBituhofirVisibility() {
+    const user = getUser();
+    const section = document.getElementById('bituhofirSection');
+    if (!section) return;
+    if (!user || !user.hasBituhOfir) {
+        // Hide the section header and its two sibling links
+        section.style.display = 'none';
+        let el = section.nextElementSibling;
+        while (el && el.tagName === 'A') {
+            el.style.display = 'none';
+            el = el.nextElementSibling;
+        }
+    }
+}
+document.addEventListener('DOMContentLoaded', updateBituhofirVisibility);

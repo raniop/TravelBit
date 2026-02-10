@@ -31,6 +31,7 @@ const companySchema = new mongoose.Schema({
     logo: { type: String, default: null },
     employeeCount: { type: Number, default: 0 },
     policyNumber: { type: String, trim: true },
+    agentCodes: [{ type: String, trim: true }],
     subscriptionStart: { type: Date, default: Date.now },
     subscriptionEnd: { type: Date },
     isActive: { type: Boolean, default: true }
