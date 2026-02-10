@@ -42,19 +42,14 @@ function initDateFilters() {
         if (y === now.getFullYear()) opt.selected = true;
         yearSelect.appendChild(opt);
     }
-}
 
-function loadWithFilter() {
-    const month = document.getElementById('filterMonth').value;
-    const year = document.getElementById('filterYear').value;
-    loadBituhOfirDashboard(month, year);
-}
-
-function loadCurrent() {
-    const now = new Date();
-    document.getElementById('filterMonth').value = now.getMonth() + 1;
-    document.getElementById('filterYear').value = now.getFullYear();
-    loadBituhOfirDashboard();
+    // Auto-load when date changes
+    monthSelect.addEventListener('change', () => {
+        loadBituhOfirDashboard(monthSelect.value, yearSelect.value);
+    });
+    yearSelect.addEventListener('change', () => {
+        loadBituhOfirDashboard(monthSelect.value, yearSelect.value);
+    });
 }
 
 async function loadBituhOfirDashboard(month, year) {
