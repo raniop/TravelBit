@@ -243,10 +243,20 @@ function parseEmlContent(raw, fileName) {
     // Combine: subject + from + all extracted body text
     const combinedText = [subject, fromHeader, allText].filter(Boolean).join('\n');
     console.log('[EML] combinedText length:', combinedText.length);
+    // Log more text to see what we have
+    console.log('[EML] combinedText 300-800:', combinedText.substring(300, 800));
+    console.log('[EML] combinedText 800-1300:', combinedText.substring(800, 1300));
+    console.log('[EML] combinedText 1300-1800:', combinedText.substring(1300, 1800));
+    console.log('[EML] has עבור:', combinedText.includes('עבור'));
+    console.log('[EML] has ת.ז:', combinedText.includes('ת.ז'));
+    console.log('[EML] has ת"ז:', combinedText.includes('ת"ז'));
+    console.log('[EML] has סיוון:', combinedText.includes('סיוון'));
+    console.log('[EML] has 32513145:', combinedText.includes('32513145'));
 
     // Run enhanced extraction
     const data = extractEmailDataEnhanced(combinedText, '');
     data.source = 'file';
+    console.log('[EML] extracted customerName:', data.customerName, 'idNumber:', data.idNumber);
 
     // Readable notes
     const readableNotes = [subject, allText.substring(0, 400)].filter(Boolean).join('\n');
