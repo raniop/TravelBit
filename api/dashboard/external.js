@@ -58,29 +58,38 @@ async function getBituhOfirToken() {
 }
 
 // Make authenticated request to BituhOfir
-async function bituhOfirFetch(path) {
+async function bituhOfirFetch(path, timeoutMs = 8000) {
     const token = await getBituhOfirToken();
-    let r = await fetch(`${BASE}${path}`, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    // If 401 - invalidate cache and retry once
-    if (r.status === 401) {
-        bituhOfirToken.accessToken = null;
-        bituhOfirToken.expiresAt = 0;
-        const newToken = await getBituhOfirToken();
-        r = await fetch(`${BASE}${path}`, {
+    try {
+        let r = await fetch(`${BASE}${path}`, {
             headers: {
-                'Authorization': `Bearer ${newToken}`,
+                'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            signal: controller.signal
         });
-    }
 
-    return r;
+        // If 401 - invalidate cache and retry once
+        if (r.status === 401) {
+            bituhOfirToken.accessToken = null;
+            bituhOfirToken.expiresAt = 0;
+            const newToken = await getBituhOfirToken();
+            r = await fetch(`${BASE}${path}`, {
+                headers: {
+                    'Authorization': `Bearer ${newToken}`,
+                    'Content-Type': 'application/json'
+                },
+                signal: controller.signal
+            });
+        }
+
+        return r;
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 // Calculate KPIs from filtered policy data
@@ -244,8 +253,6 @@ module.exports = async function handler(req, res) {
             // Extract turnover (repType 1) for each month
             const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
             const yoyData = [];
-            let curCumulative = 0;
-            let prevCumulative = 0;
             for (let m = 1; m <= maxMonth; m++) {
                 const curResult = results.find(r => r.month === m && r.year === year);
                 const prevResult = results.find(r => r.month === m && r.year === prevYear);
@@ -253,13 +260,11 @@ module.exports = async function handler(req, res) {
                 const prevCalc = prevResult?.data?.dashboardCalcData || [];
                 const curTurnover = curCalc.find(c => c.repType === 1);
                 const prevTurnover = prevCalc.find(c => c.repType === 1);
-                curCumulative += (curTurnover?.curYearValue || 0);
-                prevCumulative += (prevTurnover?.curYearValue || 0);
                 yoyData.push({
                     month: monthNames[m - 1],
                     monthNum: m,
-                    currentYear: curCumulative,
-                    previousYear: prevCumulative
+                    currentYear: curTurnover?.curYearValue || 0,
+                    previousYear: prevTurnover?.curYearValue || 0
                 });
             }
 
