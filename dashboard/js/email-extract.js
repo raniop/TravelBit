@@ -231,15 +231,18 @@ function readEmailFile(file) {
 
 function parseEmlContent(raw, fileName) {
     // Extract ALL text from the .eml recursively (handles forwarded, multipart, nested)
-    const allText = extractAllTextFromMime(raw);
+    const allText = extractAllTextFromMime(raw, 0);
+    console.log('[EML] allText length:', allText.length, 'first 300:', allText.substring(0, 300));
 
     // Also extract subject and from from top-level headers
     const topHeaders = getHeaders(raw);
     let subject = decodeEmlHeader(topHeaders['subject'] || '');
     let fromHeader = decodeEmlHeader(topHeaders['from'] || '');
+    console.log('[EML] subject:', subject, 'from:', fromHeader);
 
     // Combine: subject + from + all extracted body text
     const combinedText = [subject, fromHeader, allText].filter(Boolean).join('\n');
+    console.log('[EML] combinedText length:', combinedText.length);
 
     // Run enhanced extraction
     const data = extractEmailDataEnhanced(combinedText, '');
@@ -271,26 +274,33 @@ function parseEmlContent(raw, fileName) {
 // Extracts ALL readable text from any MIME structure:
 // text/plain, text/html (stripped), message/rfc822 (recursive), multipart/* (recursive)
 function extractAllTextFromMime(rawMime, depth) {
-    if (!depth) depth = 0;
+    if (depth === undefined) depth = 0;
     if (depth > 10) return ''; // prevent infinite recursion
+
+    // Trim leading whitespace/newlines (parts from boundary splits start with \r\n)
+    const trimmed = rawMime.replace(/^[\r\n]+/, '');
 
     const texts = [];
 
     // Split headers from body
-    const headers = getHeaders(rawMime);
-    const bodyStart = findBodyStart(rawMime);
-    const bodyPart = bodyStart >= 0 ? rawMime.substring(bodyStart) : '';
+    const headers = getHeaders(trimmed);
+    const bodyStart = findBodyStart(trimmed);
+    const bodyPart = bodyStart >= 0 ? trimmed.substring(bodyStart) : '';
 
     const contentType = (headers['content-type'] || '').toLowerCase();
     const encoding = (headers['content-transfer-encoding'] || '').toLowerCase().trim();
     const charsetMatch = contentType.match(/charset="?([^"\s;]+)"?/i);
     const charset = charsetMatch ? charsetMatch[1] : 'utf-8';
 
+    console.log('[MIME d' + depth + '] ct:', contentType.substring(0, 60), 'enc:', encoding, 'bodyLen:', bodyPart.length);
+
     // Case 1: multipart/* — split by boundary and recurse into each part
     const boundaryMatch = contentType.match(/boundary="?([^"\r\n;]+)"?/);
     if (boundaryMatch) {
         const boundary = boundaryMatch[1];
+        console.log('[MIME d' + depth + '] boundary:', boundary);
         const parts = bodyPart.split('--' + boundary);
+        console.log('[MIME d' + depth + '] parts count:', parts.length);
         for (let i = 1; i < parts.length; i++) { // skip preamble (index 0)
             const part = parts[i];
             if (part.trimStart().startsWith('--')) continue; // skip epilogue
