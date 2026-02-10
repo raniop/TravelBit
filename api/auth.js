@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const connectDB = require('./_lib/db');
-const { User } = require('./_lib/models');
+const { User, Company } = require('./_lib/models');
 const { verifyAuth, generateTokens, cors } = require('./_lib/auth');
 
 module.exports = async function handler(req, res) {
@@ -41,6 +41,13 @@ module.exports = async function handler(req, res) {
 
             const tokens = generateTokens(user);
 
+            // Fetch company name if user has a company
+            let companyName = null;
+            if (user.companyId) {
+                const company = await Company.findById(user.companyId).select('name').lean();
+                if (company) companyName = company.name;
+            }
+
             return res.json({
                 ...tokens,
                 user: {
@@ -48,7 +55,8 @@ module.exports = async function handler(req, res) {
                     username: user.username,
                     name: user.name,
                     role: user.role,
-                    companyId: user.companyId
+                    companyId: user.companyId,
+                    companyName: companyName
                 }
             });
         } catch (error) {

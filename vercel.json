@@ -11,6 +11,7 @@
     { "source": "/api/auth/me", "destination": "/api/auth" },
     { "source": "/api/admin/stats", "destination": "/api/admin" },
     { "source": "/api/admin/companies", "destination": "/api/admin" },
+    { "source": "/api/admin/users", "destination": "/api/admin" },
     { "source": "/api/dashboard/export/trips", "destination": "/api/dashboard/export" },
     { "source": "/api/dashboard/export/workdays", "destination": "/api/dashboard/export" },
     { "source": "/api/dashboard/external/dashboard", "destination": "/api/dashboard/external" },

@@ -154,5 +154,54 @@ module.exports = async function handler(req, res) {
         return res.status(405).json({ message: 'Method not allowed' });
     }
 
+    // === USERS (list / create for existing company) ===
+    if (url.includes('/admin/users')) {
+        // GET - List users for a company
+        if (req.method === 'GET') {
+            try {
+                const { companyId } = req.query;
+                const filter = {};
+                if (companyId) filter.companyId = companyId;
+                filter.role = 'company';
+                const users = await User.find(filter).select('-password').sort({ createdAt: -1 });
+                return res.json(users);
+            } catch (error) {
+                console.error('List users error:', error);
+                return res.status(500).json({ message: 'שגיאת שרת.' });
+            }
+        }
+
+        // POST - Create user for existing company
+        if (req.method === 'POST') {
+            try {
+                const { companyId, username, password, name, email } = req.body;
+                if (!companyId || !username || !password || !name) {
+                    return res.status(400).json({ message: 'נא למלא את כל השדות הנדרשים.' });
+                }
+
+                const company = await Company.findById(companyId);
+                if (!company) return res.status(404).json({ message: 'החברה לא נמצאה.' });
+
+                const existingUser = await User.findOne({ username: username.toLowerCase() });
+                if (existingUser) return res.status(400).json({ message: 'שם המשתמש כבר קיים במערכת.' });
+
+                const newUser = await User.create({
+                    username: username.toLowerCase(), password, role: 'company',
+                    companyId: company._id, name, email: email || ''
+                });
+
+                return res.status(201).json({
+                    message: 'המשתמש נוצר בהצלחה!',
+                    user: { id: newUser._id, username: newUser.username, name: newUser.name, companyId: newUser.companyId }
+                });
+            } catch (error) {
+                console.error('Create user error:', error);
+                return res.status(500).json({ message: 'שגיאת שרת.' });
+            }
+        }
+
+        return res.status(405).json({ message: 'Method not allowed' });
+    }
+
     return res.status(404).json({ message: 'Not found' });
 };

@@ -13,9 +13,9 @@ function initUser() {
         const nameEl = document.getElementById('userName');
         const avatarEl = document.getElementById('userAvatar');
         const companyEl = document.getElementById('companyName');
-        if (nameEl) nameEl.textContent = user.name || 'חברה';
+        if (nameEl) nameEl.textContent = user.name || 'משתמש';
         if (avatarEl) avatarEl.textContent = (user.name || 'C').charAt(0);
-        if (companyEl) companyEl.textContent = user.name || 'חברה';
+        if (companyEl) companyEl.textContent = user.companyName || user.name || 'חברה';
     }
 }
 

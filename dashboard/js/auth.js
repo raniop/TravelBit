@@ -3,7 +3,8 @@ const API_BASE = '/api';
 
 // Determine default landing page based on company
 function getDefaultDashboard(user) {
-    if (user && user.name && user.name.includes('אופיר')) {
+    const cName = user && (user.companyName || user.name || '');
+    if (cName.includes('אופיר')) {
         return '/dashboard/bituhofir.html';
     }
     return '/dashboard/';
