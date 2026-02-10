@@ -200,6 +200,31 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        // PUT - Update user (password reset, toggle active, edit name/email)
+        if (req.method === 'PUT') {
+            try {
+                const { userId, password, isActive, name, email } = req.body;
+                if (!userId) return res.status(400).json({ message: 'חסר מזהה משתמש.' });
+
+                const targetUser = await User.findById(userId);
+                if (!targetUser) return res.status(404).json({ message: 'המשתמש לא נמצא.' });
+
+                if (password !== undefined) {
+                    if (password.length < 6) return res.status(400).json({ message: 'הסיסמה חייבת להכיל לפחות 6 תווים.' });
+                    targetUser.password = password;
+                }
+                if (isActive !== undefined) targetUser.isActive = isActive;
+                if (name !== undefined) targetUser.name = name;
+                if (email !== undefined) targetUser.email = email;
+
+                await targetUser.save();
+                return res.json({ message: 'המשתמש עודכן בהצלחה!' });
+            } catch (error) {
+                console.error('Update user error:', error);
+                return res.status(500).json({ message: 'שגיאת שרת.' });
+            }
+        }
+
         return res.status(405).json({ message: 'Method not allowed' });
     }
 

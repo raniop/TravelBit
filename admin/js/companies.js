@@ -1,6 +1,7 @@
 // Companies Management JS
 let allCompanies = [];
 let importCompanyId = null;
+let currentDetailCompanyId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
@@ -70,7 +71,7 @@ function renderCompanies(companies) {
 
     tbody.innerHTML = companies.map(c => `
         <tr>
-            <td><strong>${escapeHtml(c.name)}</strong></td>
+            <td><a href="#" onclick="openCompanyDetail('${c._id}');return false;" style="color:var(--dark);text-decoration:none;font-weight:700;border-bottom:1px dashed var(--gray-300);">${escapeHtml(c.name)}</a></td>
             <td>${escapeHtml(c.contactPerson)}</td>
             <td>${escapeHtml(c.email)}</td>
             <td>${escapeHtml(c.phone || '-')}</td>
@@ -171,7 +172,123 @@ async function toggleCompany(id, isActive) {
     }
 }
 
-// Add User Modal
+// ==================== Company Detail Modal ====================
+async function openCompanyDetail(companyId) {
+    currentDetailCompanyId = companyId;
+    const company = allCompanies.find(c => c._id === companyId);
+    if (!company) return;
+
+    document.getElementById('companyDetailTitle').textContent = company.name;
+    document.getElementById('cdContact').textContent = company.contactPerson || '-';
+    document.getElementById('cdEmail').textContent = company.email || '-';
+    document.getElementById('cdPhone').textContent = company.phone || '-';
+    document.getElementById('cdPolicy').textContent = company.policyNumber || '-';
+    document.getElementById('companyUsersArea').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    document.getElementById('companyDetailModal').classList.add('show');
+
+    // Load users
+    try {
+        const res = await apiFetch(`/admin/users?companyId=${companyId}`);
+        if (!res.ok) throw new Error('שגיאה בטעינת משתמשים');
+        const users = await res.json();
+        renderCompanyUsers(users);
+    } catch (err) {
+        document.getElementById('companyUsersArea').innerHTML = '<p style="color:var(--danger);font-size:14px;">שגיאה בטעינת משתמשים.</p>';
+    }
+}
+
+function closeCompanyDetail() {
+    document.getElementById('companyDetailModal').classList.remove('show');
+    currentDetailCompanyId = null;
+}
+
+function renderCompanyUsers(users) {
+    const area = document.getElementById('companyUsersArea');
+    if (!users || users.length === 0) {
+        area.innerHTML = '<p style="color:var(--gray-400);font-size:14px;text-align:center;padding:20px;">אין משתמשים לחברה זו.</p>';
+        return;
+    }
+
+    area.innerHTML = `
+        <table style="width:100%;">
+            <thead>
+                <tr>
+                    <th>שם</th>
+                    <th>שם משתמש</th>
+                    <th>אימייל</th>
+                    <th>התחברות אחרונה</th>
+                    <th>סטטוס</th>
+                    <th>פעולות</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${users.map(u => `
+                    <tr>
+                        <td><strong>${escapeHtml(u.name)}</strong></td>
+                        <td style="direction:ltr;text-align:right;">${escapeHtml(u.username)}</td>
+                        <td>${escapeHtml(u.email || '-')}</td>
+                        <td>${u.lastLogin ? new Date(u.lastLogin).toLocaleString('he-IL') : 'אף פעם'}</td>
+                        <td><span class="badge ${u.isActive ? 'badge-active' : 'badge-cancelled'}">${u.isActive ? 'פעיל' : 'מושבת'}</span></td>
+                        <td>
+                            <div style="display:flex;gap:6px;">
+                                <button class="btn btn-secondary btn-sm" onclick="resetUserPassword('${u._id}','${escapeHtml(u.name)}')" title="איפוס סיסמה" style="font-size:12px;padding:5px 10px;">
+                                    🔑
+                                </button>
+                                <button class="btn btn-sm ${u.isActive ? 'btn-danger' : 'btn-success'}" onclick="toggleUser('${u._id}',${u.isActive})" style="font-size:12px;padding:5px 10px;">
+                                    ${u.isActive ? 'השבת' : 'הפעל'}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function openAddUserFromDetail() {
+    if (!currentDetailCompanyId) return;
+    const company = allCompanies.find(c => c._id === currentDetailCompanyId);
+    openAddUserModal(currentDetailCompanyId, company ? company.name : '');
+}
+
+async function resetUserPassword(userId, userName) {
+    const newPassword = prompt(`הכנס סיסמה חדשה עבור ${userName}:\n(לפחות 6 תווים)`);
+    if (!newPassword) return;
+    if (newPassword.length < 6) { alert('הסיסמה חייבת להכיל לפחות 6 תווים.'); return; }
+
+    try {
+        const res = await apiFetch('/admin/users', {
+            method: 'PUT',
+            body: JSON.stringify({ userId, password: newPassword })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message);
+        alert(`הסיסמה שונתה בהצלחה!\n\nסיסמה חדשה: ${newPassword}`);
+    } catch (err) {
+        alert('שגיאה: ' + err.message);
+    }
+}
+
+async function toggleUser(userId, isActive) {
+    const action = isActive ? 'להשבית' : 'להפעיל';
+    if (!confirm(`האם אתה בטוח שברצונך ${action} את המשתמש?`)) return;
+
+    try {
+        const res = await apiFetch('/admin/users', {
+            method: 'PUT',
+            body: JSON.stringify({ userId, isActive: !isActive })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message);
+        // Reload users list
+        if (currentDetailCompanyId) openCompanyDetail(currentDetailCompanyId);
+    } catch (err) {
+        alert('שגיאה: ' + err.message);
+    }
+}
+
+// ==================== Add User Modal ====================
 function openAddUserModal(companyId, companyName) {
     document.getElementById('addUserModal').classList.add('show');
     document.getElementById('addUserForm').reset();
@@ -215,6 +332,8 @@ async function submitAddUser() {
         }
 
         closeAddUserModal();
+        // Reload users in detail modal if open
+        if (currentDetailCompanyId) openCompanyDetail(currentDetailCompanyId);
         alert(`המשתמש נוצר בהצלחה!\n\nשם: ${data.name}\nשם משתמש: ${data.username}\nסיסמה: ${data.password}`);
     } catch (err) {
         errorEl.textContent = err.message;

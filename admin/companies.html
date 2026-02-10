@@ -105,6 +105,40 @@
         </main>
     </div>
 
+    <!-- Company Details Modal -->
+    <div class="modal-overlay" id="companyDetailModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 id="companyDetailTitle">פרטי חברה</h2>
+                <button class="modal-close" onclick="closeCompanyDetail()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 0;">
+                <!-- Company Info -->
+                <div style="padding: 20px 24px; border-bottom: 1px solid var(--gray-200); background: var(--gray-100);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px;">
+                        <div><span style="color: var(--gray-500); font-weight: 600;">איש קשר:</span> <span id="cdContact"></span></div>
+                        <div><span style="color: var(--gray-500); font-weight: 600;">אימייל:</span> <span id="cdEmail"></span></div>
+                        <div><span style="color: var(--gray-500); font-weight: 600;">טלפון:</span> <span id="cdPhone"></span></div>
+                        <div><span style="color: var(--gray-500); font-weight: 600;">מספר פוליסה:</span> <span id="cdPolicy"></span></div>
+                    </div>
+                </div>
+                <!-- Users Section -->
+                <div style="padding: 20px 24px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                        <h3 style="font-size: 16px; font-weight: 700;">משתמשי דשבורד</h3>
+                        <button class="btn btn-primary btn-sm" onclick="openAddUserFromDetail()" style="width: auto;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            הוסף משתמש
+                        </button>
+                    </div>
+                    <div id="companyUsersArea">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Company Modal -->
     <div class="modal-overlay" id="addModal">
         <div class="modal">
