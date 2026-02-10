@@ -244,11 +244,16 @@ function updateSidebarVisibility() {
     const modules = user.dashboardModules || 'management';
     const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
 
+    // Remove the head-injected init CSS (sidebar-init.js) so inline styles take over
+    const initCss = document.getElementById('sidebar-init-css');
+    if (initCss) initCss.remove();
+
     const bituhofirSection = document.getElementById('bituhofirSection');
     const managementSection = document.getElementById('managementSection');
-
-    // Management section: show/hide based on modules
     const showManagement = (modules === 'management' || modules === 'both');
+    const showInsurance = (modules === 'insurance' || modules === 'both');
+
+    // Management section: show/hide
     if (managementSection) {
         managementSection.style.display = showManagement ? '' : 'none';
         let el = managementSection.nextElementSibling;
@@ -258,8 +263,7 @@ function updateSidebarVisibility() {
         }
     }
 
-    // Bituhofir section: show/hide based on modules
-    const showInsurance = (modules === 'insurance' || modules === 'both');
+    // Bituhofir section header + all insurance links: first set all based on showInsurance
     if (bituhofirSection) {
         bituhofirSection.style.display = showInsurance ? '' : 'none';
         let el = bituhofirSection.nextElementSibling;
@@ -269,7 +273,7 @@ function updateSidebarVisibility() {
         }
     }
 
-    // Granular: hide individual insurance pages
+    // Granular: hide individual insurance pages based on insurancePages
     if (showInsurance) {
         const nav = document.querySelector('.sidebar-nav');
         if (nav) {
