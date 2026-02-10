@@ -107,6 +107,7 @@ function openAddModal() {
     document.getElementById('addModal').classList.add('show');
     document.getElementById('addCompanyForm').reset();
     document.getElementById('addError').classList.remove('show');
+    document.getElementById('addInsurancePagesWrap').style.display = 'none';
 }
 
 function closeAddModal() {
@@ -137,6 +138,17 @@ async function submitAddCompany() {
     } else {
         data.agentCodes = [];
     }
+
+    // Insurance pages checkboxes (FormData uses 'on' for checked, missing for unchecked)
+    const form2 = document.getElementById('addCompanyForm');
+    data.insurancePages = {
+        dashboard: form2.querySelector('[name="ipDashboard"]').checked,
+        policies: form2.querySelector('[name="ipPolicies"]').checked,
+        agents: form2.querySelector('[name="ipAgents"]').checked,
+        reports: form2.querySelector('[name="ipReports"]').checked
+    };
+    // Remove checkbox fields from data (they came as 'on' strings)
+    delete data.ipDashboard; delete data.ipPolicies; delete data.ipAgents; delete data.ipReports;
 
     try {
         const res = await apiFetch('/admin/companies', {
@@ -192,6 +204,13 @@ async function openCompanyDetail(companyId) {
     document.getElementById('cdPolicy').value = company.policyNumber || '';
     document.getElementById('cdAgentCodes').value = Array.isArray(company.agentCodes) ? company.agentCodes.join(', ') : '';
     document.getElementById('cdDashboardModules').value = company.dashboardModules || 'management';
+    // Insurance pages checkboxes
+    const ip = company.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
+    document.getElementById('cdIpDashboard').checked = ip.dashboard !== false;
+    document.getElementById('cdIpPolicies').checked = ip.policies !== false;
+    document.getElementById('cdIpAgents').checked = ip.agents !== false;
+    document.getElementById('cdIpReports').checked = ip.reports !== false;
+    toggleDetailInsurancePages(company.dashboardModules || 'management');
     document.getElementById('companyUsersArea').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     document.getElementById('companyDetailModal').classList.add('show');
 
@@ -221,11 +240,17 @@ async function saveCompanyDetails() {
     const agentCodesStr = document.getElementById('cdAgentCodes').value.trim();
     const agentCodes = agentCodesStr ? agentCodesStr.split(',').map(s => s.trim()).filter(Boolean) : [];
     const dashboardModules = document.getElementById('cdDashboardModules').value;
+    const insurancePages = {
+        dashboard: document.getElementById('cdIpDashboard').checked,
+        policies: document.getElementById('cdIpPolicies').checked,
+        agents: document.getElementById('cdIpAgents').checked,
+        reports: document.getElementById('cdIpReports').checked
+    };
 
     try {
         const res = await apiFetch(`/admin/companies/${currentDetailCompanyId}`, {
             method: 'PUT',
-            body: JSON.stringify({ contactPerson, email, phone, policyNumber, agentCodes, dashboardModules })
+            body: JSON.stringify({ contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages })
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.message);
@@ -239,6 +264,7 @@ async function saveCompanyDetails() {
             allCompanies[idx].policyNumber = policyNumber;
             allCompanies[idx].agentCodes = agentCodes;
             allCompanies[idx].dashboardModules = dashboardModules;
+            allCompanies[idx].insurancePages = insurancePages;
             renderCompanies(allCompanies);
         }
         alert('פרטי החברה עודכנו בהצלחה!');
@@ -497,3 +523,20 @@ async function submitImport() {
         btn.textContent = 'ייבוא';
     }
 }
+
+// Toggle insurance pages checkboxes visibility
+function toggleAddInsurancePages(val) {
+    const wrap = document.getElementById('addInsurancePagesWrap');
+    if (wrap) wrap.style.display = (val === 'insurance' || val === 'both') ? '' : 'none';
+}
+
+function toggleDetailInsurancePages(val) {
+    const wrap = document.getElementById('cdInsurancePagesWrap');
+    if (wrap) wrap.style.display = (val === 'insurance' || val === 'both') ? '' : 'none';
+}
+
+// Attach onchange to detail modal dropdown
+document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('cdDashboardModules');
+    if (sel) sel.addEventListener('change', () => toggleDetailInsurancePages(sel.value));
+});

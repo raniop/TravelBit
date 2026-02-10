@@ -41,14 +41,16 @@ module.exports = async function handler(req, res) {
 
             const tokens = generateTokens(user);
 
-            // Fetch company name and dashboard modules
+            // Fetch company name, dashboard modules, and insurance page permissions
             let companyName = null;
             let dashboardModules = 'management';
+            let insurancePages = { dashboard: true, policies: true, agents: true, reports: true };
             if (user.companyId) {
-                const company = await Company.findById(user.companyId).select('name agentCodes dashboardModules').lean();
+                const company = await Company.findById(user.companyId).select('name agentCodes dashboardModules insurancePages').lean();
                 if (company) {
                     companyName = company.name;
                     dashboardModules = company.dashboardModules || 'management';
+                    if (company.insurancePages) insurancePages = company.insurancePages;
                 }
             }
             const hasBituhOfir = dashboardModules === 'insurance' || dashboardModules === 'both';
@@ -63,7 +65,8 @@ module.exports = async function handler(req, res) {
                     companyId: user.companyId,
                     companyName: companyName,
                     hasBituhOfir,
-                    dashboardModules
+                    dashboardModules,
+                    insurancePages
                 }
             });
         } catch (error) {
@@ -97,14 +100,16 @@ module.exports = async function handler(req, res) {
         const user = await verifyAuth(req);
         if (!user) return res.status(401).json({ message: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05d2\u05d9\u05e9\u05d4.' });
 
-        // Fetch company name and dashboard modules
+        // Fetch company name, dashboard modules, and insurance page permissions
         let companyName = null;
         let dashboardModules = 'management';
+        let insurancePages = { dashboard: true, policies: true, agents: true, reports: true };
         if (user.companyId) {
-            const company = await Company.findById(user.companyId).select('name agentCodes dashboardModules').lean();
+            const company = await Company.findById(user.companyId).select('name agentCodes dashboardModules insurancePages').lean();
             if (company) {
                 companyName = company.name;
                 dashboardModules = company.dashboardModules || 'management';
+                if (company.insurancePages) insurancePages = company.insurancePages;
             }
         }
         const hasBituhOfir = dashboardModules === 'insurance' || dashboardModules === 'both';
@@ -118,7 +123,8 @@ module.exports = async function handler(req, res) {
                 companyId: user.companyId,
                 companyName: companyName,
                 hasBituhOfir,
-                dashboardModules
+                dashboardModules,
+                insurancePages
             }
         });
     }

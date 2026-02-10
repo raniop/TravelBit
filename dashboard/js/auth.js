@@ -1,12 +1,20 @@
 // Dashboard Auth Module
 const API_BASE = '/api';
 
-// Determine default landing page based on company's dashboardModules
+// Determine default landing page based on company's dashboardModules + insurancePages
 function getDefaultDashboard(user) {
     if (!user) return '/dashboard/';
     const modules = user.dashboardModules || 'management';
-    // insurance-only → go to bituhofir dashboard
-    if (modules === 'insurance') return '/dashboard/bituhofir.html';
+    const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
+
+    if (modules === 'insurance') {
+        // Find first allowed insurance page
+        if (ip.dashboard !== false) return '/dashboard/bituhofir.html';
+        if (ip.policies !== false) return '/dashboard/policies.html';
+        if (ip.agents !== false) return '/dashboard/agents.html';
+        if (ip.reports !== false) return '/dashboard/reports.html';
+        return '/dashboard/'; // fallback
+    }
     // management or both → go to general dashboard
     return '/dashboard/';
 }
@@ -15,13 +23,27 @@ function getDefaultDashboard(user) {
 function isPageAllowed(user, currentPage) {
     if (!user) return true; // let auth check handle it
     const modules = user.dashboardModules || 'management';
+    const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
 
-    const isBituhofirPage = currentPage.includes('bituhofir') || currentPage.includes('policies') || currentPage.includes('agents') || currentPage.includes('reports');
-    const isManagementPage = !isBituhofirPage && !currentPage.includes('login');
+    // Map current page to insurance page type
+    let insurancePageType = null;
+    if (currentPage.includes('bituhofir')) insurancePageType = 'dashboard';
+    else if (currentPage.includes('policies')) insurancePageType = 'policies';
+    else if (currentPage.includes('agents')) insurancePageType = 'agents';
+    else if (currentPage.includes('reports')) insurancePageType = 'reports';
 
-    if (modules === 'both') return true;
+    const isManagementPage = !insurancePageType && !currentPage.includes('login');
+
+    // Management-only: no insurance pages
+    if (modules === 'management' && insurancePageType) return false;
+    // Insurance-only: no management pages
     if (modules === 'insurance' && isManagementPage) return false;
-    if (modules === 'management' && isBituhofirPage) return false;
+
+    // Granular insurance page check
+    if (insurancePageType && (modules === 'insurance' || modules === 'both')) {
+        if (ip[insurancePageType] === false) return false;
+    }
+
     return true;
 }
 
@@ -34,7 +56,7 @@ function isPageAllowed(user, currentPage) {
         let user = null;
         try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
 
-        // Always refresh user data from server to get latest dashboardModules
+        // Always refresh user data from server to get latest dashboardModules + insurancePages
         if (user) {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
@@ -46,6 +68,7 @@ function isPageAllowed(user, currentPage) {
                         if (data.user.companyName) user.companyName = data.user.companyName;
                         if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
                         if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
+                        if (data.user.insurancePages) user.insurancePages = data.user.insurancePages;
                         localStorage.setItem('dash_user', JSON.stringify(user));
                     }
                 }
@@ -72,7 +95,7 @@ function isPageAllowed(user, currentPage) {
             return;
         }
 
-        // Always sync user data from server to get latest dashboardModules
+        // Always sync user data from server to get latest dashboardModules + insurancePages
         if (user) {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
@@ -84,6 +107,7 @@ function isPageAllowed(user, currentPage) {
                         if (data.user.companyName) user.companyName = data.user.companyName;
                         if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
                         if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
+                        if (data.user.insurancePages) user.insurancePages = data.user.insurancePages;
                         localStorage.setItem('dash_user', JSON.stringify(user));
                         // Re-check access after sync - redirect if no longer allowed
                         if (!isPageAllowed(user, currentPage)) {
@@ -205,6 +229,7 @@ async function syncCompanyName() {
                 if (data.user.companyName) user.companyName = data.user.companyName;
                 if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
                 if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
+                if (data.user.insurancePages) user.insurancePages = data.user.insurancePages;
                 localStorage.setItem('dash_user', JSON.stringify(user));
             }
         }
@@ -212,11 +237,12 @@ async function syncCompanyName() {
     return user;
 }
 
-// Hide/show sidebar sections based on dashboardModules
+// Hide/show sidebar sections based on dashboardModules + insurancePages
 function updateSidebarVisibility() {
     const user = getUser();
     if (!user) return;
     const modules = user.dashboardModules || 'management';
+    const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
 
     const bituhofirSection = document.getElementById('bituhofirSection');
     const managementSection = document.getElementById('managementSection');
@@ -239,7 +265,7 @@ function updateSidebarVisibility() {
         }
     }
 
-    // Then: hide what needs to be hidden
+    // Hide entire bituhofir section if management-only
     if (bituhofirSection && modules === 'management') {
         bituhofirSection.style.display = 'none';
         let el = bituhofirSection.nextElementSibling;
@@ -249,12 +275,38 @@ function updateSidebarVisibility() {
         }
     }
 
+    // Hide entire management section if insurance-only
     if (managementSection && modules === 'insurance') {
         managementSection.style.display = 'none';
         let el = managementSection.nextElementSibling;
         while (el && el.id !== 'bituhofirSection') {
             el.style.display = 'none';
             el = el.nextElementSibling;
+        }
+    }
+
+    // Granular: hide individual insurance pages
+    if (modules === 'insurance' || modules === 'both') {
+        const nav = document.querySelector('.sidebar-nav');
+        if (nav) {
+            const pageMap = { 'bituhofir': 'dashboard', 'policies': 'policies', 'agents': 'agents', 'reports': 'reports' };
+            let visibleCount = 0;
+            nav.querySelectorAll('a').forEach(link => {
+                const href = link.getAttribute('href') || '';
+                for (const [urlPart, pageKey] of Object.entries(pageMap)) {
+                    if (href.includes(urlPart)) {
+                        if (ip[pageKey] === false) {
+                            link.style.display = 'none';
+                        } else {
+                            visibleCount++;
+                        }
+                    }
+                }
+            });
+            // If all insurance pages hidden, hide section header too
+            if (bituhofirSection && visibleCount === 0) {
+                bituhofirSection.style.display = 'none';
+            }
         }
     }
 }

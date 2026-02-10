@@ -122,7 +122,7 @@ module.exports = async function handler(req, res) {
         // POST - Create company
         if (req.method === 'POST') {
             try {
-                const { name, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, subscriptionEnd, username, password } = req.body;
+                const { name, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, subscriptionEnd, username, password } = req.body;
                 if (!name || !contactPerson || !email || !username || !password) {
                     return res.status(400).json({ message: '\u05e0\u05d0 \u05dc\u05de\u05dc\u05d0 \u05d0\u05ea \u05db\u05dc \u05d4\u05e9\u05d3\u05d5\u05ea \u05d4\u05e0\u05d3\u05e8\u05e9\u05d9\u05dd.' });
                 }
@@ -134,6 +134,7 @@ module.exports = async function handler(req, res) {
                     name, contactPerson, email, phone, policyNumber,
                     agentCodes: Array.isArray(agentCodes) ? agentCodes : [],
                     dashboardModules: dashboardModules || 'management',
+                    insurancePages: insurancePages || { dashboard: true, policies: true, agents: true, reports: true },
                     subscriptionEnd: subscriptionEnd || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
                 });
 
@@ -157,7 +158,7 @@ module.exports = async function handler(req, res) {
         if (req.method === 'PUT') {
             try {
                 const companyId = url.split('/').pop();
-                const { name, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, isActive } = req.body;
+                const { name, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, isActive } = req.body;
 
                 const company = await Company.findById(companyId);
                 if (!company) return res.status(404).json({ message: 'החברה לא נמצאה.' });
@@ -169,6 +170,7 @@ module.exports = async function handler(req, res) {
                 if (policyNumber !== undefined) company.policyNumber = policyNumber;
                 if (agentCodes !== undefined) company.agentCodes = Array.isArray(agentCodes) ? agentCodes : [];
                 if (dashboardModules !== undefined) company.dashboardModules = dashboardModules;
+                if (insurancePages !== undefined) company.insurancePages = insurancePages;
                 if (isActive !== undefined) company.isActive = isActive;
 
                 await company.save();

@@ -33,6 +33,12 @@ const companySchema = new mongoose.Schema({
     policyNumber: { type: String, trim: true },
     agentCodes: [{ type: String, trim: true }],
     dashboardModules: { type: String, enum: ['management', 'insurance', 'both'], default: 'management' },
+    insurancePages: {
+        dashboard: { type: Boolean, default: true },
+        policies: { type: Boolean, default: true },
+        agents: { type: Boolean, default: true },
+        reports: { type: Boolean, default: true }
+    },
     subscriptionStart: { type: Date, default: Date.now },
     subscriptionEnd: { type: Date },
     isActive: { type: Boolean, default: true }

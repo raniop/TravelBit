@@ -139,7 +139,7 @@ module.exports = async function handler(req, res) {
 
     // Access control: company must have insurance access (dashboardModules)
     await connectDB();
-    const company = await Company.findById(user.companyId).select('agentCodes dashboardModules').lean();
+    const company = await Company.findById(user.companyId).select('agentCodes dashboardModules insurancePages').lean();
     if (!company) return res.status(403).json({ message: 'אין הרשאה לנתוני ביטוח.' });
     const modules = company.dashboardModules || 'management';
     if (modules !== 'insurance' && modules !== 'both') {
@@ -150,7 +150,19 @@ module.exports = async function handler(req, res) {
         ? company.agentCodes.map(String)
         : null;
 
+    const ip = company.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
+
     const url = req.url.split('?')[0];
+
+    // Granular page-level access check
+    let pageType = null;
+    if (url.includes('/external/dashboard') || url.includes('/external/yoy')) pageType = 'dashboard';
+    else if (url.includes('/external/policies') || url.includes('/external/policy-details') || url.includes('/external/site-policies')) pageType = 'policies';
+    else if (url.includes('/external/daily-report')) pageType = 'dashboard';
+
+    if (pageType && ip[pageType] === false) {
+        return res.status(403).json({ message: 'אין הרשאה לדף זה.' });
+    }
 
     try {
         // Route: /api/dashboard/external/dashboard
