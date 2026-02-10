@@ -96,6 +96,33 @@ function extractEmailDataEnhanced(text, html) {
         data._extractedFields.push('detectedType');
     }
 
+    // DEBUG: Show context around "עבור" and "סיוון" in the text
+    const idxAvur = searchText.indexOf('עבור');
+    if (idxAvur >= 0) {
+        console.log('[NAME DEBUG] עבור found at index', idxAvur);
+        console.log('[NAME DEBUG] context around עבור:', JSON.stringify(searchText.substring(idxAvur, idxAvur + 60)));
+        // Show char codes after "עבור"
+        const after = searchText.substring(idxAvur + 4, idxAvur + 20);
+        console.log('[NAME DEBUG] char codes after עבור:', Array.from(after).map(c => c + '=' + c.charCodeAt(0)));
+    }
+    const idxSivan = searchText.indexOf('סיוון');
+    if (idxSivan >= 0) {
+        console.log('[NAME DEBUG] סיוון found at index', idxSivan);
+        console.log('[NAME DEBUG] context around סיוון:', JSON.stringify(searchText.substring(Math.max(0, idxSivan - 20), idxSivan + 40)));
+        // Show char codes of "סיוון"
+        const nameArea = searchText.substring(idxSivan, idxSivan + 15);
+        console.log('[NAME DEBUG] char codes of סיוון area:', Array.from(nameArea).map(c => c + '=' + c.charCodeAt(0)));
+    }
+
+    // Also find ALL occurrences of "עבור"
+    let avurIdx = 0;
+    let count = 0;
+    while ((avurIdx = searchText.indexOf('עבור', avurIdx)) >= 0 && count < 5) {
+        console.log(`[NAME DEBUG] עבור occurrence #${count}:`, JSON.stringify(searchText.substring(avurIdx, avurIdx + 50)));
+        avurIdx += 4;
+        count++;
+    }
+
     // 3+4. Customer Name + ID — try combined pattern first (name + number pair)
     // Stopwords: common Hebrew words that are NOT person names
     const NAME_STOPWORDS = ['על', 'את', 'כל', 'של', 'הם', 'עם', 'כי', 'גם', 'או', 'לא', 'זה', 'מה', 'אם', 'יש', 'לו', 'לה', 'הן', 'אל', 'רק', 'עד', 'בו', 'בה', 'כן', 'לי', 'לך', 'בי', 'זו', 'דף', 'פי'];
@@ -145,10 +172,16 @@ function extractEmailDataEnhanced(text, html) {
             /מבוטח\s*:?\s*([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/g,
             /(?:גב'|מר|גברת|אדון)\s+([א-ת][א-ת'"-]+\s+[א-ת][א-ת'"-]+)/g
         ];
-        for (const pattern of namePatterns) {
+        for (let pi = 0; pi < namePatterns.length; pi++) {
+            const pattern = namePatterns[pi];
             pattern.lastIndex = 0;
             let match;
             while ((match = pattern.exec(searchText)) !== null) {
+                console.log(`[NAME DEBUG] pattern #${pi} matched:`, JSON.stringify(match[1]), 'isValid:', isValidName(match[1]));
+                if (!isValidName(match[1])) {
+                    const parts = match[1].trim().split(/\s+/);
+                    console.log(`[NAME DEBUG] invalid because: parts=${JSON.stringify(parts)}, len=${match[1].length}, stopFirst=${NAME_STOPWORDS.includes(parts[0])}, stopLast=${NAME_STOP_LAST.includes(parts[parts.length-1])}, shortPart=${parts.some(p => p.length < 2)}`);
+                }
                 if (isValidName(match[1])) {
                     data.customerName = match[1].trim();
                     data._extractedFields.push('customerName');
@@ -156,6 +189,14 @@ function extractEmailDataEnhanced(text, html) {
                 }
             }
             if (data.customerName) break;
+        }
+        if (!data.customerName) {
+            console.log('[NAME DEBUG] no valid name found from any pattern');
+            // Try a simple direct search: does the text contain Hebrew name-like patterns?
+            const simpleNameMatch = searchText.match(/([א-ת]{2,})\s+([א-ת]{2,})\s+(\d{8,9})/);
+            if (simpleNameMatch) {
+                console.log('[NAME DEBUG] simple pattern found:', simpleNameMatch[1], simpleNameMatch[2], simpleNameMatch[3]);
+            }
         }
     }
 
