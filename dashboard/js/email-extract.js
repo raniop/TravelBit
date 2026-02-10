@@ -53,9 +53,9 @@ function extractEmailDataEnhanced(text, html) {
     const searchText = text || stripHtml(html || '');
     if (!searchText) return data;
 
-    // 1. Insurance Company — from email domain
-    const emailMatch = searchText.match(/[\w.-]+@([\w.-]+)\.\w+/);
-    if (emailMatch) {
+    // 1. Insurance Company — scan ALL email domains, prefer insurance company
+    const allEmails = searchText.matchAll(/[\w.-]+@([\w.-]+\.\w+)/g);
+    for (const emailMatch of allEmails) {
         const domain = emailMatch[1].toLowerCase();
         for (const [key, name] of Object.entries(INSURANCE_DOMAIN_MAP)) {
             if (domain.includes(key)) {
@@ -64,6 +64,7 @@ function extractEmailDataEnhanced(text, html) {
                 break;
             }
         }
+        if (data.insuranceCompany) break;
     }
 
     // 1b. Insurance Company — from content (if not found from domain)
@@ -215,84 +216,44 @@ function readEmailFile(file) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const raw = e.target.result || '';
-                // Parse .eml: extract subject, from, and body text
                 const parsed = parseEmlContent(raw, name);
                 resolve(parsed);
             };
             reader.onerror = function() {
-                // Fallback: extract what we can from filename
                 resolve(extractFromFileName(name));
             };
             reader.readAsText(file, 'utf-8');
         } else {
-            // .msg or unknown: can't read in browser, extract from filename
             resolve(extractFromFileName(name));
         }
     });
 }
 
 function parseEmlContent(raw, fileName) {
-    // DEBUG: log raw eml info
-    console.log('[EML DEBUG] raw length:', raw.length);
-    console.log('[EML DEBUG] raw first 500 chars:', raw.substring(0, 500));
+    // Extract ALL text from the .eml recursively (handles forwarded, multipart, nested)
+    const allText = extractAllTextFromMime(raw);
 
-    // Split headers from body (first empty line)
-    // Try both \r\n\r\n and \n\n
-    let headerBodySplit = raw.indexOf('\r\n\r\n');
-    let bodySeparatorLen = 4;
-    if (headerBodySplit < 0) {
-        headerBodySplit = raw.indexOf('\n\n');
-        bodySeparatorLen = 2;
-    }
-    console.log('[EML DEBUG] headerBodySplit:', headerBodySplit);
-    const headersPart = headerBodySplit > 0 ? raw.substring(0, headerBodySplit) : '';
-    const bodyPart = headerBodySplit > 0 ? raw.substring(headerBodySplit + bodySeparatorLen) : raw;
+    // Also extract subject and from from top-level headers
+    const topHeaders = getHeaders(raw);
+    let subject = decodeEmlHeader(topHeaders['subject'] || '');
+    let fromHeader = decodeEmlHeader(topHeaders['from'] || '');
 
-    console.log('[EML DEBUG] headers length:', headersPart.length);
-    console.log('[EML DEBUG] body length:', bodyPart.length);
-    console.log('[EML DEBUG] headers:', headersPart.substring(0, 1000));
+    // Combine: subject + from + all extracted body text
+    const combinedText = [subject, fromHeader, allText].filter(Boolean).join('\n');
 
-    // Decode subject from headers (handle multi-line folded headers)
-    let subject = '';
-    const subjectMatch = headersPart.match(/^Subject:\s*([\s\S]*?)(?=\r?\n[^\s\t]|$)/mi);
-    if (subjectMatch) {
-        console.log('[EML DEBUG] raw subject match:', subjectMatch[1].substring(0, 200));
-        // Unfold header (remove line breaks followed by whitespace)
-        subject = decodeEmlHeader(subjectMatch[1].replace(/\r?\n[\s\t]+/g, ' ').trim());
-    }
-    console.log('[EML DEBUG] decoded subject:', subject);
-
-    // Extract From header for insurance company detection
-    let fromHeader = '';
-    const fromMatch = headersPart.match(/^From:\s*([\s\S]*?)(?=\r?\n[^\s\t]|$)/mi);
-    if (fromMatch) {
-        fromHeader = decodeEmlHeader(fromMatch[1].replace(/\r?\n[\s\t]+/g, ' ').trim());
-    }
-    console.log('[EML DEBUG] decoded from:', fromHeader);
-
-    // Decode body: handle base64 and quoted-printable with proper charset
-    let bodyText = decodeEmlBody(bodyPart, headersPart);
-    console.log('[EML DEBUG] decoded body (first 500):', bodyText.substring(0, 500));
-    console.log('[EML DEBUG] body contains Hebrew?', /[א-ת]/.test(bodyText));
-
-    // Combine all text sources for extraction
-    const combinedText = [subject, fromHeader, bodyText].join('\n');
-    console.log('[EML DEBUG] combined text (first 500):', combinedText.substring(0, 500));
-
-    // Run enhanced extraction on the combined text
+    // Run enhanced extraction
     const data = extractEmailDataEnhanced(combinedText, '');
     data.source = 'file';
-    console.log('[EML DEBUG] extracted data:', JSON.stringify(data, null, 2));
 
-    // Override notes with readable decoded text (not raw garbled bytes)
-    const readableNotes = [subject, bodyText.substring(0, 400)].filter(Boolean).join('\n');
+    // Readable notes
+    const readableNotes = [subject, allText.substring(0, 400)].filter(Boolean).join('\n');
     if (readableNotes.trim()) {
         data.notes = readableNotes.substring(0, 500);
     } else {
         data.notes = 'יובא מקובץ: ' + fileName;
     }
 
-    // If type not detected from content, try from filename
+    // Fallback: try filename for type detection
     if (!data.detectedType) {
         const fnData = extractFromFileName(fileName);
         if (fnData.detectedType) {
@@ -306,11 +267,112 @@ function parseEmlContent(raw, fileName) {
     return data;
 }
 
+// ===== Recursive MIME text extractor =====
+// Extracts ALL readable text from any MIME structure:
+// text/plain, text/html (stripped), message/rfc822 (recursive), multipart/* (recursive)
+function extractAllTextFromMime(rawMime, depth) {
+    if (!depth) depth = 0;
+    if (depth > 10) return ''; // prevent infinite recursion
+
+    const texts = [];
+
+    // Split headers from body
+    const headers = getHeaders(rawMime);
+    const bodyStart = findBodyStart(rawMime);
+    const bodyPart = bodyStart >= 0 ? rawMime.substring(bodyStart) : '';
+
+    const contentType = (headers['content-type'] || '').toLowerCase();
+    const encoding = (headers['content-transfer-encoding'] || '').toLowerCase().trim();
+    const charsetMatch = contentType.match(/charset="?([^"\s;]+)"?/i);
+    const charset = charsetMatch ? charsetMatch[1] : 'utf-8';
+
+    // Case 1: multipart/* — split by boundary and recurse into each part
+    const boundaryMatch = contentType.match(/boundary="?([^"\r\n;]+)"?/);
+    if (boundaryMatch) {
+        const boundary = boundaryMatch[1];
+        const parts = bodyPart.split('--' + boundary);
+        for (let i = 1; i < parts.length; i++) { // skip preamble (index 0)
+            const part = parts[i];
+            if (part.trimStart().startsWith('--')) continue; // skip epilogue
+            texts.push(extractAllTextFromMime(part, depth + 1));
+        }
+        return texts.filter(Boolean).join('\n');
+    }
+
+    // Case 2: message/rfc822 — the body IS another full email message
+    if (contentType.includes('message/rfc822')) {
+        texts.push(extractAllTextFromMime(bodyPart, depth + 1));
+        return texts.filter(Boolean).join('\n');
+    }
+
+    // Case 3: text/plain — decode and return
+    if (contentType.includes('text/plain') || (!contentType && bodyPart.trim())) {
+        const decoded = decodeBodyContent(bodyPart, encoding, charset);
+        if (decoded.trim()) texts.push(decoded);
+        return texts.join('\n');
+    }
+
+    // Case 4: text/html — decode, strip tags, return
+    if (contentType.includes('text/html')) {
+        const decoded = decodeBodyContent(bodyPart, encoding, charset);
+        if (decoded.trim()) texts.push(stripHtml(decoded));
+        return texts.join('\n');
+    }
+
+    // Case 5: no Content-Type header (might be inline text in forwarded body)
+    // Try to decode as plain text
+    if (!contentType && bodyPart.trim().length > 20) {
+        const decoded = decodeBodyContent(bodyPart, encoding, charset);
+        if (decoded.trim()) texts.push(decoded);
+    }
+
+    return texts.filter(Boolean).join('\n');
+}
+
+// Get headers as key-value object (handles folded headers)
+function getHeaders(raw) {
+    // Find end of headers
+    let endIdx = raw.indexOf('\r\n\r\n');
+    let sepLen = 4;
+    if (endIdx < 0) {
+        endIdx = raw.indexOf('\n\n');
+        sepLen = 2;
+    }
+    if (endIdx < 0) return {};
+
+    const headerBlock = raw.substring(0, endIdx);
+    const headers = {};
+
+    // Unfold headers (lines starting with space/tab are continuations)
+    const unfolded = headerBlock.replace(/\r?\n([ \t]+)/g, ' ');
+    const lines = unfolded.split(/\r?\n/);
+
+    for (const line of lines) {
+        const colonIdx = line.indexOf(':');
+        if (colonIdx > 0) {
+            const key = line.substring(0, colonIdx).trim().toLowerCase();
+            const val = line.substring(colonIdx + 1).trim();
+            headers[key] = val;
+        }
+    }
+
+    return headers;
+}
+
+// Find where body starts (after first blank line)
+function findBodyStart(raw) {
+    let idx = raw.indexOf('\r\n\r\n');
+    if (idx >= 0) return idx + 4;
+    idx = raw.indexOf('\n\n');
+    if (idx >= 0) return idx + 2;
+    return -1;
+}
+
 function decodeEmlHeader(header) {
+    if (!header) return '';
     // Decode RFC 2047 encoded-words: =?charset?encoding?text?=
     // Handle consecutive encoded words (join them)
     let decoded = header.replace(/=\?([^?]+)\?(B|Q)\?([^?]+)\?=(\s*=\?[^?]+\?(B|Q)\?[^?]+\?=)*/gi, function(fullMatch) {
-        // Split into individual encoded words
         const words = fullMatch.match(/=\?([^?]+)\?(B|Q)\?([^?]+)\?=/gi) || [];
         const allBytes = [];
         let detectedCharset = 'utf-8';
@@ -318,20 +380,18 @@ function decodeEmlHeader(header) {
         for (const word of words) {
             const parts = word.match(/=\?([^?]+)\?(B|Q)\?([^?]+)\?=/i);
             if (!parts) continue;
-            const charset = parts[1].toLowerCase();
+            const cs = parts[1].toLowerCase();
             const enc = parts[2].toUpperCase();
             const text = parts[3];
-            detectedCharset = charset;
+            detectedCharset = cs;
 
             try {
                 if (enc === 'B') {
-                    // Base64 → bytes
                     const binary = atob(text);
                     for (let i = 0; i < binary.length; i++) {
                         allBytes.push(binary.charCodeAt(i));
                     }
                 } else {
-                    // Quoted-Printable → bytes
                     const qpText = text.replace(/_/g, ' ');
                     let i = 0;
                     while (i < qpText.length) {
@@ -349,10 +409,8 @@ function decodeEmlHeader(header) {
 
         if (allBytes.length === 0) return fullMatch;
 
-        // Decode bytes using TextDecoder with the correct charset
         try {
-            const uint8 = new Uint8Array(allBytes);
-            return new TextDecoder(detectedCharset).decode(uint8);
+            return new TextDecoder(detectedCharset).decode(new Uint8Array(allBytes));
         } catch (e) {
             try {
                 return new TextDecoder('utf-8').decode(new Uint8Array(allBytes));
@@ -365,103 +423,35 @@ function decodeEmlHeader(header) {
     return decoded;
 }
 
-function decodeEmlBody(bodyPart, headersPart) {
-    // Check Content-Transfer-Encoding
-    const encodingMatch = headersPart.match(/Content-Transfer-Encoding:\s*(\S+)/i);
-    const encoding = encodingMatch ? encodingMatch[1].toLowerCase() : '';
-
-    // Check charset from Content-Type
-    const charsetMatch = headersPart.match(/charset="?([^"\s;]+)"?/i);
-    const mainCharset = charsetMatch ? charsetMatch[1].toLowerCase() : 'utf-8';
-
-    // Check if multipart
-    const boundaryMatch = headersPart.match(/boundary="?([^"\r\n;]+)"?/i);
-
-    if (boundaryMatch) {
-        // Multipart: extract text/plain part
-        const boundary = boundaryMatch[1];
-        const parts = bodyPart.split('--' + boundary);
-        for (const part of parts) {
-            // Prefer text/plain parts
-            const partHeaders = part.substring(0, Math.max(part.indexOf('\r\n\r\n'), 0));
-            const isTextPlain = partHeaders.match(/Content-Type:\s*text\/plain/i);
-            const isTextHtml = partHeaders.match(/Content-Type:\s*text\/html/i);
-
-            if (isTextPlain || (!isTextHtml && part.length > 50)) {
-                // Get the body of this part (after headers)
-                const partBodyIdx = part.indexOf('\r\n\r\n');
-                if (partBodyIdx > 0) {
-                    let partBody = part.substring(partBodyIdx + 4);
-                    // Check part encoding and charset
-                    const partEncMatch = partHeaders.match(/Content-Transfer-Encoding:\s*(\S+)/i);
-                    const partEnc = partEncMatch ? partEncMatch[1].toLowerCase() : '';
-                    const partCharsetMatch = partHeaders.match(/charset="?([^"\s;]+)"?/i);
-                    const partCharset = partCharsetMatch ? partCharsetMatch[1].toLowerCase() : mainCharset;
-                    partBody = decodeBodyContent(partBody, partEnc, partCharset);
-                    if (partBody.trim()) return partBody;
-                }
-            }
-        }
-
-        // If no text/plain found, try text/html and strip tags
-        for (const part of parts) {
-            const partHeaders = part.substring(0, Math.max(part.indexOf('\r\n\r\n'), 0));
-            if (partHeaders.match(/Content-Type:\s*text\/html/i)) {
-                const partBodyIdx = part.indexOf('\r\n\r\n');
-                if (partBodyIdx > 0) {
-                    let partBody = part.substring(partBodyIdx + 4);
-                    const partEncMatch = partHeaders.match(/Content-Transfer-Encoding:\s*(\S+)/i);
-                    const partEnc = partEncMatch ? partEncMatch[1].toLowerCase() : '';
-                    const partCharsetMatch = partHeaders.match(/charset="?([^"\s;]+)"?/i);
-                    const partCharset = partCharsetMatch ? partCharsetMatch[1].toLowerCase() : mainCharset;
-                    partBody = decodeBodyContent(partBody, partEnc, partCharset);
-                    if (partBody.trim()) return stripHtml(partBody);
-                }
-            }
-        }
-    }
-
-    // Single part
-    return decodeBodyContent(bodyPart, encoding, mainCharset);
-}
-
 function decodeBodyContent(text, encoding, charset) {
     charset = charset || 'utf-8';
     try {
         if (encoding === 'base64') {
-            // Remove line breaks and decode base64 to bytes
             const cleaned = text.replace(/[\r\n\s]/g, '');
+            if (!cleaned) return '';
             const binary = atob(cleaned);
             const bytes = new Uint8Array(binary.length);
             for (let i = 0; i < binary.length; i++) {
                 bytes[i] = binary.charCodeAt(i);
             }
-            // Decode bytes with TextDecoder for proper UTF-8/Hebrew support
             try {
                 return new TextDecoder(charset).decode(bytes);
             } catch (e) {
                 return new TextDecoder('utf-8').decode(bytes);
             }
         } else if (encoding === 'quoted-printable') {
-            // First remove soft line breaks
             const cleaned = text.replace(/=\r?\n/g, '');
-            // Convert QP hex codes to bytes
             const bytes = [];
             let i = 0;
             while (i < cleaned.length) {
                 if (cleaned[i] === '=' && i + 2 < cleaned.length && /[0-9A-Fa-f]{2}/.test(cleaned.substring(i + 1, i + 3))) {
                     bytes.push(parseInt(cleaned.substring(i + 1, i + 3), 16));
                     i += 3;
-                } else if (cleaned[i] === '\r' || cleaned[i] === '\n') {
-                    // Keep line breaks as-is
-                    bytes.push(cleaned.charCodeAt(i));
-                    i++;
                 } else {
                     bytes.push(cleaned.charCodeAt(i));
                     i++;
                 }
             }
-            // Decode bytes with TextDecoder
             try {
                 return new TextDecoder(charset).decode(new Uint8Array(bytes));
             } catch (e) {
@@ -473,8 +463,6 @@ function decodeBodyContent(text, encoding, charset) {
 }
 
 function extractFromFileName(name) {
-    // Try to extract info from the email file name
-    // Outlook names files like "Subject.eml" or "Fw- Subject.eml"
     const cleanName = name.replace(/\.(eml|msg)$/i, '').replace(/^(Fw|Fwd|Re)-?\s*/i, '').trim();
     const data = extractEmailDataEnhanced(cleanName, '');
     data.source = 'file';
@@ -493,7 +481,6 @@ function stripHtml(html) {
 function showExtractionToast(count) {
     if (count <= 0) return;
 
-    // Remove existing toast
     const existing = document.querySelector('.extract-toast');
     if (existing) existing.remove();
 
@@ -514,7 +501,6 @@ function markAutoFilled(elementId) {
     const el = document.getElementById(elementId);
     if (!el) return;
     el.classList.add('auto-filled');
-    // Remove highlight when user focuses (starts editing)
     el.addEventListener('focus', function handler() {
         el.classList.remove('auto-filled');
         el.removeEventListener('focus', handler);
