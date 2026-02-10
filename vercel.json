@@ -22,6 +22,8 @@
     { "source": "/api/dashboard/external/yoy", "destination": "/api/dashboard/external" },
     { "source": "/api/dashboard/external/daily-report", "destination": "/api/dashboard/external" },
     { "source": "/api/dashboard/external/site-policies", "destination": "/api/dashboard/external" },
+    { "source": "/api/dashboard/external/agents-report", "destination": "/api/dashboard/external" },
+    { "source": "/api/dashboard/external/agents", "destination": "/api/dashboard/external" },
     { "source": "/api/dashboard/reminders/:id", "destination": "/api/dashboard/reminders" },
     { "source": "/api/dashboard/reminders", "destination": "/api/dashboard/reminders" },
     { "source": "/api/(.*)", "destination": "/api/$1" }
