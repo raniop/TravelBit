@@ -201,20 +201,9 @@
                     <span class="last-update" id="lastUpdate"><span class="dot"></span></span>
                 </div>
 
-                <!-- KPI Cards - 2 columns: ימין=פרמיה/פוליסות/מכירות יום | שמאל=מחזור/רווח/מכירות יומיות -->
+                <!-- KPI Cards - 2 columns: ימין=מחזור/רווח/מכירות יומיות | שמאל=פרמיה/פוליסות/מכירות יום -->
                 <div class="kpi-grid" id="kpiSection">
-                    <!-- Row 1: ימין=מחזור שנתי | שמאל=פרמיה ממוצעת -->
-                    <div class="kpi-card">
-                        <div class="kpi-header">מחזור שנתי מצטבר</div>
-                        <div class="kpi-body">
-                            <div class="kpi-arrow down" id="kpiArrow1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" transform="rotate(180 12 12)"/></svg></div>
-                            <div class="kpi-data">
-                                <div class="kpi-value" id="kpiTurnover">-</div>
-                                <div class="kpi-pct" id="kpiTurnoverChange"></div>
-                                <div class="kpi-prev" id="kpiTurnoverPrev"></div>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Row 1: שמאל=מחזור שנתי | ימין=פרמיה ממוצעת -->
                     <div class="kpi-card">
                         <div class="kpi-header">פרמיה ממוצעת</div>
                         <div class="kpi-body">
@@ -226,18 +215,18 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Row 2: ימין=רווח שנתי | שמאל=סה"כ פוליסות -->
                     <div class="kpi-card">
-                        <div class="kpi-header">רווח שנתי מצטבר</div>
+                        <div class="kpi-header">מחזור שנתי מצטבר</div>
                         <div class="kpi-body">
-                            <div class="kpi-arrow down" id="kpiArrow2"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" transform="rotate(180 12 12)"/></svg></div>
+                            <div class="kpi-arrow down" id="kpiArrow1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" transform="rotate(180 12 12)"/></svg></div>
                             <div class="kpi-data">
-                                <div class="kpi-value" id="kpiProfit">-</div>
-                                <div class="kpi-pct" id="kpiProfitChange"></div>
-                                <div class="kpi-prev" id="kpiProfitPrev"></div>
+                                <div class="kpi-value" id="kpiTurnover">-</div>
+                                <div class="kpi-pct" id="kpiTurnoverChange"></div>
+                                <div class="kpi-prev" id="kpiTurnoverPrev"></div>
                             </div>
                         </div>
                     </div>
+                    <!-- Row 2: שמאל=רווח שנתי | ימין=סה"כ פוליסות -->
                     <div class="kpi-card">
                         <div class="kpi-header">סה"כ פוליסות מתחילת שנה</div>
                         <div class="kpi-body">
@@ -249,18 +238,18 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Row 3: ימין=מכירות יומיות שת"פ | שמאל=סה"כ מכירות ליום נוכחי -->
                     <div class="kpi-card">
-                        <div class="kpi-header">מכירות יומיות שת"פים</div>
+                        <div class="kpi-header">רווח שנתי מצטבר</div>
                         <div class="kpi-body">
-                            <div class="kpi-arrow down" id="kpiArrow3"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" transform="rotate(180 12 12)"/></svg></div>
+                            <div class="kpi-arrow down" id="kpiArrow2"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" transform="rotate(180 12 12)"/></svg></div>
                             <div class="kpi-data">
-                                <div class="kpi-value" id="kpiDailySales">-</div>
-                                <div class="kpi-pct" id="kpiDailySalesChange"></div>
-                                <div class="kpi-prev" id="kpiDailySalesPrev"></div>
+                                <div class="kpi-value" id="kpiProfit">-</div>
+                                <div class="kpi-pct" id="kpiProfitChange"></div>
+                                <div class="kpi-prev" id="kpiProfitPrev"></div>
                             </div>
                         </div>
                     </div>
+                    <!-- Row 3: שמאל=מכירות יומיות שת"פ | ימין=סה"כ מכירות ליום נוכחי -->
                     <div class="kpi-card">
                         <div class="kpi-header">סה"כ מכירות ליום נוכחי</div>
                         <div class="kpi-body">
@@ -269,6 +258,17 @@
                                 <div class="kpi-value" id="kpiTodaySales">-</div>
                                 <div class="kpi-pct" id="kpiTodaySalesChange"></div>
                                 <div class="kpi-prev" id="kpiTodaySalesPrev"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-header">מכירות יומיות שת"פים</div>
+                        <div class="kpi-body">
+                            <div class="kpi-arrow down" id="kpiArrow3"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" transform="rotate(180 12 12)"/></svg></div>
+                            <div class="kpi-data">
+                                <div class="kpi-value" id="kpiDailySales">-</div>
+                                <div class="kpi-pct" id="kpiDailySalesChange"></div>
+                                <div class="kpi-prev" id="kpiDailySalesPrev"></div>
                             </div>
                         </div>
                     </div>
@@ -313,6 +313,6 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/bituhofir.js?v=4"></script>
+    <script src="js/bituhofir.js?v=5"></script>
 </body>
 </html>
