@@ -170,55 +170,47 @@ module.exports = async function handler(req, res) {
             const now = new Date();
             const month = Number(req.query.month) || (now.getMonth() + 1);
             const year = Number(req.query.year) || now.getFullYear();
-            const prevYear = year - 1;
 
-            // Fetch periods + riders + all policies (large batch to cover current + previous year)
-            const [periodsRes, ridersRes, topPoliciesRes] = await Promise.all([
-                bituhOfirFetch('/api/Dashboard'),
-                bituhOfirFetch('/api/Policy/getDailyReportRiderList').catch(() => null),
-                bituhOfirFetch('/api/Policy/GetTopPolicies?top=10000').catch(() => null)
-            ]);
+            // === Ophir (no agentCodes): use original BituhOfir Dashboard API ===
+            if (!agentCodes) {
+                const [calcRes, periodsRes, ridersRes, topPoliciesRes] = await Promise.all([
+                    bituhOfirFetch(`/api/Dashboard/GetDashboardCalcByData?month=${month}&year=${year}`),
+                    bituhOfirFetch('/api/Dashboard'),
+                    bituhOfirFetch('/api/Policy/getDailyReportRiderList').catch(() => null),
+                    bituhOfirFetch('/api/Policy/GetTopPolicies?top=500').catch(() => null)
+                ]);
 
-            const periods = await periodsRes.json();
+                const calcData = await calcRes.json();
+                const periods = await periodsRes.json();
 
-            let riders = [];
-            try { if (ridersRes && ridersRes.ok) riders = await ridersRes.json(); } catch(_) {}
+                let riders = [];
+                try { if (ridersRes && ridersRes.ok) riders = await ridersRes.json(); } catch(_) {}
 
-            let allPolicies = [];
-            try { if (topPoliciesRes && topPoliciesRes.ok) allPolicies = await topPoliciesRes.json(); } catch(_) {}
+                let topPolicies = [];
+                try { if (topPoliciesRes && topPoliciesRes.ok) topPolicies = await topPoliciesRes.json(); } catch(_) {}
+                if (!Array.isArray(topPolicies)) topPolicies = [];
 
-            // Filter by company's agentCodes (if set; null = show all)
-            if (Array.isArray(allPolicies)) {
-                if (agentCodes) allPolicies = allPolicies.filter(p => agentCodes.includes(String(p.agentCode)));
-            } else { allPolicies = []; }
+                return res.json({
+                    ...calcData,
+                    periods: Array.isArray(periods) ? periods : [],
+                    riders: Array.isArray(riders) ? riders : [],
+                    topPolicies,
+                    requestedMonth: month,
+                    requestedYear: year,
+                    lastRefresh: new Date().toISOString()
+                });
+            }
 
-            // Filter policies by requested month/year based on issueDate
-            const curMonthPolicies = allPolicies.filter(p => {
-                if (!p.issueDate) return false;
-                const d = new Date(p.issueDate);
-                return d.getFullYear() === year && (d.getMonth() + 1) === month;
-            });
-
-            const prevYearMonthPolicies = allPolicies.filter(p => {
-                if (!p.issueDate) return false;
-                const d = new Date(p.issueDate);
-                return d.getFullYear() === prevYear && (d.getMonth() + 1) === month;
-            });
-
-            // Calculate KPIs from filtered policies
-            const dashboardCalcData = calculateKPIs(curMonthPolicies, prevYearMonthPolicies, month, year);
-
-            // For topPolicies display, return only current period's policies
-            const topPolicies = curMonthPolicies;
-
+            // === Other companies (with agentCodes): no data yet ===
             return res.json({
-                dashboardCalcData,
-                periods: Array.isArray(periods) ? periods : [],
-                riders: Array.isArray(riders) ? riders : [],
-                topPolicies,
+                dashboardCalcData: [],
+                periods: [],
+                riders: [],
+                topPolicies: [],
                 requestedMonth: month,
                 requestedYear: year,
-                lastRefresh: new Date().toISOString()
+                lastRefresh: new Date().toISOString(),
+                noData: true
             });
         }
 
@@ -228,16 +220,17 @@ module.exports = async function handler(req, res) {
             const prevYear = year - 1;
             const maxMonth = Number(req.query.month) || 12;
 
-            // Fetch all policies (large batch to cover both years), then filter by agentCodes
+            // === Other companies (with agentCodes): no data yet ===
+            if (agentCodes) {
+                return res.json({ year, prevYear, yoyData: [], noData: true });
+            }
+
+            // === Ophir (no agentCodes): calculate from all policies ===
             const policiesRes = await bituhOfirFetch('/api/Policy/GetTopPolicies?top=10000').catch(() => null);
 
             let allPolicies = [];
             try { if (policiesRes && policiesRes.ok) allPolicies = await policiesRes.json(); } catch(_) {}
-
-            // Filter by company's agentCodes (if set; null = show all)
-            if (Array.isArray(allPolicies)) {
-                if (agentCodes) allPolicies = allPolicies.filter(p => agentCodes.includes(String(p.agentCode)));
-            } else { allPolicies = []; }
+            if (!Array.isArray(allPolicies)) allPolicies = [];
 
             // Split into current and previous year
             const curYearPolicies = allPolicies.filter(p => {
@@ -249,7 +242,7 @@ module.exports = async function handler(req, res) {
                 return new Date(p.issueDate).getFullYear() === prevYear;
             });
 
-            // Calculate turnover per month from filtered policies
+            // Calculate turnover per month from all policies (no filtering for Ophir)
             const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
             const yoyData = [];
             for (let m = 1; m <= maxMonth; m++) {
