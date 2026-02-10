@@ -292,21 +292,39 @@ function extractAllTextFromMime(rawMime, depth) {
     const charsetMatch = contentType.match(/charset="?([^"\s;]+)"?/i);
     const charset = charsetMatch ? charsetMatch[1] : 'utf-8';
 
-    console.log('[MIME d' + depth + '] ct:', contentType.substring(0, 60), 'enc:', encoding, 'bodyLen:', bodyPart.length);
+    console.log('[MIME d' + depth + '] ct:', contentType.substring(0, 80), 'enc:', encoding, 'bodyLen:', bodyPart.length);
 
     // Case 1: multipart/* — split by boundary and recurse into each part
-    const boundaryMatch = contentType.match(/boundary="?([^"\r\n;]+)"?/);
-    if (boundaryMatch) {
-        const boundary = boundaryMatch[1];
-        console.log('[MIME d' + depth + '] boundary:', boundary);
-        const parts = bodyPart.split('--' + boundary);
+    let boundary = null;
+
+    // Try to extract boundary from Content-Type header
+    const bQuoted = contentType.match(/boundary="([^"]+)"/);      // boundary="xxx"
+    const bUnquoted = contentType.match(/boundary=([^\s;]+)/);    // boundary=xxx
+    if (bQuoted) boundary = bQuoted[1];
+    else if (bUnquoted) boundary = bUnquoted[1];
+
+    if (boundary) {
+        console.log('[MIME d' + depth + '] boundary from header:', boundary);
+        let parts = bodyPart.split('--' + boundary);
         console.log('[MIME d' + depth + '] parts count:', parts.length);
-        for (let i = 1; i < parts.length; i++) { // skip preamble (index 0)
+
+        // If boundary didn't work, try finding actual boundary from body
+        if (parts.length <= 1 && bodyPart.includes('--')) {
+            const bodyLine = bodyPart.match(/^(--[^\r\n]+)/m);
+            if (bodyLine) {
+                const actualBoundary = bodyLine[1].substring(2); // remove leading --
+                console.log('[MIME d' + depth + '] trying body boundary:', actualBoundary);
+                parts = bodyPart.split('--' + actualBoundary);
+                console.log('[MIME d' + depth + '] parts count after retry:', parts.length);
+            }
+        }
+
+        for (let i = 1; i < parts.length; i++) {
             const part = parts[i];
             if (part.trimStart().startsWith('--')) continue; // skip epilogue
             texts.push(extractAllTextFromMime(part, depth + 1));
         }
-        return texts.filter(Boolean).join('\n');
+        if (texts.filter(Boolean).length > 0) return texts.filter(Boolean).join('\n');
     }
 
     // Case 2: message/rfc822 — the body IS another full email message
