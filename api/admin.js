@@ -191,8 +191,9 @@ module.exports = async function handler(req, res) {
                 const company = await Company.findById(companyId);
                 if (!company) return res.status(404).json({ message: 'החברה לא נמצאה.' });
 
-                // Permanent delete: ?permanent=true
-                const isPermanent = req.query.permanent === 'true';
+                // Permanent delete: ?permanent=true (parse from raw URL since req.query may not exist on Vercel)
+                const rawQuery = (req.url.split('?')[1] || '');
+                const isPermanent = rawQuery.includes('permanent=true') || (req.query && req.query.permanent === 'true');
                 if (isPermanent) {
                     // Delete all related data
                     await Promise.all([
