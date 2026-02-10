@@ -137,13 +137,18 @@ module.exports = async function handler(req, res) {
     if (!user) return res.status(401).json({ message: 'אין הרשאת גישה.' });
     if (user.role !== 'company') return res.status(403).json({ message: 'אין הרשאה.' });
 
-    // Access control: company must have agentCodes to access BituhOfir data
+    // Access control: company must have insurance access (dashboardModules)
     await connectDB();
-    const company = await Company.findById(user.companyId).select('agentCodes').lean();
-    if (!company || !Array.isArray(company.agentCodes) || company.agentCodes.length === 0) {
+    const company = await Company.findById(user.companyId).select('agentCodes dashboardModules').lean();
+    if (!company) return res.status(403).json({ message: 'אין הרשאה לנתוני ביטוח.' });
+    const modules = company.dashboardModules || 'management';
+    if (modules !== 'insurance' && modules !== 'both') {
         return res.status(403).json({ message: 'אין הרשאה לנתוני ביטוח.' });
     }
-    const agentCodes = company.agentCodes.map(String);
+    // If agentCodes exist → filter by them; if empty → show all (no filtering)
+    const agentCodes = (Array.isArray(company.agentCodes) && company.agentCodes.length > 0)
+        ? company.agentCodes.map(String)
+        : null;
 
     const url = req.url.split('?')[0];
 
@@ -170,9 +175,9 @@ module.exports = async function handler(req, res) {
             let allPolicies = [];
             try { if (topPoliciesRes && topPoliciesRes.ok) allPolicies = await topPoliciesRes.json(); } catch(_) {}
 
-            // Filter by company's agentCodes
+            // Filter by company's agentCodes (if set; null = show all)
             if (Array.isArray(allPolicies)) {
-                allPolicies = allPolicies.filter(p => agentCodes.includes(String(p.agentCode)));
+                if (agentCodes) allPolicies = allPolicies.filter(p => agentCodes.includes(String(p.agentCode)));
             } else { allPolicies = []; }
 
             // Filter policies by requested month/year based on issueDate
@@ -217,9 +222,9 @@ module.exports = async function handler(req, res) {
             let allPolicies = [];
             try { if (policiesRes && policiesRes.ok) allPolicies = await policiesRes.json(); } catch(_) {}
 
-            // Filter by company's agentCodes
+            // Filter by company's agentCodes (if set; null = show all)
             if (Array.isArray(allPolicies)) {
-                allPolicies = allPolicies.filter(p => agentCodes.includes(String(p.agentCode)));
+                if (agentCodes) allPolicies = allPolicies.filter(p => agentCodes.includes(String(p.agentCode)));
             } else { allPolicies = []; }
 
             // Split into current and previous year
@@ -263,11 +268,13 @@ module.exports = async function handler(req, res) {
             const apiRes = await bituhOfirFetch(path);
             let data = await apiRes.json();
 
-            // Filter by company's agentCodes
-            if (Array.isArray(data)) {
-                data = data.filter(p => agentCodes.includes(String(p.agentCode)));
-            } else if (data && data.agentCode && !agentCodes.includes(String(data.agentCode))) {
-                return res.status(403).json({ message: 'אין הרשאה לפוליסה זו.' });
+            // Filter by company's agentCodes (if set; null = show all)
+            if (agentCodes) {
+                if (Array.isArray(data)) {
+                    data = data.filter(p => agentCodes.includes(String(p.agentCode)));
+                } else if (data && data.agentCode && !agentCodes.includes(String(data.agentCode))) {
+                    return res.status(403).json({ message: 'אין הרשאה לפוליסה זו.' });
+                }
             }
 
             return res.json(data);
@@ -279,8 +286,8 @@ module.exports = async function handler(req, res) {
             const apiRes = await bituhOfirFetch(`/api/Policy/GetPolicyCustomersDetailsByIndex?policyIndex=${policyIndex}`);
             const data = await apiRes.json();
 
-            // Verify policy belongs to this company's agents
-            if (data && data.agentCode && !agentCodes.includes(String(data.agentCode))) {
+            // Verify policy belongs to this company's agents (if agentCodes set)
+            if (agentCodes && data && data.agentCode && !agentCodes.includes(String(data.agentCode))) {
                 return res.status(403).json({ message: 'אין הרשאה לפוליסה זו.' });
             }
 
@@ -303,11 +310,13 @@ module.exports = async function handler(req, res) {
             const apiRes = await bituhOfirFetch(path);
             let data = await apiRes.json();
 
-            // Filter by company's agentCodes
-            if (Array.isArray(data)) {
-                data = data.filter(p => agentCodes.includes(String(p.agentCode)));
-            } else if (data && data.agentCode && !agentCodes.includes(String(data.agentCode))) {
-                return res.status(403).json({ message: 'אין הרשאה לפוליסה זו.' });
+            // Filter by company's agentCodes (if set; null = show all)
+            if (agentCodes) {
+                if (Array.isArray(data)) {
+                    data = data.filter(p => agentCodes.includes(String(p.agentCode)));
+                } else if (data && data.agentCode && !agentCodes.includes(String(data.agentCode))) {
+                    return res.status(403).json({ message: 'אין הרשאה לפוליסה זו.' });
+                }
             }
 
             return res.json(data);
