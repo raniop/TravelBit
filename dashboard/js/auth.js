@@ -45,7 +45,7 @@ function isPageAllowed(user, currentPage) {
     else if (currentPage.includes('agents')) insurancePageType = 'agents';
     else if (currentPage.includes('reports')) insurancePageType = 'reports';
 
-    const isRemindersPage = currentPage.includes('reminders');
+    const isRemindersPage = currentPage.includes('reminders') || currentPage.includes('reminder-detail');
     const isManagementPage = !insurancePageType && !isRemindersPage && !currentPage.includes('login');
 
     // Check module-level access
@@ -56,6 +56,15 @@ function isPageAllowed(user, currentPage) {
     // Granular insurance page check
     if (insurancePageType && modules.insurance) {
         if (ip[insurancePageType] === false) return false;
+    }
+
+    // Granular reminder page check
+    if (currentPage.includes('reminder-detail') && modules.reminders) {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const type = urlParams.get('type');
+            if (type && rp[type] === false) return false;
+        } catch(_) {}
     }
 
     return true;
@@ -495,10 +504,22 @@ function updateSidebarVisibility() {
 
     // Reminders section: show/hide
     if (remindersSection) {
+        const rp = user.reminderPages || { agentAppointment: true, policyCancellations: true, newProductions: true, claims: true, firstDeposit: true, completingDeficiencies: true };
         remindersSection.style.display = modules.reminders ? '' : 'none';
         let el = remindersSection.nextElementSibling;
         while (el && el.tagName === 'A') {
-            el.style.display = modules.reminders ? '' : 'none';
+            if (!modules.reminders) {
+                el.style.display = 'none';
+            } else {
+                // Check granular reminder type links
+                const href = el.getAttribute('href') || '';
+                const typeMatch = href.match(/type=(\w+)/);
+                if (typeMatch) {
+                    el.style.display = rp[typeMatch[1]] === false ? 'none' : '';
+                } else {
+                    el.style.display = '';
+                }
+            }
             el = el.nextElementSibling;
         }
     }

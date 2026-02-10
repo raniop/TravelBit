@@ -1,4 +1,4 @@
-// Reminders Page Logic
+// Reminders Dashboard — Card Grid Logic
 const REMINDER_TYPES = {
     agentAppointment: 'מינוי סוכן',
     policyCancellations: 'ביטולי פוליסות',
@@ -8,16 +8,16 @@ const REMINDER_TYPES = {
     completingDeficiencies: 'השלמת חוסרים'
 };
 
-const STATUS_LABELS = {
-    open: 'פתוח',
-    inProgress: 'בטיפול',
-    completed: 'הושלם',
-    cancelled: 'בוטל'
+const CARD_ICONS = {
+    agentAppointment: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',
+    policyCancellations: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    newProductions: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>',
+    claims: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+    firstDeposit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>',
+    completingDeficiencies: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
 };
 
-let currentType = null; // null = all
 let allReminders = [];
-let agentCodes = [];
 
 // Init
 (async function() {
@@ -32,296 +32,151 @@ let agentCodes = [];
     if (userNameEl && user.name) userNameEl.textContent = user.name;
     if (avatarEl && user.name) avatarEl.textContent = user.name.charAt(0);
 
-    // Build tabs based on reminderPages
-    buildTabs(user);
+    // Load all reminders
+    await loadAllReminders();
 
-    // Load reminders
-    await loadReminders();
+    // Setup email drop zone
+    setupEmailDropZone();
 })();
 
-function buildTabs(user) {
-    const rp = user.reminderPages || {};
-    const tabsEl = document.getElementById('reminderTabs');
-    if (!tabsEl) return;
-
-    // "All" tab
-    let html = `<button class="reminder-tab active" data-type="" onclick="switchTab(this, '')">הכל</button>`;
-
-    for (const [key, label] of Object.entries(REMINDER_TYPES)) {
-        if (rp[key] === false) continue; // hidden page
-        html += `<button class="reminder-tab" data-type="${key}" onclick="switchTab(this, '${key}')">${label}</button>`;
-    }
-
-    tabsEl.innerHTML = html;
-
-    // Also update form type dropdown — remove hidden types
-    const formType = document.getElementById('formType');
-    if (formType) {
-        Array.from(formType.options).forEach(opt => {
-            if (rp[opt.value] === false) opt.remove();
-        });
-    }
-}
-
-function switchTab(btn, type) {
-    document.querySelectorAll('.reminder-tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-    currentType = type || null;
-    renderTable();
-}
-
-async function loadReminders() {
+async function loadAllReminders() {
     try {
-        let url = '/dashboard/reminders';
-        const params = [];
-        if (currentType) params.push(`type=${currentType}`);
-        if (params.length) url += '?' + params.join('&');
-
-        const res = await apiFetch(url);
+        const res = await apiFetch('/dashboard/reminders');
         if (!res || !res.ok) throw new Error('Failed to load');
         const data = await res.json();
-
         allReminders = data.reminders || [];
-        agentCodes = data.agentCodes || [];
-
-        // Populate agent filter dropdown
-        populateAgentDropdowns();
-
-        renderTable();
+        renderDashboard();
     } catch (err) {
         console.error('Load reminders error:', err);
-        document.getElementById('remindersBody').innerHTML =
-            '<tr><td colspan="11" style="text-align:center; padding:40px; color:var(--gray-400);">שגיאה בטעינת תזכורות</td></tr>';
+        document.getElementById('cardsContainer').innerHTML =
+            '<div style="text-align:center;padding:40px;color:var(--gray-400);">שגיאה בטעינת תזכורות</div>';
     }
 }
 
-function populateAgentDropdowns() {
-    const filterAgent = document.getElementById('filterAgent');
-    const formAgent = document.getElementById('formAgentCode');
+function renderDashboard() {
+    const user = getUser();
+    const rp = user ? (user.reminderPages || {}) : {};
+    const container = document.getElementById('cardsContainer');
+    if (!container) return;
 
-    if (filterAgent) {
-        filterAgent.innerHTML = '<option value="">הכל</option>';
-        agentCodes.forEach(code => {
-            filterAgent.innerHTML += `<option value="${code}">${code}</option>`;
-        });
+    let html = '<div class="reminder-cards-grid">';
+
+    for (const [key, label] of Object.entries(REMINDER_TYPES)) {
+        if (rp[key] === false) continue;
+
+        const typeReminders = allReminders.filter(r => r.type === key);
+        const total = typeReminders.length;
+        const openCount = typeReminders.filter(r => r.status === 'open').length;
+        const inProgressCount = typeReminders.filter(r => r.status === 'inProgress').length;
+        const completedCount = typeReminders.filter(r => r.status === 'completed').length;
+        const icon = CARD_ICONS[key] || '';
+
+        html += `
+        <a class="reminder-card" href="reminder-detail.html?type=${key}">
+            <div class="card-icon">${icon}</div>
+            <div class="reminder-card-title">${label}</div>
+            <div class="reminder-card-count">${total}</div>
+            <div class="reminder-card-statuses">
+                ${openCount ? `<span class="mini-badge mini-open">${openCount} פתוח</span>` : ''}
+                ${inProgressCount ? `<span class="mini-badge mini-inProgress">${inProgressCount} בטיפול</span>` : ''}
+                ${completedCount ? `<span class="mini-badge mini-completed">${completedCount} הושלם</span>` : ''}
+            </div>
+        </a>`;
     }
-    if (formAgent) {
-        formAgent.innerHTML = '<option value="">ללא</option>';
-        agentCodes.forEach(code => {
-            formAgent.innerHTML += `<option value="${code}">${code}</option>`;
-        });
-    }
+
+    html += '</div>';
+    container.innerHTML = html;
 }
 
-function getFilteredReminders() {
-    let list = allReminders;
-    if (currentType) list = list.filter(r => r.type === currentType);
+// ===== Email Drop Zone =====
+function setupEmailDropZone() {
+    const zone = document.getElementById('emailDropZone');
+    if (!zone) return;
 
-    const agent = document.getElementById('filterAgent')?.value;
-    if (agent) list = list.filter(r => r.agentCode === agent);
-
-    const status = document.getElementById('filterStatus')?.value;
-    if (status) list = list.filter(r => r.status === status);
-
-    return list;
-}
-
-function renderTable() {
-    const filtered = getFilteredReminders();
-    const tbody = document.getElementById('remindersBody');
-    const countEl = document.getElementById('totalCount');
-    const titleEl = document.getElementById('tableTitle');
-
-    if (countEl) countEl.textContent = filtered.length;
-    if (titleEl) {
-        titleEl.textContent = currentType ? REMINDER_TYPES[currentType] : 'כל התזכורות';
-    }
-
-    // Update tab counts
-    document.querySelectorAll('.reminder-tab').forEach(tab => {
-        const type = tab.dataset.type;
-        let count;
-        if (!type) {
-            count = allReminders.length;
-        } else {
-            count = allReminders.filter(r => r.type === type).length;
-        }
-        let existingCount = tab.querySelector('.tab-count');
-        if (existingCount) existingCount.textContent = count;
-        else {
-            const span = document.createElement('span');
-            span.className = 'tab-count';
-            span.textContent = count;
-            tab.appendChild(span);
-        }
+    zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.add('drag-over');
     });
 
-    if (!filtered.length) {
-        tbody.innerHTML = `
-            <tr><td colspan="11">
-                <div class="empty-state">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-                    <p>אין תזכורות${currentType ? ' מסוג זה' : ''}</p>
-                </div>
-            </td></tr>`;
+    zone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.remove('drag-over');
+    });
+
+    zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.remove('drag-over');
+        handleEmailDrop(e);
+    });
+}
+
+function handleEmailDrop(e) {
+    // 1. Try to get files (.msg from Outlook Desktop)
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+        const file = files[0];
+        const name = file.name || '';
+        const emailData = {
+            source: 'file',
+            fileName: name,
+            notes: 'יובא מקובץ: ' + name
+        };
+        navigateToDetailWithEmail(emailData);
         return;
     }
 
-    tbody.innerHTML = filtered.map(r => {
-        const dateStr = r.date ? new Date(r.date).toLocaleDateString('he-IL') : '-';
-        const amountStr = r.amount ? r.amount.toLocaleString('he-IL') : '-';
-        const statusClass = `status-${r.status || 'open'}`;
-        const statusLabel = STATUS_LABELS[r.status] || 'פתוח';
-        const typeLabel = REMINDER_TYPES[r.type] || r.type;
+    // 2. Try to get text (from Gmail / Outlook Web)
+    const text = e.dataTransfer.getData('text/plain') || '';
+    const html = e.dataTransfer.getData('text/html') || '';
 
-        return `<tr>
-            <td><strong>${escHtml(r.customerName || '-')}</strong></td>
-            <td>${escHtml(r.idNumber || '-')}</td>
-            <td>${escHtml(r.phone || '-')}</td>
-            <td>${escHtml(r.policyNumber || '-')}</td>
-            <td>${escHtml(r.insuranceCompany || '-')}</td>
-            <td>${escHtml(r.agentCode || '-')}</td>
-            <td>${dateStr}</td>
-            <td>${amountStr}</td>
-            <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
-            <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.notes || '')}">${escHtml(r.notes || '-')}</td>
-            <td style="white-space:nowrap;">
-                <button class="action-btn edit" title="ערוך" onclick="openEditModal('${r._id}')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                </button>
-                <button class="action-btn delete" title="מחק" onclick="deleteReminder('${r._id}')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                </button>
-            </td>
-        </tr>`;
-    }).join('');
-}
-
-function escHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
-
-// Filter change handlers
-document.getElementById('filterAgent')?.addEventListener('change', renderTable);
-document.getElementById('filterStatus')?.addEventListener('change', renderTable);
-
-// ===== Modal =====
-function openAddModal() {
-    document.getElementById('editId').value = '';
-    document.getElementById('modalTitle').textContent = 'הוסף תזכורת';
-    document.getElementById('formStatusRow').style.display = 'none';
-
-    // Set type to current tab type
-    const formType = document.getElementById('formType');
-    if (currentType && formType) {
-        formType.value = currentType;
+    if (text || html) {
+        const extracted = extractEmailData(text || html);
+        navigateToDetailWithEmail(extracted);
+        return;
     }
 
-    // Clear form
-    document.getElementById('formCustomerName').value = '';
-    document.getElementById('formIdNumber').value = '';
-    document.getElementById('formPhone').value = '';
-    document.getElementById('formPolicyNumber').value = '';
-    document.getElementById('formInsuranceCompany').value = '';
-    document.getElementById('formDate').value = '';
-    document.getElementById('formAmount').value = '';
-    document.getElementById('formNotes').value = '';
-    document.getElementById('formAgentCode').value = '';
-    document.getElementById('formStatus').value = 'open';
-
-    document.getElementById('reminderModal').classList.add('show');
+    // 3. Fallback: navigate to first available type
+    navigateToDetailWithEmail({ source: 'empty', notes: '' });
 }
 
-function openEditModal(id) {
-    const r = allReminders.find(x => x._id === id);
-    if (!r) return;
+function extractEmailData(text) {
+    const data = { source: 'text', notes: text.substring(0, 500) };
 
-    document.getElementById('editId').value = r._id;
-    document.getElementById('modalTitle').textContent = 'ערוך תזכורת';
-    document.getElementById('formStatusRow').style.display = 'block';
+    // Try to extract phone number (Israeli format)
+    const phoneMatch = text.match(/0[2-9]\d[\s-]?\d{3}[\s-]?\d{4}|0[2-9]\d{7,8}/);
+    if (phoneMatch) data.phone = phoneMatch[0].replace(/[\s-]/g, '');
 
-    document.getElementById('formType').value = r.type;
-    document.getElementById('formCustomerName').value = r.customerName || '';
-    document.getElementById('formIdNumber').value = r.idNumber || '';
-    document.getElementById('formPhone').value = r.phone || '';
-    document.getElementById('formPolicyNumber').value = r.policyNumber || '';
-    document.getElementById('formInsuranceCompany').value = r.insuranceCompany || '';
-    document.getElementById('formDate').value = r.date ? r.date.substring(0, 10) : '';
-    document.getElementById('formAmount').value = r.amount || '';
-    document.getElementById('formNotes').value = r.notes || '';
-    document.getElementById('formAgentCode').value = r.agentCode || '';
-    document.getElementById('formStatus').value = r.status || 'open';
+    // Try to extract ID number (9 digits)
+    const idMatch = text.match(/\b\d{9}\b/);
+    if (idMatch && idMatch[0] !== (data.phone || '')) data.idNumber = idMatch[0];
 
-    document.getElementById('reminderModal').classList.add('show');
-}
+    // Try to extract email address
+    const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/);
+    if (emailMatch) data.email = emailMatch[0];
 
-function closeModal() {
-    document.getElementById('reminderModal').classList.remove('show');
-}
-
-async function saveReminder() {
-    const editId = document.getElementById('editId').value;
-    const isEdit = !!editId;
-
-    const body = {
-        type: document.getElementById('formType').value,
-        customerName: document.getElementById('formCustomerName').value.trim(),
-        idNumber: document.getElementById('formIdNumber').value.trim(),
-        phone: document.getElementById('formPhone').value.trim(),
-        policyNumber: document.getElementById('formPolicyNumber').value.trim(),
-        insuranceCompany: document.getElementById('formInsuranceCompany').value.trim(),
-        date: document.getElementById('formDate').value || null,
-        amount: document.getElementById('formAmount').value || 0,
-        notes: document.getElementById('formNotes').value.trim(),
-        agentCode: document.getElementById('formAgentCode').value
-    };
-
-    if (isEdit) {
-        body.status = document.getElementById('formStatus').value;
+    // Try to extract amount (number with ₪ or NIS or ש"ח)
+    const amountMatch = text.match(/(?:₪|NIS|ש"ח)\s*[\d,]+\.?\d*|\d[\d,]+\.?\d*\s*(?:₪|NIS|ש"ח)/);
+    if (amountMatch) {
+        data.amount = parseFloat(amountMatch[0].replace(/[^\d.]/g, ''));
     }
 
-    const saveBtn = document.getElementById('saveBtn');
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'שומר...';
-
-    try {
-        let url = '/dashboard/reminders';
-        let method = 'POST';
-        if (isEdit) {
-            url = `/dashboard/reminders/${editId}`;
-            method = 'PUT';
-        }
-
-        const res = await apiFetch(url, {
-            method,
-            body: JSON.stringify(body)
-        });
-
-        if (!res || !res.ok) {
-            const data = await res.json().catch(() => ({}));
-            throw new Error(data.message || 'שגיאה בשמירה');
-        }
-
-        closeModal();
-        await loadReminders();
-    } catch (err) {
-        alert(err.message);
-    } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'שמור';
-    }
+    return data;
 }
 
-async function deleteReminder(id) {
-    if (!confirm('האם למחוק תזכורת זו?')) return;
+function navigateToDetailWithEmail(emailData) {
+    // Store in sessionStorage for the detail page to pick up
+    sessionStorage.setItem('emailDraft', JSON.stringify(emailData));
 
-    try {
-        const res = await apiFetch(`/dashboard/reminders/${id}`, { method: 'DELETE' });
-        if (!res || !res.ok) throw new Error('שגיאה במחיקה');
-        await loadReminders();
-    } catch (err) {
-        alert(err.message);
+    // Navigate to first available type
+    const user = getUser();
+    const rp = user ? (user.reminderPages || {}) : {};
+    let targetType = 'agentAppointment';
+    for (const key of Object.keys(REMINDER_TYPES)) {
+        if (rp[key] !== false) { targetType = key; break; }
     }
+
+    window.location.href = `reminder-detail.html?type=${targetType}&fromEmail=1`;
 }

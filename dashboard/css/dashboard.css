@@ -314,6 +314,21 @@ body {
     color: var(--primary);
 }
 
+.sidebar-nav a.sidebar-sub-link {
+    padding: 8px 16px 8px 16px;
+    padding-right: 36px;
+    font-size: 13px;
+    color: var(--gray-500);
+    margin-bottom: 0;
+}
+.sidebar-nav a.sidebar-sub-link:hover {
+    color: white;
+}
+.sidebar-nav a.sidebar-sub-link.active {
+    color: white;
+    background: rgba(255, 107, 44, 0.1);
+}
+
 .sidebar-nav svg {
     width: 20px;
     height: 20px;

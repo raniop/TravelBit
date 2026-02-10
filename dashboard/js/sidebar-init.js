@@ -40,6 +40,18 @@
         if (!modules.reminders) {
             rules.push('#remindersSection { display: none !important; }');
             rules.push('.sidebar-nav a[href*="reminders"] { display: none !important; }');
+            rules.push('.sidebar-nav a[href*="reminder-detail"] { display: none !important; }');
+        }
+
+        // Granular reminder page hiding
+        if (modules.reminders) {
+            var rp = user.reminderPages || {};
+            if (rp.agentAppointment === false) rules.push('.sidebar-nav a[href*="type=agentAppointment"] { display: none !important; }');
+            if (rp.policyCancellations === false) rules.push('.sidebar-nav a[href*="type=policyCancellations"] { display: none !important; }');
+            if (rp.newProductions === false) rules.push('.sidebar-nav a[href*="type=newProductions"] { display: none !important; }');
+            if (rp.claims === false) rules.push('.sidebar-nav a[href*="type=claims"] { display: none !important; }');
+            if (rp.firstDeposit === false) rules.push('.sidebar-nav a[href*="type=firstDeposit"] { display: none !important; }');
+            if (rp.completingDeficiencies === false) rules.push('.sidebar-nav a[href*="type=completingDeficiencies"] { display: none !important; }');
         }
 
         // Granular insurance page hiding
