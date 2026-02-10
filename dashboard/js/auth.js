@@ -1,13 +1,23 @@
 // Dashboard Auth Module
 const API_BASE = '/api';
 
+// Determine default landing page based on company
+function getDefaultDashboard(user) {
+    if (user && user.name && user.name.includes('אופיר')) {
+        return '/dashboard/bituhofir.html';
+    }
+    return '/dashboard/';
+}
+
 // Check if already logged in
 (function() {
     const token = localStorage.getItem('dash_token');
     const currentPage = window.location.pathname;
 
     if (token && currentPage.includes('login')) {
-        window.location.href = '/dashboard/';
+        let user = null;
+        try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
+        window.location.href = getDefaultDashboard(user);
         return;
     }
 
@@ -58,7 +68,7 @@ if (loginForm) {
             localStorage.setItem('dash_token', data.accessToken);
             localStorage.setItem('dash_refresh', data.refreshToken);
             localStorage.setItem('dash_user', JSON.stringify(data.user));
-            window.location.href = '/dashboard/';
+            window.location.href = getDefaultDashboard(data.user);
         } catch (err) {
             errorEl.textContent = err.message;
             errorEl.classList.add('show');
