@@ -1,4 +1,4 @@
-// Policies Search Page JS - v3
+// Policies Search Page JS - v4
 let allPolicies = [];
 let selectedPolicyIndex = null;
 let isSearching = false;
@@ -7,6 +7,11 @@ let searchTimeout = null;
 document.addEventListener('DOMContentLoaded', () => {
     initUser();
     loadPolicies();
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeModal();
+    });
 });
 
 function initUser() {
@@ -56,13 +61,30 @@ function searchPolicies() {
         return;
     }
 
-    // Check if query looks like a TZ / ID number (6+ digits)
+    // Check if query looks like a TZ / ID / policy number (5+ digits)
     const isNumericQuery = /^\d{5,}$/.test(query);
 
     if (isNumericQuery) {
-        // Debounce server-side search
+        // First try client-side search (instant match on fullPolicyID, policyIndex)
+        const lowerQuery = query.toLowerCase();
+        const clientFiltered = allPolicies.filter(p => {
+            const fields = [
+                p.fullPolicyID,
+                p.policyIndex,
+                p.doketNumber
+            ].filter(Boolean).map(v => String(v).toLowerCase());
+            return fields.some(f => f.includes(lowerQuery));
+        });
+
+        if (clientFiltered.length > 0) {
+            // Found locally — show results instantly
+            document.getElementById('searchCount').textContent = clientFiltered.length + ' תוצאות (חיפוש מקומי)';
+            renderPoliciesTable(clientFiltered);
+        }
+
+        // Also do server-side search (for TZ / policy number not in top 500)
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => searchByIdServer(query), 400);
+        searchTimeout = setTimeout(() => searchByIdServer(query, clientFiltered.length), 500);
     } else {
         // Client-side search (instant)
         const lowerQuery = query.toLowerCase();
@@ -88,30 +110,56 @@ function searchPolicies() {
     }
 }
 
-// Server-side search by TZ / ID
-async function searchByIdServer(idQuery) {
+// Server-side search by TZ / ID / policy number
+async function searchByIdServer(idQuery, localResultCount) {
     if (isSearching) return;
     isSearching = true;
 
-    const tbody = document.getElementById('policiesBody');
-    tbody.innerHTML = '<tr><td colspan="12"><div class="loading-overlay"><div class="spinner"></div> מחפש לפי ת.ז / מספר מזהה...</div></td></tr>';
+    // Show loading only if no local results
+    if (!localResultCount) {
+        const tbody = document.getElementById('policiesBody');
+        tbody.innerHTML = '<tr><td colspan="12"><div class="loading-overlay"><div class="spinner"></div> מחפש לפי ת.ז / מספר פוליסה...</div></td></tr>';
+    }
 
     try {
         const res = await apiFetch('/dashboard/external/policies?id=' + encodeURIComponent(idQuery));
         if (!res || !res.ok) {
-            document.getElementById('searchCount').textContent = 'שגיאה בחיפוש';
-            tbody.innerHTML = '<tr><td colspan="12"><div class="empty-msg"><p>שגיאה בחיפוש לפי ת.ז</p></div></td></tr>';
+            if (!localResultCount) {
+                document.getElementById('searchCount').textContent = 'שגיאה בחיפוש';
+                const tbody = document.getElementById('policiesBody');
+                tbody.innerHTML = '<tr><td colspan="12"><div class="empty-msg"><p>שגיאה בחיפוש</p></div></td></tr>';
+            }
             isSearching = false;
             return;
         }
 
         const data = await res.json();
         const results = Array.isArray(data) ? data : [];
-        document.getElementById('searchCount').textContent = results.length + ' פוליסות נמצאו עבור ת.ז ' + idQuery;
-        renderPoliciesTable(results);
+
+        if (results.length > 0) {
+            // Merge with any local results — deduplicate by policyIndex
+            const seen = new Set();
+            const merged = [];
+            [...results].forEach(p => {
+                if (!seen.has(p.policyIndex)) {
+                    seen.add(p.policyIndex);
+                    merged.push(p);
+                }
+            });
+
+            document.getElementById('searchCount').textContent = merged.length + ' פוליסות נמצאו';
+            renderPoliciesTable(merged);
+        } else if (!localResultCount) {
+            document.getElementById('searchCount').textContent = 'לא נמצאו תוצאות';
+            const tbody = document.getElementById('policiesBody');
+            tbody.innerHTML = '<tr><td colspan="12"><div class="empty-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>לא נמצאו פוליסות</p></div></td></tr>';
+        }
     } catch (err) {
         console.error('Error searching by ID:', err);
-        tbody.innerHTML = '<tr><td colspan="12"><div class="empty-msg"><p>שגיאה בחיפוש</p></div></td></tr>';
+        if (!localResultCount) {
+            const tbody = document.getElementById('policiesBody');
+            tbody.innerHTML = '<tr><td colspan="12"><div class="empty-msg"><p>שגיאה בחיפוש</p></div></td></tr>';
+        }
     }
     isSearching = false;
 }
@@ -131,7 +179,7 @@ function renderPoliciesTable(policies) {
             ? issueDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
             : '-';
 
-        return `<tr onclick="selectPolicy(${idx}, this)" class="${selectedPolicyIndex === idx ? 'selected' : ''}">
+        return `<tr onclick="selectPolicy(${idx})" class="${selectedPolicyIndex === idx ? 'selected' : ''}">
             <td><strong>${esc(p.fullPolicyID || String(p.policyIndex))}</strong></td>
             <td>${esc(p.agentName || '-')}</td>
             <td class="td-center">${esc(p.agentCode ? String(p.agentCode) : '-')}</td>
@@ -148,8 +196,8 @@ function renderPoliciesTable(policies) {
     }).join('');
 }
 
-// ==================== Policy Details ====================
-async function selectPolicy(policyIndex, rowEl) {
+// ==================== Policy Details Modal ====================
+async function selectPolicy(policyIndex) {
     if (!policyIndex) return;
 
     selectedPolicyIndex = policyIndex;
@@ -157,19 +205,25 @@ async function selectPolicy(policyIndex, rowEl) {
     // Highlight selected row
     const rows = document.querySelectorAll('.policies-table tbody tr');
     rows.forEach(r => r.classList.remove('selected'));
-    if (rowEl) rowEl.classList.add('selected');
+    // Find and highlight the clicked row
+    const allRows = document.querySelectorAll('.policies-table tbody tr');
+    allRows.forEach(r => {
+        if (r.getAttribute('onclick') && r.getAttribute('onclick').includes(policyIndex)) {
+            r.classList.add('selected');
+        }
+    });
 
-    // Show panel with loading
-    const panel = document.getElementById('policyDetailsPanel');
-    const body = document.getElementById('detailsBody');
-    const title = document.getElementById('detailsTitle');
+    // Open modal with loading
+    const modal = document.getElementById('policyModal');
+    const body = document.getElementById('modalBody');
+    const title = document.getElementById('modalTitle');
+    const subtitle = document.getElementById('modalSubtitle');
 
-    panel.classList.add('show');
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden'; // prevent background scroll
     body.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> טוען פרטי פוליסה...</div>';
     title.textContent = 'פוליסה ' + policyIndex;
-
-    // Scroll to panel
-    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    subtitle.textContent = '';
 
     try {
         const res = await apiFetch('/dashboard/external/policies?policyIndex=' + policyIndex);
@@ -180,6 +234,15 @@ async function selectPolicy(policyIndex, rowEl) {
 
         const data = await res.json();
         console.log('Policy details:', data);
+
+        // Update modal header with policy info
+        if (data.fullPolicyID) {
+            title.textContent = 'פוליסה ' + data.fullPolicyID;
+        }
+        if (data.clientName) {
+            subtitle.textContent = data.clientName + (data.areaName ? ' | ' + data.areaName : '');
+        }
+
         renderPolicyDetails(data);
     } catch (err) {
         console.error('Error loading policy details:', err);
@@ -188,7 +251,7 @@ async function selectPolicy(policyIndex, rowEl) {
 }
 
 function renderPolicyDetails(p) {
-    const body = document.getElementById('detailsBody');
+    const body = document.getElementById('modalBody');
     if (!p) {
         body.innerHTML = '<div class="empty-msg"><p>לא נמצאו פרטים לפוליסה זו</p></div>';
         return;
@@ -317,13 +380,21 @@ function renderPolicyDetails(p) {
     body.innerHTML = html;
 }
 
-function closePolicyDetails() {
-    const panel = document.getElementById('policyDetailsPanel');
-    panel.classList.remove('show');
+function closeModal() {
+    const modal = document.getElementById('policyModal');
+    modal.classList.remove('show');
+    document.body.style.overflow = ''; // restore scroll
     selectedPolicyIndex = null;
 
     const rows = document.querySelectorAll('.policies-table tbody tr');
     rows.forEach(r => r.classList.remove('selected'));
+}
+
+function closeModalOverlay(event) {
+    // Close only if clicked on the overlay itself (not the modal content)
+    if (event.target === event.currentTarget) {
+        closeModal();
+    }
 }
 
 // ==================== Utilities ====================

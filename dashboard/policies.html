@@ -67,38 +67,54 @@
         /* ===== Page Layout ===== */
         .page-body { display: flex; flex-direction: column; min-height: calc(100vh - 80px); }
 
-        /* ===== Policy Details Panel ===== */
-        .policy-details-panel {
-            background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border: 1px solid var(--gray-100); margin-bottom: 24px;
-            display: none; animation: slideDown 0.3s ease;
+        /* ===== Modal Overlay ===== */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            align-items: center; justify-content: center; padding: 24px;
+            animation: fadeIn 0.2s ease;
         }
-        .policy-details-panel.show { display: block; }
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
+        .modal-overlay.show { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .modal-content {
+            background: white; border-radius: 16px; width: 100%; max-width: 900px;
+            max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .details-header {
-            padding: 16px 20px; border-bottom: 1px solid var(--gray-100);
+        .modal-header {
+            padding: 20px 24px; border-bottom: 1px solid var(--gray-100);
             display: flex; align-items: center; justify-content: space-between;
             background: linear-gradient(135deg, #FF6B2C 0%, #FF8F5E 100%);
-            border-radius: 12px 12px 0 0; color: white;
+            border-radius: 16px 16px 0 0; color: white; flex-shrink: 0;
         }
-        .details-header h2 { font-size: 16px; font-weight: 700; margin: 0; }
-        .details-close {
+        .modal-header h2 { font-size: 18px; font-weight: 700; margin: 0; }
+        .modal-header .subtitle { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+        .modal-close {
             background: rgba(255,255,255,0.2); border: none; color: white;
-            width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
-            font-size: 18px; display: flex; align-items: center; justify-content: center;
-            transition: background 0.2s;
+            width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
+            font-size: 22px; display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s; flex-shrink: 0;
         }
-        .details-close:hover { background: rgba(255,255,255,0.3); }
+        .modal-close:hover { background: rgba(255,255,255,0.35); }
 
-        .details-body { padding: 20px; }
+        .modal-body {
+            padding: 24px; overflow-y: auto; flex: 1;
+        }
+
         .details-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
         }
-        @media (max-width: 768px) { .details-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) {
+            .details-grid { grid-template-columns: 1fr; }
+            .modal-content { max-width: 100%; margin: 8px; }
+            .modal-overlay { padding: 8px; }
+        }
 
         .details-section {
             background: var(--gray-50); border-radius: 10px; padding: 16px;
@@ -237,7 +253,7 @@
                     <label>חיפוש:</label>
                     <input type="text" class="search-input" id="searchInput" placeholder="שם מבוטח, מספר פוליסה, ת.ז, סוכן, דוכת..." oninput="searchPolicies()" autofocus>
                     <span class="search-count" id="searchCount"></span>
-                    <span class="search-hint">הכנס ת.ז לחיפוש לפי מספר זהות</span>
+                    <span class="search-hint">הכנס ת.ז או מס' פוליסה לחיפוש מהשרת</span>
                 </div>
 
                 <!-- Policies Table -->
@@ -270,22 +286,27 @@
                         </table>
                     </div>
                 </div>
-
-                <!-- Policy Details Panel (hidden by default) -->
-                <div class="policy-details-panel" id="policyDetailsPanel">
-                    <div class="details-header">
-                        <h2 id="detailsTitle">פרטי פוליסה</h2>
-                        <button class="details-close" onclick="closePolicyDetails()">&times;</button>
-                    </div>
-                    <div class="details-body" id="detailsBody">
-                        <div class="loading-overlay"><div class="spinner"></div> טוען פרטים...</div>
-                    </div>
-                </div>
             </div>
         </main>
     </div>
 
+    <!-- Policy Details Modal -->
+    <div class="modal-overlay" id="policyModal" onclick="closeModalOverlay(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalTitle">פרטי פוליסה</h2>
+                    <div class="subtitle" id="modalSubtitle"></div>
+                </div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="loading-overlay"><div class="spinner"></div> טוען פרטים...</div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/auth.js"></script>
-    <script src="js/policies.js?v=3"></script>
+    <script src="js/policies.js?v=4"></script>
 </body>
 </html>
