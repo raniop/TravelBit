@@ -247,46 +247,30 @@ function updateSidebarVisibility() {
     const bituhofirSection = document.getElementById('bituhofirSection');
     const managementSection = document.getElementById('managementSection');
 
-    // First: reset everything to visible
+    // Management section: show/hide based on modules
+    const showManagement = (modules === 'management' || modules === 'both');
     if (managementSection) {
-        managementSection.style.display = '';
+        managementSection.style.display = showManagement ? '' : 'none';
         let el = managementSection.nextElementSibling;
         while (el && el.id !== 'bituhofirSection') {
-            el.style.display = '';
+            el.style.display = showManagement ? '' : 'none';
             el = el.nextElementSibling;
         }
     }
+
+    // Bituhofir section: show/hide based on modules
+    const showInsurance = (modules === 'insurance' || modules === 'both');
     if (bituhofirSection) {
-        bituhofirSection.style.display = '';
+        bituhofirSection.style.display = showInsurance ? '' : 'none';
         let el = bituhofirSection.nextElementSibling;
         while (el && el.tagName === 'A') {
-            el.style.display = '';
-            el = el.nextElementSibling;
-        }
-    }
-
-    // Hide entire bituhofir section if management-only
-    if (bituhofirSection && modules === 'management') {
-        bituhofirSection.style.display = 'none';
-        let el = bituhofirSection.nextElementSibling;
-        while (el && el.tagName === 'A') {
-            el.style.display = 'none';
-            el = el.nextElementSibling;
-        }
-    }
-
-    // Hide entire management section if insurance-only
-    if (managementSection && modules === 'insurance') {
-        managementSection.style.display = 'none';
-        let el = managementSection.nextElementSibling;
-        while (el && el.id !== 'bituhofirSection') {
-            el.style.display = 'none';
+            el.style.display = showInsurance ? '' : 'none';
             el = el.nextElementSibling;
         }
     }
 
     // Granular: hide individual insurance pages
-    if (modules === 'insurance' || modules === 'both') {
+    if (showInsurance) {
         const nav = document.querySelector('.sidebar-nav');
         if (nav) {
             const pageMap = { 'bituhofir': 'dashboard', 'policies': 'policies', 'agents': 'agents', 'reports': 'reports' };
@@ -310,6 +294,5 @@ function updateSidebarVisibility() {
         }
     }
 }
-// Run after server sync completes (called from the IIFE above)
-// Also run on DOMContentLoaded as fallback in case sync is slow
-document.addEventListener('DOMContentLoaded', updateSidebarVisibility);
+// Run immediately (script is at bottom of body, DOM is ready)
+updateSidebarVisibility();

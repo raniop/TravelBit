@@ -225,38 +225,37 @@ module.exports = async function handler(req, res) {
                 return res.json({ year, prevYear, yoyData: [], noData: true });
             }
 
-            // === Ophir (no agentCodes): calculate from all policies ===
-            const policiesRes = await bituhOfirFetch('/api/Policy/GetTopPolicies?top=10000').catch(() => null);
+            // === Ophir (no agentCodes): use original BituhOfir Dashboard API ===
+            // Fetch GetDashboardCalcByData for each month (current + previous year)
+            const promises = [];
+            for (let m = 1; m <= maxMonth; m++) {
+                promises.push(
+                    bituhOfirFetch(`/api/Dashboard/GetDashboardCalcByData?month=${m}&year=${year}`)
+                        .then(r => r.json()).then(d => ({ month: m, year, data: d })).catch(() => ({ month: m, year, data: null }))
+                );
+                promises.push(
+                    bituhOfirFetch(`/api/Dashboard/GetDashboardCalcByData?month=${m}&year=${prevYear}`)
+                        .then(r => r.json()).then(d => ({ month: m, year: prevYear, data: d })).catch(() => ({ month: m, year: prevYear, data: null }))
+                );
+            }
 
-            let allPolicies = [];
-            try { if (policiesRes && policiesRes.ok) allPolicies = await policiesRes.json(); } catch(_) {}
-            if (!Array.isArray(allPolicies)) allPolicies = [];
+            const results = await Promise.all(promises);
 
-            // Split into current and previous year
-            const curYearPolicies = allPolicies.filter(p => {
-                if (!p.issueDate) return false;
-                return new Date(p.issueDate).getFullYear() === year;
-            });
-            const prevYearPolicies = allPolicies.filter(p => {
-                if (!p.issueDate) return false;
-                return new Date(p.issueDate).getFullYear() === prevYear;
-            });
-
-            // Calculate turnover per month from all policies (no filtering for Ophir)
+            // Extract turnover (repType 1) for each month
             const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
             const yoyData = [];
             for (let m = 1; m <= maxMonth; m++) {
-                const curMonthTotal = curYearPolicies
-                    .filter(p => { const d = new Date(p.issueDate); return d.getFullYear() === year && (d.getMonth() + 1) === m; })
-                    .reduce((sum, p) => sum + (Number(p.total) || 0), 0);
-                const prevMonthTotal = prevYearPolicies
-                    .filter(p => { const d = new Date(p.issueDate); return d.getFullYear() === prevYear && (d.getMonth() + 1) === m; })
-                    .reduce((sum, p) => sum + (Number(p.total) || 0), 0);
+                const curResult = results.find(r => r.month === m && r.year === year);
+                const prevResult = results.find(r => r.month === m && r.year === prevYear);
+                const curCalc = curResult?.data?.dashboardCalcData || [];
+                const prevCalc = prevResult?.data?.dashboardCalcData || [];
+                const curTurnover = curCalc.find(c => c.repType === 1);
+                const prevTurnover = prevCalc.find(c => c.repType === 1);
                 yoyData.push({
                     month: monthNames[m - 1],
                     monthNum: m,
-                    currentYear: curMonthTotal,
-                    previousYear: prevMonthTotal
+                    currentYear: curTurnover?.curYearValue || 0,
+                    previousYear: prevTurnover?.curYearValue || 0
                 });
             }
 
