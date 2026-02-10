@@ -83,11 +83,15 @@ async function loadBituhOfirDashboard(month, year) {
         const data = await res.json();
         console.log('BituhOfir Dashboard Data:', data);
 
-        // Update timestamp
+        // Update timestamp from API
         const tsEl = document.getElementById('lastUpdate');
-        if (tsEl) tsEl.textContent = 'עדכון אחרון: ' + new Date().toLocaleTimeString('he-IL');
+        if (tsEl) {
+            const lr = data.lastRefresh ? new Date(data.lastRefresh).toLocaleString('he-IL') : new Date().toLocaleTimeString('he-IL');
+            tsEl.textContent = 'עדכון אחרון: ' + lr;
+        }
 
-        updateKPIs(data);
+        // API returns: { lastRefresh, dashboardCalcData: [...], periods: [...] }
+        updateKPIs(data.dashboardCalcData || []);
         renderAgentsTable(data);
         renderRegionChart(data);
         renderRidersChart(data);
@@ -109,125 +113,81 @@ function showError(msg) {
 }
 
 // ==================== KPIs ====================
+// API returns dashboardCalcData array:
+// [{ repType: 1, curYearValue, prevYearValue, percentDiff, calcTitle }]
+// repType mapping:
+// 1 = מחזור שנתי מצטבר
+// 2 = רווח שנתי מצטבר
+// 3 = מכירות יומיות שת"פים
+// 4 = פרמיה ממוצעת
+// 5 = סה"כ פוליסות מתחילת שנה
+// 6 = סה"כ מכירות ליום נוכחי
 
-function updateKPIs(data) {
-    // The API response structure needs to be mapped.
-    // Based on the screenshot, expected fields might be:
-    // data.annualTurnover / data.yearlyTurnover, data.avgPremium,
-    // data.annualProfit / data.yearlyProfit, data.totalPolicies,
-    // data.dailyPartnerSales, data.todaySales
-    // Also: data.prevAnnualTurnover, data.turnoverChangePercent etc.
+const KPI_MAP = {
+    1: { id: 'kpiTurnover', prefix: '$' },       // מחזור שנתי מצטבר
+    4: { id: 'kpiAvgPremium', prefix: '$' },      // פרמיה ממוצעת
+    2: { id: 'kpiProfit', prefix: '$' },           // רווח שנתי מצטבר
+    5: { id: 'kpiPolicies', prefix: '' },          // סה"כ פוליסות מתחילת שנה
+    3: { id: 'kpiDailySales', prefix: '$' },       // מכירות יומיות שת"פים
+    6: { id: 'kpiTodaySales', prefix: '$' }        // סה"כ מכירות ליום נוכחי
+};
 
-    // Try multiple possible field name patterns
-    setKPI('kpiTurnover', findVal(data, ['annualTurnover', 'yearlyTurnover', 'totalTurnover', 'machzorShnati']), '$');
-    setKPI('kpiAvgPremium', findVal(data, ['avgPremium', 'averagePremium', 'premiaMemutzaat']), '$');
-    setKPI('kpiProfit', findVal(data, ['annualProfit', 'yearlyProfit', 'revachShnati', 'totalProfit']), '$');
-    setKPI('kpiPolicies', findVal(data, ['totalPolicies', 'policiesCount', 'totalPoliciesYTD', 'sahachPolisot']), '');
-    setKPI('kpiDailySales', findVal(data, ['dailyPartnerSales', 'dailySalesPartners', 'mechirotYomiotShataf']), '$');
-    setKPI('kpiTodaySales', findVal(data, ['todaySales', 'todayTotalSales', 'sahachMechirotHayom']), '$');
+function updateKPIs(calcData) {
+    if (!Array.isArray(calcData)) return;
 
-    // Try to set change percentages
-    setKPIChange('kpiTurnoverChange', 'kpiTurnoverPrev', data, ['annualTurnoverChange', 'turnoverChangePercent'], ['prevAnnualTurnover', 'prevTurnover']);
-    setKPIChange('kpiAvgPremiumChange', 'kpiAvgPremiumPrev', data, ['avgPremiumChange', 'premiumChangePercent'], ['prevAvgPremium']);
-    setKPIChange('kpiProfitChange', 'kpiProfitPrev', data, ['annualProfitChange', 'profitChangePercent'], ['prevAnnualProfit', 'prevProfit']);
-    setKPIChange('kpiPoliciesChange', 'kpiPoliciesPrev', data, ['policiesChange', 'policiesChangePercent'], ['prevTotalPolicies']);
-    setKPIChange('kpiDailySalesChange', 'kpiDailySalesPrev', data, ['dailySalesChange'], ['prevDailySales']);
-    setKPIChange('kpiTodaySalesChange', 'kpiTodaySalesPrev', data, ['todaySalesChange'], ['prevTodaySales']);
+    // Reset all KPIs
+    Object.values(KPI_MAP).forEach(kpi => {
+        const el = document.getElementById(kpi.id);
+        if (el) el.textContent = '-';
+        const changeEl = document.getElementById(kpi.id + 'Change');
+        if (changeEl) changeEl.innerHTML = '';
+        const prevEl = document.getElementById(kpi.id + 'Prev');
+        if (prevEl) prevEl.textContent = '';
+    });
 
-    // If the data has a flat structure or deeply nested, log it to help debug
-    if (typeof data === 'object' && data !== null) {
-        const keys = Object.keys(data);
-        console.log('API Response Keys:', keys);
-        // Try to auto-detect and populate if it's a deeply nested structure
-        autoMapKPIs(data);
-    }
-}
+    calcData.forEach(item => {
+        const kpi = KPI_MAP[item.repType];
+        if (!kpi) return;
 
-function findVal(obj, keys) {
-    if (!obj || typeof obj !== 'object') return null;
-    for (const k of keys) {
-        if (obj[k] !== undefined && obj[k] !== null) return obj[k];
-    }
-    // Deep search one level
-    for (const key of Object.keys(obj)) {
-        if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-            for (const k of keys) {
-                if (obj[key][k] !== undefined && obj[key][k] !== null) return obj[key][k];
-            }
+        // Set main value
+        const el = document.getElementById(kpi.id);
+        if (el) {
+            const val = item.curYearValue;
+            el.textContent = kpi.prefix + formatNumber(val);
         }
-    }
-    return null;
-}
 
-function setKPI(id, value, prefix) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (value === null || value === undefined) {
-        el.textContent = '-';
-        return;
-    }
-    if (prefix === '$') {
-        el.textContent = '$' + formatNumber(value);
-    } else {
-        el.textContent = formatNumber(value);
-    }
-}
+        // Set change percentage
+        const changeEl = document.getElementById(kpi.id + 'Change');
+        if (changeEl && item.percentDiff !== null && item.percentDiff !== undefined) {
+            const pct = item.percentDiff;
+            const isPositive = pct >= 0;
+            changeEl.className = 'kpi-change ' + (isPositive ? 'positive' : 'negative');
+            changeEl.innerHTML = (isPositive ? '&#9650; ' : '&#9660; ') + Math.abs(pct).toFixed(2) + '%';
+        }
 
-function setKPIChange(changeId, prevId, data, changeKeys, prevKeys) {
-    const changeEl = document.getElementById(changeId);
-    const prevEl = document.getElementById(prevId);
-    if (!changeEl) return;
-
-    const changeVal = findVal(data, changeKeys);
-    const prevVal = findVal(data, prevKeys);
-
-    if (changeVal !== null && changeVal !== undefined) {
-        const pct = typeof changeVal === 'number' ? changeVal : parseFloat(changeVal);
-        const isPositive = pct >= 0;
-        changeEl.className = 'kpi-change ' + (isPositive ? 'positive' : 'negative');
-        changeEl.innerHTML = (isPositive ? '&#9650; ' : '&#9660; ') + Math.abs(pct).toFixed(2) + '%';
-    }
-
-    if (prevEl && prevVal !== null && prevVal !== undefined) {
-        prevEl.textContent = '$' + formatNumber(prevVal);
-    }
-}
-
-function autoMapKPIs(data) {
-    // If the data structure contains "kpis" or "statistics" array/object, try to map automatically
-    const kpiContainer = data.kpis || data.statistics || data.stats || data.kpiData;
-    if (Array.isArray(kpiContainer)) {
-        // Array of { name, value, change, prev } objects
-        kpiContainer.forEach((kpi, i) => {
-            const ids = ['kpiTurnover', 'kpiAvgPremium', 'kpiProfit', 'kpiPolicies', 'kpiDailySales', 'kpiTodaySales'];
-            if (ids[i]) {
-                const el = document.getElementById(ids[i]);
-                if (el && el.textContent === '-') {
-                    el.textContent = typeof kpi.value === 'number' ? '$' + formatNumber(kpi.value) : kpi.value;
-                }
-            }
-        });
-    }
+        // Set previous year value
+        const prevEl = document.getElementById(kpi.id + 'Prev');
+        if (prevEl && item.prevYearValue !== null && item.prevYearValue !== undefined) {
+            prevEl.textContent = kpi.prefix + formatNumber(item.prevYearValue);
+        }
+    });
 }
 
 // ==================== Agents Table ====================
+// The agents data needs a separate API call - the dashboard endpoint doesn't include it
+// For now show "no data" - agents require a different endpoint
 
 function renderAgentsTable(data) {
     const tbody = document.getElementById('agentsTableBody');
     const tfoot = document.getElementById('agentsTableFoot');
 
-    // Try to find agents array in the data
+    // Try to find agents in any nested structure
     const agents = data.agents || data.agentsList || data.soknim || data.soknimData || [];
     allAgents = agents;
 
     if (!Array.isArray(agents) || agents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><h3>אין נתוני סוכנים</h3><p>בדקו את החיבור ל-API</p></div></td></tr>';
-        console.log('No agents found. Data keys:', Object.keys(data));
-        // Try to render if the data itself is an array
-        if (Array.isArray(data) && data.length > 0) {
-            allAgents = data;
-            renderAgentRows(data, tbody, tfoot);
-        }
+        tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><h3>נתוני סוכנים</h3><p>נתוני הסוכנים יוצגו כאן בקרוב</p></div></td></tr>';
+        if (tfoot) tfoot.innerHTML = '';
         return;
     }
 
@@ -243,7 +203,6 @@ function renderAgentRows(agents, tbody, tfoot) {
     let totalPremium = 0, totalHatam = 0, totalSochen = 0;
 
     tbody.innerHTML = agents.map((a, i) => {
-        // Try multiple field name patterns
         const agentNum = a.agentNumber || a.agentId || a.sochen || a.misparSochen || a.id || i;
         const agentName = a.agentName || a.name || a.shemSochen || a.fullName || '-';
         const policyCount = a.policyCount || a.policiesCount || a.maspHndl || a.totalPolicies || 0;
@@ -296,24 +255,21 @@ function filterAgents() {
 }
 
 // ==================== Charts ====================
+// Charts data is not in the dashboard calc endpoint
+// These will be populated when we discover which endpoints return chart data
 
 function renderRegionChart(data) {
     const canvas = document.getElementById('regionChart');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // Try to find geographic data
-    const regions = data.regions || data.salesByRegion || data.geographicSales || data.azorimData || [];
+    const regions = data.regions || data.salesByRegion || data.geographicSales || [];
 
     if (regionChart) regionChart.destroy();
 
-    if (!Array.isArray(regions) || regions.length === 0) {
-        // If no structured array, try to extract from other keys
-        console.log('No regions data found. Looking in data keys...');
-        return;
-    }
+    if (!Array.isArray(regions) || regions.length === 0) return;
 
-    const labels = regions.map(r => r.name || r.region || r.label || r._id || 'N/A');
+    const labels = regions.map(r => r.name || r.region || r.label || 'N/A');
     const values = regions.map(r => r.value || r.count || r.total || r.percent || 0);
     const colors = ['#3B82F6', '#00B67A', '#FF6B2C', '#F59E0B', '#8B5CF6', '#EF4444', '#06B6D4', '#EC4899'];
 
@@ -332,10 +288,7 @@ function renderRegionChart(data) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'right',
-                    labels: { font: { family: 'Heebo', size: 11 }, padding: 10 }
-                }
+                legend: { position: 'right', labels: { font: { family: 'Heebo', size: 11 }, padding: 10 } }
             }
         }
     });
@@ -346,16 +299,12 @@ function renderRidersChart(data) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    const riders = data.riders || data.topRiders || data.ridersSales || data.raidrimData || [];
+    const riders = data.riders || data.topRiders || data.ridersSales || [];
 
     if (ridersChart) ridersChart.destroy();
+    if (!Array.isArray(riders) || riders.length === 0) return;
 
-    if (!Array.isArray(riders) || riders.length === 0) {
-        console.log('No riders data found.');
-        return;
-    }
-
-    const labels = riders.map(r => r.name || r.rider || r.label || r._id || 'N/A');
+    const labels = riders.map(r => r.name || r.rider || r.label || 'N/A');
     const values = riders.map(r => r.value || r.count || r.total || r.percent || 0);
     const colors = ['#3B82F6', '#00B67A', '#FF6B2C', '#F59E0B', '#8B5CF6', '#EF4444',
                     '#06B6D4', '#EC4899', '#10B981', '#F97316', '#6366F1', '#84CC16'];
@@ -375,10 +324,7 @@ function renderRidersChart(data) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'right',
-                    labels: { font: { family: 'Heebo', size: 11 }, padding: 8 }
-                }
+                legend: { position: 'right', labels: { font: { family: 'Heebo', size: 11 }, padding: 8 } }
             }
         }
     });
@@ -389,17 +335,12 @@ function renderSalesYoYChart(data) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    const salesYoY = data.salesComparison || data.yearlySales || data.monthlySalesComparison || data.mechirotHashvaa || [];
+    const salesYoY = data.salesComparison || data.yearlySales || data.monthlySalesComparison || [];
 
     if (salesYoYChart) salesYoYChart.destroy();
+    if (!Array.isArray(salesYoY) || salesYoY.length === 0) return;
 
-    if (!Array.isArray(salesYoY) || salesYoY.length === 0) {
-        console.log('No YoY sales data found.');
-        return;
-    }
-
-    // Expect: [{ month: 'ינואר', currentYear: 123, previousYear: 456 }]
-    const labels = salesYoY.map(s => s.month || s.label || s.period || s._id || '');
+    const labels = salesYoY.map(s => s.month || s.label || s.period || '');
     const current = salesYoY.map(s => s.currentYear || s.current || s.thisYear || s.value || 0);
     const previous = salesYoY.map(s => s.previousYear || s.previous || s.lastYear || s.prevValue || 0);
 
@@ -408,37 +349,15 @@ function renderSalesYoYChart(data) {
         data: {
             labels,
             datasets: [
-                {
-                    label: 'שנה נוכחית',
-                    data: current,
-                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                    borderRadius: 4
-                },
-                {
-                    label: 'שנה קודמת',
-                    data: previous,
-                    backgroundColor: 'rgba(239, 68, 68, 0.6)',
-                    borderRadius: 4
-                }
+                { label: 'שנה נוכחית', data: current, backgroundColor: 'rgba(59, 130, 246, 0.8)', borderRadius: 4 },
+                { label: 'שנה קודמת', data: previous, backgroundColor: 'rgba(239, 68, 68, 0.6)', borderRadius: 4 }
             ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: { font: { family: 'Heebo' } }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: v => '$' + formatNumber(v)
-                    }
-                }
-            }
+            plugins: { legend: { position: 'top', labels: { font: { family: 'Heebo' } } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => '$' + formatNumber(v) } } }
         }
     });
 }

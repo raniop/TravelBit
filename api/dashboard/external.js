@@ -100,14 +100,25 @@ module.exports = async function handler(req, res) {
     try {
         // Route: /api/dashboard/external/dashboard
         if (url.includes('/external/dashboard')) {
-            const { month, year } = req.query;
-            let path = '/api/Dashboard';
-            if (month && year) {
-                path = `/api/Dashboard/GetDashboardCalcByData?month=${month}&year=${year}`;
-            }
-            const apiRes = await bituhOfirFetch(path);
-            const data = await apiRes.json();
-            return res.json(data);
+            const now = new Date();
+            const month = req.query.month || (now.getMonth() + 1);
+            const year = req.query.year || now.getFullYear();
+
+            // Fetch KPI data + available periods in parallel
+            const [calcRes, periodsRes] = await Promise.all([
+                bituhOfirFetch(`/api/Dashboard/GetDashboardCalcByData?month=${month}&year=${year}`),
+                bituhOfirFetch('/api/Dashboard')
+            ]);
+
+            const calcData = await calcRes.json();
+            const periods = await periodsRes.json();
+
+            return res.json({
+                ...calcData,
+                periods: Array.isArray(periods) ? periods : [],
+                requestedMonth: Number(month),
+                requestedYear: Number(year)
+            });
         }
 
         // Route: /api/dashboard/external/policies
