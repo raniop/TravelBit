@@ -179,10 +179,10 @@ async function openCompanyDetail(companyId) {
     if (!company) return;
 
     document.getElementById('companyDetailTitle').textContent = company.name;
-    document.getElementById('cdContact').textContent = company.contactPerson || '-';
-    document.getElementById('cdEmail').textContent = company.email || '-';
-    document.getElementById('cdPhone').textContent = company.phone || '-';
-    document.getElementById('cdPolicy').textContent = company.policyNumber || '-';
+    document.getElementById('cdContact').value = company.contactPerson || '';
+    document.getElementById('cdEmail').value = company.email || '';
+    document.getElementById('cdPhone').value = company.phone || '';
+    document.getElementById('cdPolicy').value = company.policyNumber || '';
     document.getElementById('companyUsersArea').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     document.getElementById('companyDetailModal').classList.add('show');
 
@@ -200,6 +200,37 @@ async function openCompanyDetail(companyId) {
 function closeCompanyDetail() {
     document.getElementById('companyDetailModal').classList.remove('show');
     currentDetailCompanyId = null;
+}
+
+async function saveCompanyDetails() {
+    if (!currentDetailCompanyId) return;
+
+    const contactPerson = document.getElementById('cdContact').value.trim();
+    const email = document.getElementById('cdEmail').value.trim();
+    const phone = document.getElementById('cdPhone').value.trim();
+    const policyNumber = document.getElementById('cdPolicy').value.trim();
+
+    try {
+        const res = await apiFetch(`/admin/companies/${currentDetailCompanyId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ contactPerson, email, phone, policyNumber })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message);
+
+        // Update local data
+        const idx = allCompanies.findIndex(c => c._id === currentDetailCompanyId);
+        if (idx !== -1) {
+            allCompanies[idx].contactPerson = contactPerson;
+            allCompanies[idx].email = email;
+            allCompanies[idx].phone = phone;
+            allCompanies[idx].policyNumber = policyNumber;
+            renderCompanies(allCompanies);
+        }
+        alert('פרטי החברה עודכנו בהצלחה!');
+    } catch (err) {
+        alert('שגיאה: ' + err.message);
+    }
 }
 
 function renderCompanyUsers(users) {

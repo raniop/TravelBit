@@ -113,13 +113,30 @@
                 <button class="modal-close" onclick="closeCompanyDetail()">&times;</button>
             </div>
             <div class="modal-body" style="padding: 0;">
-                <!-- Company Info -->
+                <!-- Company Info (editable) -->
                 <div style="padding: 20px 24px; border-bottom: 1px solid var(--gray-200); background: var(--gray-100);">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px;">
-                        <div><span style="color: var(--gray-500); font-weight: 600;">איש קשר:</span> <span id="cdContact"></span></div>
-                        <div><span style="color: var(--gray-500); font-weight: 600;">אימייל:</span> <span id="cdEmail"></span></div>
-                        <div><span style="color: var(--gray-500); font-weight: 600;">טלפון:</span> <span id="cdPhone"></span></div>
-                        <div><span style="color: var(--gray-500); font-weight: 600;">מספר פוליסה:</span> <span id="cdPolicy"></span></div>
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:12px;color:var(--gray-500);font-weight:600;margin-bottom:4px;">איש קשר</label>
+                            <input type="text" id="cdContact" style="padding:6px 10px;font-size:13px;border-radius:6px;border:1px solid var(--gray-200);">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:12px;color:var(--gray-500);font-weight:600;margin-bottom:4px;">אימייל</label>
+                            <input type="email" id="cdEmail" style="padding:6px 10px;font-size:13px;border-radius:6px;border:1px solid var(--gray-200);direction:ltr;text-align:left;">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:12px;color:var(--gray-500);font-weight:600;margin-bottom:4px;">טלפון</label>
+                            <input type="text" id="cdPhone" style="padding:6px 10px;font-size:13px;border-radius:6px;border:1px solid var(--gray-200);direction:ltr;text-align:left;">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:12px;color:var(--gray-500);font-weight:600;margin-bottom:4px;">מספר פוליסה</label>
+                            <input type="text" id="cdPolicy" style="padding:6px 10px;font-size:13px;border-radius:6px;border:1px solid var(--gray-200);direction:ltr;text-align:left;">
+                        </div>
+                    </div>
+                    <div style="margin-top:12px;text-align:left;">
+                        <button class="btn btn-primary btn-sm" onclick="saveCompanyDetails()" style="width:auto;font-size:13px;padding:6px 18px;">
+                            שמור פרטי חברה
+                        </button>
                     </div>
                 </div>
                 <!-- Users Section -->

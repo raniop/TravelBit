@@ -10,6 +10,7 @@
     { "source": "/api/auth/refresh", "destination": "/api/auth" },
     { "source": "/api/auth/me", "destination": "/api/auth" },
     { "source": "/api/admin/stats", "destination": "/api/admin" },
+    { "source": "/api/admin/companies/:id", "destination": "/api/admin" },
     { "source": "/api/admin/companies", "destination": "/api/admin" },
     { "source": "/api/admin/users", "destination": "/api/admin" },
     { "source": "/api/dashboard/export/trips", "destination": "/api/dashboard/export" },

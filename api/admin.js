@@ -151,6 +151,46 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        // PUT - Update company details
+        if (req.method === 'PUT') {
+            try {
+                const companyId = url.split('/').pop();
+                const { name, contactPerson, email, phone, policyNumber, isActive } = req.body;
+
+                const company = await Company.findById(companyId);
+                if (!company) return res.status(404).json({ message: 'החברה לא נמצאה.' });
+
+                if (name !== undefined) company.name = name;
+                if (contactPerson !== undefined) company.contactPerson = contactPerson;
+                if (email !== undefined) company.email = email;
+                if (phone !== undefined) company.phone = phone;
+                if (policyNumber !== undefined) company.policyNumber = policyNumber;
+                if (isActive !== undefined) company.isActive = isActive;
+
+                await company.save();
+                return res.json({ message: 'החברה עודכנה בהצלחה!', company });
+            } catch (error) {
+                console.error('Update company error:', error);
+                return res.status(500).json({ message: 'שגיאת שרת.' });
+            }
+        }
+
+        // DELETE - Deactivate company
+        if (req.method === 'DELETE') {
+            try {
+                const companyId = url.split('/').pop();
+                const company = await Company.findById(companyId);
+                if (!company) return res.status(404).json({ message: 'החברה לא נמצאה.' });
+
+                company.isActive = false;
+                await company.save();
+                return res.json({ message: 'החברה הושבתה.' });
+            } catch (error) {
+                console.error('Delete company error:', error);
+                return res.status(500).json({ message: 'שגיאת שרת.' });
+            }
+        }
+
         return res.status(405).json({ message: 'Method not allowed' });
     }
 
