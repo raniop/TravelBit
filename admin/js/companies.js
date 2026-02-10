@@ -89,6 +89,9 @@ function renderCompanies(companies) {
                     <button class="btn btn-sm ${c.isActive ? 'btn-danger' : 'btn-success'}" onclick="toggleCompany('${c._id}', ${c.isActive})">
                         ${c.isActive ? 'השבת' : 'הפעל'}
                     </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteCompany('${c._id}', '${escapeHtml(c.name)}')" title="מחיקת חברה" style="background:#dc2626;padding:5px 8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
                 </div>
             </td>
         </tr>
@@ -188,6 +191,27 @@ async function toggleCompany(id, isActive) {
         loadCompanies();
     } catch (err) {
         console.error('Toggle company error:', err);
+    }
+}
+
+// Delete company permanently
+async function deleteCompany(id, name) {
+    const confirmText = prompt(`⚠️ מחיקת חברה לצמיתות!\n\nהחברה "${name}" תימחק יחד עם כל המשתמשים, העובדים, הנסיעות והפוליסות שלה.\n\nפעולה זו בלתי הפיכה!\n\nהקלד את שם החברה "${name}" לאישור:`);
+    if (confirmText !== name) {
+        if (confirmText !== null) alert('השם שהוקלד לא תואם. המחיקה בוטלה.');
+        return;
+    }
+
+    try {
+        const res = await apiFetch(`/admin/companies/${id}?permanent=true`, { method: 'DELETE' });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message);
+        alert(result.message);
+        loadCompanies();
+        // Close detail modal if open for this company
+        if (currentDetailCompanyId === id) closeCompanyDetail();
+    } catch (err) {
+        alert('שגיאה: ' + err.message);
     }
 }
 

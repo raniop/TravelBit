@@ -184,13 +184,28 @@ module.exports = async function handler(req, res) {
             }
         }
 
-        // DELETE - Deactivate company
+        // DELETE - Deactivate or permanently delete company
         if (req.method === 'DELETE') {
             try {
                 const companyId = url.split('/').pop();
                 const company = await Company.findById(companyId);
                 if (!company) return res.status(404).json({ message: 'החברה לא נמצאה.' });
 
+                // Permanent delete: ?permanent=true
+                const isPermanent = req.query.permanent === 'true';
+                if (isPermanent) {
+                    // Delete all related data
+                    await Promise.all([
+                        User.deleteMany({ companyId: company._id }),
+                        Employee.deleteMany({ companyId: company._id }),
+                        Trip.deleteMany({ companyId: company._id }),
+                        Policy.deleteMany({ companyId: company._id }),
+                        Company.findByIdAndDelete(company._id)
+                    ]);
+                    return res.json({ message: 'החברה וכל הנתונים שלה נמחקו לצמיתות.' });
+                }
+
+                // Soft delete (deactivate)
                 company.isActive = false;
                 await company.save();
                 return res.json({ message: 'החברה הושבתה.' });
