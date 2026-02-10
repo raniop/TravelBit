@@ -20,15 +20,10 @@
         .date-filter-bar label { font-weight: 700; font-size: 14px; color: var(--gray-700); }
         .date-filter-bar select {
             padding: 8px 16px; border-radius: 8px; border: 1px solid var(--gray-200);
-            font-family: 'Heebo', sans-serif; font-size: 14px; background: white; cursor: pointer;
-            min-width: 100px;
+            font-family: 'Heebo', sans-serif; font-size: 14px; background: white; cursor: pointer; min-width: 100px;
         }
         .date-filter-bar select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,107,44,0.1); }
-        .filter-btn {
-            padding: 8px 24px; border-radius: 8px; border: none;
-            font-family: 'Heebo', sans-serif; font-size: 14px; font-weight: 600;
-            cursor: pointer; transition: all 0.2s;
-        }
+        .filter-btn { padding: 8px 24px; border-radius: 8px; border: none; font-family: 'Heebo', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
         .filter-btn-primary { background: var(--primary); color: white; }
         .filter-btn-primary:hover { background: #e55a1f; transform: translateY(-1px); }
         .filter-btn-secondary { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-200); }
@@ -40,57 +35,63 @@
         .error-banner { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; display: none; font-weight: 500; }
         .error-banner.show { display: flex; align-items: center; gap: 10px; }
 
-        /* ===== KPI Grid ===== */
+        /* ===== KPI Grid - 2 columns like original ===== */
         .kpi-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px;
         }
-        @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 600px) { .kpi-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .kpi-grid { grid-template-columns: 1fr; } }
 
         .kpi-card {
-            background: white; border-radius: 14px; padding: 20px 24px;
+            background: white; border-radius: 14px; padding: 24px 28px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-100);
-            display: flex; justify-content: space-between; align-items: flex-start;
             transition: all 0.2s; position: relative; overflow: hidden;
         }
         .kpi-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
-        .kpi-card::before {
-            content: ''; position: absolute; top: 0; right: 0; width: 4px; height: 100%;
-            border-radius: 0 14px 14px 0;
-        }
-        .kpi-card.blue::before { background: #3B82F6; }
-        .kpi-card.green::before { background: #00B67A; }
-        .kpi-card.orange::before { background: #FF6B2C; }
-        .kpi-card.purple::before { background: #8B5CF6; }
-        .kpi-card.teal::before { background: #06B6D4; }
-        .kpi-card.red::before { background: #EF4444; }
 
-        .kpi-main { flex: 1; }
-        .kpi-title { font-size: 13px; color: var(--gray-500); font-weight: 500; margin-bottom: 8px; }
-        .kpi-value { font-size: 28px; font-weight: 800; color: var(--dark); line-height: 1.1; margin-bottom: 6px; }
-        .kpi-change { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
-        .kpi-change.positive { color: #059669; background: #ECFDF5; }
-        .kpi-change.negative { color: #DC2626; background: #FEF2F2; }
-        .kpi-prev { font-size: 12px; color: var(--gray-400); margin-top: 6px; }
-        .kpi-icon {
-            width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; margin-right: 12px;
+        /* Color top border */
+        .kpi-card::after {
+            content: ''; position: absolute; top: 0; right: 0; left: 0; height: 3px;
         }
-        .kpi-icon.blue { background: #EFF6FF; color: #3B82F6; }
-        .kpi-icon.green { background: #F0FDF4; color: #00B67A; }
-        .kpi-icon.orange { background: #FFF7ED; color: #FF6B2C; }
-        .kpi-icon.purple { background: #F5F3FF; color: #8B5CF6; }
-        .kpi-icon.teal { background: #F0FDFA; color: #06B6D4; }
-        .kpi-icon.red { background: #FEF2F2; color: #EF4444; }
-        .kpi-icon svg { width: 24px; height: 24px; }
+        .kpi-card:nth-child(1)::after { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+        .kpi-card:nth-child(2)::after { background: linear-gradient(90deg, #06B6D4, #22D3EE); }
+        .kpi-card:nth-child(3)::after { background: linear-gradient(90deg, #00B67A, #34D399); }
+        .kpi-card:nth-child(4)::after { background: linear-gradient(90deg, #8B5CF6, #A78BFA); }
+        .kpi-card:nth-child(5)::after { background: linear-gradient(90deg, #FF6B2C, #FB923C); }
+        .kpi-card:nth-child(6)::after { background: linear-gradient(90deg, #EF4444, #F87171); }
 
-        /* ===== Charts Grid ===== */
+        .kpi-header {
+            font-size: 15px; font-weight: 700; color: var(--gray-600); margin-bottom: 16px;
+            text-align: center; letter-spacing: 0.02em;
+        }
+        .kpi-body {
+            display: flex; align-items: center; gap: 16px;
+        }
+        .kpi-arrow {
+            width: 44px; height: 44px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .kpi-arrow svg { width: 40px; height: 40px; }
+        .kpi-arrow.up svg { color: #059669; }
+        .kpi-arrow.down svg { color: #DC2626; }
+
+        .kpi-data { flex: 1; text-align: center; }
+        .kpi-value {
+            font-size: 32px; font-weight: 800; color: var(--dark); line-height: 1.1; margin-bottom: 4px;
+        }
+        .kpi-pct {
+            font-size: 16px; font-weight: 700; margin-bottom: 4px;
+        }
+        .kpi-pct.positive { color: #059669; }
+        .kpi-pct.negative { color: #DC2626; }
+        .kpi-prev {
+            font-size: 14px; color: var(--gray-400); font-weight: 500;
+        }
+
+        /* ===== Charts ===== */
         .charts-row {
             display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;
         }
-        .charts-row-full {
-            display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 24px;
-        }
+        .charts-row-full { margin-bottom: 24px; }
         @media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
 
         .chart-card-v2 {
@@ -98,72 +99,21 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-100);
         }
         .chart-card-v2 h3 {
-            font-size: 15px; font-weight: 700; color: var(--dark); margin: 0 0 16px 0;
-            padding-bottom: 12px; border-bottom: 1px solid var(--gray-100);
+            font-size: 14px; font-weight: 700; color: var(--dark); margin: 0 0 14px 0;
+            padding-bottom: 10px; border-bottom: 1px solid var(--gray-100);
             display: flex; align-items: center; gap: 8px;
         }
         .chart-card-v2 h3 .chart-icon {
-            width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
-            font-size: 14px;
+            width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px;
         }
-        .chart-container-v2 { position: relative; height: 280px; }
-        .chart-container-v2.tall { height: 350px; }
+        .chart-container-v2 { position: relative; height: 260px; }
+        .chart-container-v2.tall { height: 320px; }
         .chart-empty {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             height: 100%; color: var(--gray-400); gap: 8px;
         }
-        .chart-empty svg { width: 40px; height: 40px; opacity: 0.3; }
+        .chart-empty svg { width: 36px; height: 36px; opacity: 0.3; }
         .chart-empty p { font-size: 13px; }
-
-        /* ===== Agents Table ===== */
-        .agents-card {
-            background: white; border-radius: 14px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-100);
-            overflow: hidden;
-        }
-        .agents-header {
-            padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--gray-100);
-        }
-        .agents-header h2 { font-size: 16px; font-weight: 700; color: var(--dark); margin: 0; display: flex; align-items: center; gap: 10px; }
-        .agents-header h2 .badge {
-            background: var(--primary); color: white; font-size: 11px; font-weight: 700;
-            padding: 2px 10px; border-radius: 20px;
-        }
-        .agent-search {
-            padding: 8px 14px; border: 1px solid var(--gray-200); border-radius: 8px;
-            font-family: 'Heebo', sans-serif; font-size: 13px; width: 220px;
-            transition: border-color 0.2s;
-        }
-        .agent-search:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,107,44,0.1); }
-
-        .agents-table-wrap { overflow-x: auto; }
-        .agents-table {
-            width: 100%; border-collapse: collapse; font-size: 13px;
-        }
-        .agents-table thead th {
-            background: var(--gray-50); padding: 10px 14px; text-align: right;
-            font-weight: 600; color: var(--gray-600); font-size: 12px;
-            border-bottom: 2px solid var(--gray-200); white-space: nowrap;
-            position: sticky; top: 0;
-        }
-        .agents-table tbody td {
-            padding: 10px 14px; border-bottom: 1px solid var(--gray-100);
-            color: var(--gray-700);
-        }
-        .agents-table tbody tr:hover { background: #FFF7ED; }
-        .agents-table tbody tr:nth-child(even) { background: var(--gray-50); }
-        .agents-table tbody tr:nth-child(even):hover { background: #FFF7ED; }
-        .agents-table tfoot td {
-            padding: 12px 14px; font-weight: 700; background: var(--gray-50);
-            border-top: 2px solid var(--gray-300); color: var(--dark);
-        }
-        .agents-table .num { font-variant-numeric: tabular-nums; direction: ltr; text-align: left; }
-
-        /* ===== Loading States ===== */
-        .skeleton { background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-50) 50%, var(--gray-100) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        .loading-kpi { height: 24px; width: 120px; }
     </style>
 </head>
 <body>
@@ -251,79 +201,108 @@
                     <span class="last-update" id="lastUpdate"><span class="dot"></span></span>
                 </div>
 
-                <!-- KPI Cards - 3x2 Grid -->
+                <!-- KPI Cards - 2 column grid like original -->
                 <div class="kpi-grid" id="kpiSection">
-                    <!-- Row 1 -->
-                    <div class="kpi-card blue">
-                        <div class="kpi-main">
-                            <div class="kpi-title">מחזור שנתי מצטבר</div>
-                            <div class="kpi-value" id="kpiTurnover">-</div>
-                            <div class="kpi-change" id="kpiTurnoverChange"></div>
-                            <div class="kpi-prev" id="kpiTurnoverPrev"></div>
-                        </div>
-                        <div class="kpi-icon blue">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                        </div>
-                    </div>
-                    <div class="kpi-card teal">
-                        <div class="kpi-main">
-                            <div class="kpi-title">פרמיה ממוצעת</div>
-                            <div class="kpi-value" id="kpiAvgPremium">-</div>
-                            <div class="kpi-change" id="kpiAvgPremiumChange"></div>
-                            <div class="kpi-prev" id="kpiAvgPremiumPrev"></div>
-                        </div>
-                        <div class="kpi-icon teal">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    <!-- 1: מחזור שנתי מצטבר -->
+                    <div class="kpi-card" id="kpiCard1">
+                        <div class="kpi-header">מחזור שנתי מצטבר</div>
+                        <div class="kpi-body">
+                            <div class="kpi-arrow down" id="kpiArrow1">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" transform="rotate(180 12 12)"/></svg>
+                            </div>
+                            <div class="kpi-data">
+                                <div class="kpi-value" id="kpiTurnover">-</div>
+                                <div class="kpi-pct" id="kpiTurnoverChange"></div>
+                                <div class="kpi-prev" id="kpiTurnoverPrev"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="kpi-card green">
-                        <div class="kpi-main">
-                            <div class="kpi-title">רווח שנתי מצטבר</div>
-                            <div class="kpi-value" id="kpiProfit">-</div>
-                            <div class="kpi-change" id="kpiProfitChange"></div>
-                            <div class="kpi-prev" id="kpiProfitPrev"></div>
-                        </div>
-                        <div class="kpi-icon green">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                        </div>
-                    </div>
-                    <!-- Row 2 -->
-                    <div class="kpi-card purple">
-                        <div class="kpi-main">
-                            <div class="kpi-title">סה"כ פוליסות מתחילת שנה</div>
-                            <div class="kpi-value" id="kpiPolicies">-</div>
-                            <div class="kpi-change" id="kpiPoliciesChange"></div>
-                            <div class="kpi-prev" id="kpiPoliciesPrev"></div>
-                        </div>
-                        <div class="kpi-icon purple">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <!-- 2: פרמיה ממוצעת -->
+                    <div class="kpi-card" id="kpiCard4">
+                        <div class="kpi-header">פרמיה ממוצעת</div>
+                        <div class="kpi-body">
+                            <div class="kpi-arrow down" id="kpiArrow4">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" transform="rotate(180 12 12)"/></svg>
+                            </div>
+                            <div class="kpi-data">
+                                <div class="kpi-value" id="kpiAvgPremium">-</div>
+                                <div class="kpi-pct" id="kpiAvgPremiumChange"></div>
+                                <div class="kpi-prev" id="kpiAvgPremiumPrev"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="kpi-card orange">
-                        <div class="kpi-main">
-                            <div class="kpi-title">מכירות יומיות שת"פ</div>
-                            <div class="kpi-value" id="kpiDailySales">-</div>
-                            <div class="kpi-change" id="kpiDailySalesChange"></div>
-                            <div class="kpi-prev" id="kpiDailySalesPrev"></div>
-                        </div>
-                        <div class="kpi-icon orange">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <!-- 3: רווח שנתי מצטבר -->
+                    <div class="kpi-card" id="kpiCard2">
+                        <div class="kpi-header">רווח שנתי מצטבר</div>
+                        <div class="kpi-body">
+                            <div class="kpi-arrow down" id="kpiArrow2">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" transform="rotate(180 12 12)"/></svg>
+                            </div>
+                            <div class="kpi-data">
+                                <div class="kpi-value" id="kpiProfit">-</div>
+                                <div class="kpi-pct" id="kpiProfitChange"></div>
+                                <div class="kpi-prev" id="kpiProfitPrev"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="kpi-card red">
-                        <div class="kpi-main">
-                            <div class="kpi-title">סה"כ מכירות ליום נוכחי</div>
-                            <div class="kpi-value" id="kpiTodaySales">-</div>
-                            <div class="kpi-change" id="kpiTodaySalesChange"></div>
-                            <div class="kpi-prev" id="kpiTodaySalesPrev"></div>
+                    <!-- 4: סה"כ פוליסות מתחילת שנה -->
+                    <div class="kpi-card" id="kpiCard5">
+                        <div class="kpi-header">סה"כ פוליסות מתחילת שנה</div>
+                        <div class="kpi-body">
+                            <div class="kpi-arrow up" id="kpiArrow5">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>
+                            </div>
+                            <div class="kpi-data">
+                                <div class="kpi-value" id="kpiPolicies">-</div>
+                                <div class="kpi-pct" id="kpiPoliciesChange"></div>
+                                <div class="kpi-prev" id="kpiPoliciesPrev"></div>
+                            </div>
                         </div>
-                        <div class="kpi-icon red">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <!-- 5: מכירות יומיות שת"פ -->
+                    <div class="kpi-card" id="kpiCard3">
+                        <div class="kpi-header">מכירות יומיות שת"פים</div>
+                        <div class="kpi-body">
+                            <div class="kpi-arrow down" id="kpiArrow3">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" transform="rotate(180 12 12)"/></svg>
+                            </div>
+                            <div class="kpi-data">
+                                <div class="kpi-value" id="kpiDailySales">-</div>
+                                <div class="kpi-pct" id="kpiDailySalesChange"></div>
+                                <div class="kpi-prev" id="kpiDailySalesPrev"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 6: סה"כ מכירות ליום נוכחי -->
+                    <div class="kpi-card" id="kpiCard6">
+                        <div class="kpi-header">סה"כ מכירות ליום נוכחי</div>
+                        <div class="kpi-body">
+                            <div class="kpi-arrow down" id="kpiArrow6">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" transform="rotate(180 12 12)"/></svg>
+                            </div>
+                            <div class="kpi-data">
+                                <div class="kpi-value" id="kpiTodaySales">-</div>
+                                <div class="kpi-pct" id="kpiTodaySalesChange"></div>
+                                <div class="kpi-prev" id="kpiTodaySalesPrev"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Charts Row 1: Geographic + Riders -->
+                <!-- YoY Sales Chart (Full width) -->
+                <div class="charts-row-full">
+                    <div class="chart-card-v2">
+                        <h3>
+                            <span class="chart-icon" style="background:#FFF7ED;color:#FF6B2C;">&#128200;</span>
+                            מכירות מצטברות - בהשוואה לשנה קודמת
+                        </h3>
+                        <div class="chart-container-v2 tall" id="yoyChartWrap">
+                            <canvas id="salesYoYChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row: Geographic + Riders (smaller, at bottom) -->
                 <div class="charts-row">
                     <div class="chart-card-v2">
                         <h3>
@@ -344,55 +323,11 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Charts Row 2: YoY Sales (Full width) -->
-                <div class="charts-row-full">
-                    <div class="chart-card-v2">
-                        <h3>
-                            <span class="chart-icon" style="background:#FFF7ED;color:#FF6B2C;">&#128200;</span>
-                            מכירות מצטברות - בהשוואה לשנה קודמת
-                        </h3>
-                        <div class="chart-container-v2 tall" id="yoyChartWrap">
-                            <canvas id="salesYoYChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Agents Table -->
-                <div class="agents-card">
-                    <div class="agents-header">
-                        <h2>
-                            סוכנים מרכזי - חודש נוכחי
-                            <span class="badge" id="agentsCount">0</span>
-                        </h2>
-                        <input type="text" class="agent-search" id="agentSearch" placeholder="חיפוש סוכן..." oninput="filterAgents()">
-                    </div>
-                    <div class="agents-table-wrap" style="max-height:500px; overflow-y:auto;">
-                        <table class="agents-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>מספר סוכן</th>
-                                    <th>שם סוכן</th>
-                                    <th>מסי' הנד"ל</th>
-                                    <th>סה"כ פרמיה</th>
-                                    <th>עמלת סוכן %</th>
-                                    <th>עמלת חתם</th>
-                                    <th>עמלת סוכן</th>
-                                </tr>
-                            </thead>
-                            <tbody id="agentsTableBody">
-                                <tr><td colspan="8" style="text-align:center;padding:40px;"><div class="spinner"></div></td></tr>
-                            </tbody>
-                            <tfoot id="agentsTableFoot"></tfoot>
-                        </table>
-                    </div>
-                </div>
             </div>
         </main>
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/bituhofir.js?v=3"></script>
+    <script src="js/bituhofir.js?v=4"></script>
 </body>
 </html>
