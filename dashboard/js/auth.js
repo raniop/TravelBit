@@ -16,7 +16,7 @@ function isPageAllowed(user, currentPage) {
     if (!user) return true; // let auth check handle it
     const modules = user.dashboardModules || 'management';
 
-    const isBituhofirPage = currentPage.includes('bituhofir') || currentPage.includes('policies');
+    const isBituhofirPage = currentPage.includes('bituhofir') || currentPage.includes('policies') || currentPage.includes('agents') || currentPage.includes('reports');
     const isManagementPage = !isBituhofirPage && !currentPage.includes('login');
 
     if (modules === 'both') return true;
