@@ -141,7 +141,7 @@ function renderTable() {
     }
 
     tbody.innerHTML = filtered.map(r => {
-        const dateStr = r.date ? new Date(r.date).toLocaleDateString('he-IL') : '-';
+        const dateStr = r.date ? isoToIL(r.date.substring(0, 10)) : '-';
         const amountStr = r.amount ? r.amount.toLocaleString('he-IL') : '-';
         const statusClass = `status-${r.status || 'open'}`;
         const statusLabel = STATUS_LABELS[r.status] || 'פתוח';
@@ -251,7 +251,7 @@ function openEditModal(id) {
     document.getElementById('formPhone').value = r.phone || '';
     document.getElementById('formPolicyNumber').value = r.policyNumber || '';
     document.getElementById('formInsuranceCompany').value = r.insuranceCompany || '';
-    document.getElementById('formDate').value = r.date ? r.date.substring(0, 10) : '';
+    document.getElementById('formDate').value = r.date ? isoToIL(r.date.substring(0, 10)) : '';
     document.getElementById('formAmount').value = r.amount || '';
     document.getElementById('formNotes').value = r.notes || '';
     document.getElementById('formAgentCode').value = r.agentCode || '';
@@ -275,7 +275,7 @@ async function saveReminder() {
         phone: document.getElementById('formPhone').value.trim(),
         policyNumber: document.getElementById('formPolicyNumber').value.trim(),
         insuranceCompany: document.getElementById('formInsuranceCompany').value.trim(),
-        date: document.getElementById('formDate').value || null,
+        date: ilToIso(document.getElementById('formDate').value) || null,
         amount: document.getElementById('formAmount').value || 0,
         notes: document.getElementById('formNotes').value.trim(),
         agentCode: document.getElementById('formAgentCode').value

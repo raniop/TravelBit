@@ -230,7 +230,7 @@ function extractEmailDataEnhanced(text, html) {
         }
     }
 
-    // 8. Date — DD/MM/YYYY or DD.MM.YYYY or DD-MM-YYYY
+    // 8. Date — DD/MM/YYYY or DD.MM.YYYY or DD-MM-YYYY (Israeli format)
     const dateMatch = searchText.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/);
     if (dateMatch) {
         let day = dateMatch[1].padStart(2, '0');
@@ -241,7 +241,7 @@ function extractEmailDataEnhanced(text, html) {
         // Validate date components
         const d = parseInt(day), m = parseInt(month), y = parseInt(year);
         if (d >= 1 && d <= 31 && m >= 1 && m <= 12 && y >= 2000 && y <= 2099) {
-            data.date = `${year}-${month}-${day}`;
+            data.date = `${day}/${month}/${year}`;
             data._extractedFields.push('date');
         }
     }
@@ -557,6 +557,26 @@ function showExtractionToast(count) {
         toast.style.transition = 'opacity 0.3s ease';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
+}
+
+// Helper: convert ISO date (YYYY-MM-DD) to Israeli format (DD/MM/YYYY)
+function isoToIL(isoDate) {
+    if (!isoDate) return '';
+    // Already in DD/MM/YYYY?
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(isoDate)) return isoDate;
+    const parts = isoDate.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return isoDate;
+}
+
+// Helper: convert Israeli format (DD/MM/YYYY) to ISO (YYYY-MM-DD) for DB storage
+function ilToIso(ilDate) {
+    if (!ilDate) return '';
+    // Already in YYYY-MM-DD?
+    if (/^\d{4}-\d{2}-\d{2}$/.test(ilDate)) return ilDate;
+    const parts = ilDate.split('/');
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    return ilDate;
 }
 
 // Helper: mark field as auto-filled and setup cleanup
