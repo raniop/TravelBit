@@ -1,12 +1,28 @@
 // Dashboard Auth Module
 const API_BASE = '/api';
 
-// Determine default landing page based on company
+// Determine default landing page based on company's dashboardModules
 function getDefaultDashboard(user) {
-    if (user && user.hasBituhOfir) {
-        return '/dashboard/bituhofir.html';
-    }
+    if (!user) return '/dashboard/';
+    const modules = user.dashboardModules || 'management';
+    // insurance-only → go to bituhofir dashboard
+    if (modules === 'insurance') return '/dashboard/bituhofir.html';
+    // management or both → go to general dashboard
     return '/dashboard/';
+}
+
+// Check which pages this user is allowed to visit
+function isPageAllowed(user, currentPage) {
+    if (!user) return true; // let auth check handle it
+    const modules = user.dashboardModules || 'management';
+
+    const isBituhofirPage = currentPage.includes('bituhofir') || currentPage.includes('policies');
+    const isManagementPage = !isBituhofirPage && !currentPage.includes('login');
+
+    if (modules === 'both') return true;
+    if (modules === 'insurance' && isManagementPage) return false;
+    if (modules === 'management' && isBituhofirPage) return false;
+    return true;
 }
 
 // Check if already logged in
@@ -18,8 +34,8 @@ function getDefaultDashboard(user) {
         let user = null;
         try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
 
-        // If user data is missing companyName or hasBituhOfir, refresh from server
-        if (user && (!user.companyName || user.hasBituhOfir === undefined)) {
+        // If user data is missing companyName or dashboardModules, refresh from server
+        if (user && (!user.companyName || !user.dashboardModules)) {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -29,6 +45,7 @@ function getDefaultDashboard(user) {
                     if (data.user) {
                         if (data.user.companyName) user.companyName = data.user.companyName;
                         if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
+                        if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
                         localStorage.setItem('dash_user', JSON.stringify(user));
                     }
                 }
@@ -44,22 +61,19 @@ function getDefaultDashboard(user) {
         return;
     }
 
-    // If logged in and on a dashboard page, check redirect + sync companyName
+    // If logged in and on a dashboard page, check access + sync
     if (token && !currentPage.includes('login')) {
         let user = null;
         try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
 
-        // FIRST: Immediate redirect check
-        if (user) {
-            const correctPage = getDefaultDashboard(user);
-            if (!currentPage.includes('bituhofir') && !currentPage.includes('policies') && correctPage.includes('bituhofir')) {
-                window.location.href = correctPage;
-                return;
-            }
+        // Redirect if user doesn't have access to this page
+        if (user && !isPageAllowed(user, currentPage)) {
+            window.location.href = getDefaultDashboard(user);
+            return;
         }
 
-        // THEN: Background sync companyName + hasBituhOfir for sidebar display
-        if (user && (!user.companyName || user.hasBituhOfir === undefined)) {
+        // Background sync companyName + dashboardModules for sidebar display
+        if (user && (!user.companyName || !user.dashboardModules)) {
             try {
                 const res = await fetch(`${API_BASE}/auth/me`, {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -69,6 +83,7 @@ function getDefaultDashboard(user) {
                     if (data.user) {
                         if (data.user.companyName) user.companyName = data.user.companyName;
                         if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
+                        if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
                         localStorage.setItem('dash_user', JSON.stringify(user));
                     }
                 }
@@ -165,11 +180,11 @@ async function apiFetch(url, options = {}) {
     return res;
 }
 
-// Sync companyName + hasBituhOfir from server if missing in localStorage
+// Sync companyName + dashboardModules from server if missing in localStorage
 // Returns the (possibly updated) user object
 async function syncCompanyName() {
     let user = getUser();
-    if (!user || (user.companyName && user.hasBituhOfir !== undefined)) return user;
+    if (!user || (user.companyName && user.dashboardModules)) return user;
 
     try {
         const token = getToken();
@@ -182,6 +197,7 @@ async function syncCompanyName() {
             if (data.user) {
                 if (data.user.companyName) user.companyName = data.user.companyName;
                 if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
+                if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
                 localStorage.setItem('dash_user', JSON.stringify(user));
             }
         }
@@ -189,19 +205,33 @@ async function syncCompanyName() {
     return user;
 }
 
-// Hide bituhofir sidebar section for companies without access
-function updateBituhofirVisibility() {
+// Hide/show sidebar sections based on dashboardModules
+function updateSidebarVisibility() {
     const user = getUser();
-    const section = document.getElementById('bituhofirSection');
-    if (!section) return;
-    if (!user || !user.hasBituhOfir) {
-        // Hide the section header and its two sibling links
-        section.style.display = 'none';
-        let el = section.nextElementSibling;
+    if (!user) return;
+    const modules = user.dashboardModules || 'management';
+
+    // Hide bituhofir section if no insurance access
+    const bituhofirSection = document.getElementById('bituhofirSection');
+    if (bituhofirSection && modules === 'management') {
+        bituhofirSection.style.display = 'none';
+        let el = bituhofirSection.nextElementSibling;
         while (el && el.tagName === 'A') {
             el.style.display = 'none';
             el = el.nextElementSibling;
         }
     }
+
+    // Hide management section if insurance-only
+    const managementSection = document.getElementById('managementSection');
+    if (managementSection && modules === 'insurance') {
+        managementSection.style.display = 'none';
+        let el = managementSection.nextElementSibling;
+        // Hide links until we reach the bituhofirSection divider
+        while (el && el.id !== 'bituhofirSection') {
+            el.style.display = 'none';
+            el = el.nextElementSibling;
+        }
+    }
 }
-document.addEventListener('DOMContentLoaded', updateBituhofirVisibility);
+document.addEventListener('DOMContentLoaded', updateSidebarVisibility);

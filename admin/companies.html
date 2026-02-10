@@ -133,10 +133,18 @@
                             <input type="text" id="cdPolicy" style="padding:6px 10px;font-size:13px;border-radius:6px;border:1px solid var(--gray-200);direction:ltr;text-align:left;">
                         </div>
                     </div>
-                    <div style="margin-top:12px;">
+                    <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                         <div class="form-group" style="margin:0;">
                             <label style="font-size:12px;color:var(--gray-500);font-weight:600;margin-bottom:4px;">קודי סוכן ביטוח <span style="color:var(--gray-400);font-weight:400;">(מופרדים בפסיק)</span></label>
                             <input type="text" id="cdAgentCodes" placeholder="לדוגמה: 1234, 5678" style="padding:6px 10px;font-size:13px;border-radius:6px;border:1px solid var(--gray-200);direction:ltr;text-align:left;width:100%;box-sizing:border-box;">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label style="font-size:12px;color:var(--gray-500);font-weight:600;margin-bottom:4px;">פאנלים בדשבורד</label>
+                            <select id="cdDashboardModules" style="padding:6px 10px;font-size:13px;border-radius:6px;border:1px solid var(--gray-200);width:100%;box-sizing:border-box;">
+                                <option value="management">ניהול בלבד</option>
+                                <option value="insurance">ביטוח בלבד</option>
+                                <option value="both">ניהול + ביטוח</option>
+                            </select>
                         </div>
                     </div>
                     <div style="margin-top:12px;text-align:left;">
@@ -194,6 +202,14 @@
                     <div class="form-group">
                         <label>קודי סוכן ביטוח <span style="color:var(--gray-400);font-weight:400;">(מופרדים בפסיק)</span></label>
                         <input type="text" name="agentCodes" placeholder="לדוגמה: 1234, 5678" style="direction: ltr; text-align: left;">
+                    </div>
+                    <div class="form-group">
+                        <label>פאנלים בדשבורד</label>
+                        <select name="dashboardModules">
+                            <option value="management">ניהול בלבד</option>
+                            <option value="insurance">ביטוח בלבד</option>
+                            <option value="both">ניהול + ביטוח</option>
+                        </select>
                     </div>
                     <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--gray-200);">
                     <p style="font-size: 14px; color: var(--gray-500); margin-bottom: 12px; font-weight: 600;">פרטי התחברות לדשבורד החברה</p>

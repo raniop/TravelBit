@@ -41,16 +41,17 @@ module.exports = async function handler(req, res) {
 
             const tokens = generateTokens(user);
 
-            // Fetch company name and check for BituhOfir access
+            // Fetch company name and dashboard modules
             let companyName = null;
-            let hasBituhOfir = false;
+            let dashboardModules = 'management';
             if (user.companyId) {
-                const company = await Company.findById(user.companyId).select('name agentCodes').lean();
+                const company = await Company.findById(user.companyId).select('name agentCodes dashboardModules').lean();
                 if (company) {
                     companyName = company.name;
-                    hasBituhOfir = Array.isArray(company.agentCodes) && company.agentCodes.length > 0;
+                    dashboardModules = company.dashboardModules || 'management';
                 }
             }
+            const hasBituhOfir = dashboardModules === 'insurance' || dashboardModules === 'both';
 
             return res.json({
                 ...tokens,
@@ -61,7 +62,8 @@ module.exports = async function handler(req, res) {
                     role: user.role,
                     companyId: user.companyId,
                     companyName: companyName,
-                    hasBituhOfir
+                    hasBituhOfir,
+                    dashboardModules
                 }
             });
         } catch (error) {
@@ -95,16 +97,17 @@ module.exports = async function handler(req, res) {
         const user = await verifyAuth(req);
         if (!user) return res.status(401).json({ message: '\u05d0\u05d9\u05df \u05d4\u05e8\u05e9\u05d0\u05ea \u05d2\u05d9\u05e9\u05d4.' });
 
-        // Fetch company name and check for BituhOfir access
+        // Fetch company name and dashboard modules
         let companyName = null;
-        let hasBituhOfir = false;
+        let dashboardModules = 'management';
         if (user.companyId) {
-            const company = await Company.findById(user.companyId).select('name agentCodes').lean();
+            const company = await Company.findById(user.companyId).select('name agentCodes dashboardModules').lean();
             if (company) {
                 companyName = company.name;
-                hasBituhOfir = Array.isArray(company.agentCodes) && company.agentCodes.length > 0;
+                dashboardModules = company.dashboardModules || 'management';
             }
         }
+        const hasBituhOfir = dashboardModules === 'insurance' || dashboardModules === 'both';
 
         return res.json({
             user: {
@@ -114,7 +117,8 @@ module.exports = async function handler(req, res) {
                 role: user.role,
                 companyId: user.companyId,
                 companyName: companyName,
-                hasBituhOfir
+                hasBituhOfir,
+                dashboardModules
             }
         });
     }
