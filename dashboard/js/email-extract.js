@@ -374,7 +374,7 @@ function parseMsgBinary(arrayBuffer, fileName) {
     return extractFromFileName(fileName);
 }
 
-// OLE2 / MSG internal strings to filter out from extracted text
+// OLE2 / MSG / Exchange internal strings to filter out from extracted text
 const MSG_NOISE_PATTERNS = [
     /^Root Entry$/i,
     /^__substg/i,
@@ -409,6 +409,27 @@ const MSG_NOISE_PATTERNS = [
     /^charset=/i,
     /^boundary=/i,
     /^Content-Disposition/i,
+    // Exchange / Outlook internal properties
+    /Exchange/i,
+    /^HasQuotedText$/i,
+    /Antispam/i,
+    /EntityExtract/i,
+    /Inference/i,
+    /Classification/i,
+    /ApplicationFlags/i,
+    /^x-eoptenantattributed/i,
+    /^x-ms-exchange/i,
+    /^x-microsoft/i,
+    /^x-originating/i,
+    /^x-forefront/i,
+    /^Authentication-Results/i,
+    /^ARC-/i,
+    /^DKIM-/i,
+    /^nameid_version/i,
+    /^version1\.0$/i,
+    /^nExchangeAp/i,
+    /^ibutedmessage/i,
+    /^eoptenantattributed/i,
 ];
 
 // Extract UTF-16LE encoded strings from binary buffer
@@ -465,6 +486,10 @@ function isMsgNoise(str) {
     if (/^[0-9A-Fa-f]+$/.test(str) && str.length <= 20) return true;
     // Filter property-like strings like "0037001F" or "001A001F"
     if (/^[0-9A-F]{8}$/i.test(str)) return true;
+    // Filter CamelCase technical terms (like ExchangeApplicationFlags, HasQuotedText)
+    if (/^[A-Z][a-z]+([A-Z][a-z]+){2,}$/.test(str)) return true;
+    // Filter strings that are mostly non-Hebrew ASCII with no spaces (likely technical)
+    if (str.length > 5 && /^[a-zA-Z0-9._\-]+$/.test(str) && !str.includes(' ') && !/[\u0590-\u05FF]/.test(str)) return true;
     return false;
 }
 

@@ -58,6 +58,9 @@ let agentCodes = [];
     // Setup email drop zone
     setupEmailDropZone();
 
+    // Setup date auto-format (DD/MM/YYYY)
+    setupDateAutoFormat();
+
     // Check if coming from email drop
     const fromEmail = params.get('fromEmail');
     if (fromEmail) {
@@ -96,28 +99,11 @@ async function loadReminders() {
 }
 
 function populateAgentDropdowns() {
-    const filterAgent = document.getElementById('filterAgent');
-    const formAgent = document.getElementById('formAgentCode');
-
-    if (filterAgent) {
-        filterAgent.innerHTML = '<option value="">הכל</option>';
-        agentCodes.forEach(code => {
-            filterAgent.innerHTML += `<option value="${code}">${code}</option>`;
-        });
-    }
-    if (formAgent) {
-        formAgent.innerHTML = '<option value="">ללא</option>';
-        agentCodes.forEach(code => {
-            formAgent.innerHTML += `<option value="${code}">${code}</option>`;
-        });
-    }
+    // Agent dropdowns removed from UI — keep function as no-op for compatibility
 }
 
 function getFilteredReminders() {
     let list = allReminders;
-
-    const agent = document.getElementById('filterAgent')?.value;
-    if (agent) list = list.filter(r => r.agentCode === agent);
 
     const status = document.getElementById('filterStatus')?.value;
     if (status) list = list.filter(r => r.status === status);
@@ -134,7 +120,7 @@ function renderTable() {
 
     if (!filtered.length) {
         tbody.innerHTML = `
-            <tr><td colspan="11">
+            <tr><td colspan="10">
                 <div class="empty-state">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
                     <p>אין תזכורות מסוג זה</p>
@@ -155,7 +141,6 @@ function renderTable() {
             <td>${escHtml(r.phone || '-')}</td>
             <td>${escHtml(r.policyNumber || '-')}</td>
             <td>${escHtml(r.insuranceCompany || '-')}</td>
-            <td>${escHtml(r.agentCode || '-')}</td>
             <td>${dateStr}</td>
             <td>${amountStr}</td>
             <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
@@ -179,7 +164,6 @@ function escHtml(str) {
 }
 
 // Filter change handlers
-document.getElementById('filterAgent')?.addEventListener('change', renderTable);
 document.getElementById('filterStatus')?.addEventListener('change', renderTable);
 
 // ===== Modal =====
@@ -197,7 +181,6 @@ function openAddModal() {
     document.getElementById('formDate').value = '';
     document.getElementById('formAmount').value = '';
     document.getElementById('formNotes').value = '';
-    document.getElementById('formAgentCode').value = '';
     document.getElementById('formStatus').value = 'open';
 
     document.getElementById('reminderModal').classList.add('show');
@@ -235,6 +218,21 @@ function openAddModalWithData(data) {
         }
     }
 
+    // Auto-fill today's date if not already filled from email
+    if (!data.date) {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const todayStr = `${day}/${month}/${year}`;
+        const dateEl = document.getElementById('formDate');
+        if (dateEl && !dateEl.value) {
+            dateEl.value = todayStr;
+            markAutoFilled('formDate');
+            filledCount++;
+        }
+    }
+
     // Show toast with count of auto-filled fields
     if (filledCount > 0) {
         showExtractionToast(filledCount);
@@ -257,7 +255,6 @@ function openEditModal(id) {
     document.getElementById('formDate').value = r.date ? isoToIL(r.date.substring(0, 10)) : '';
     document.getElementById('formAmount').value = r.amount || '';
     document.getElementById('formNotes').value = r.notes || '';
-    document.getElementById('formAgentCode').value = r.agentCode || '';
     document.getElementById('formStatus').value = r.status || 'open';
 
     document.getElementById('reminderModal').classList.add('show');
@@ -280,8 +277,7 @@ async function saveReminder() {
         insuranceCompany: document.getElementById('formInsuranceCompany').value.trim(),
         date: ilToIso(document.getElementById('formDate').value) || null,
         amount: document.getElementById('formAmount').value || 0,
-        notes: document.getElementById('formNotes').value.trim(),
-        agentCode: document.getElementById('formAgentCode').value
+        notes: document.getElementById('formNotes').value.trim()
     };
 
     if (isEdit) {
@@ -404,4 +400,48 @@ async function handleEmailDrop(e) {
     // 3. Fallback: open empty modal
     console.log('[handleEmailDrop] No data found, opening empty modal');
     openAddModal();
+}
+
+// ===== Date Auto-Format (DD/MM/YYYY) =====
+function setupDateAutoFormat() {
+    const dateInput = document.getElementById('formDate');
+    if (!dateInput) return;
+
+    dateInput.addEventListener('input', function(e) {
+        // Get only digits from current value
+        let digits = this.value.replace(/\D/g, '');
+
+        // Limit to 8 digits (DDMMYYYY)
+        if (digits.length > 8) digits = digits.substring(0, 8);
+
+        // Auto-insert slashes
+        let formatted = '';
+        if (digits.length > 0) {
+            formatted = digits.substring(0, Math.min(2, digits.length));
+        }
+        if (digits.length > 2) {
+            formatted += '/' + digits.substring(2, Math.min(4, digits.length));
+        }
+        if (digits.length > 4) {
+            formatted += '/' + digits.substring(4, 8);
+        }
+
+        // Only update if different (prevent cursor jump on no change)
+        if (this.value !== formatted) {
+            this.value = formatted;
+        }
+    });
+
+    // Allow keyboard navigation and special keys
+    dateInput.addEventListener('keydown', function(e) {
+        // Allow: backspace, delete, tab, escape, enter, arrows
+        if ([8, 46, 9, 27, 13, 37, 38, 39, 40].includes(e.keyCode)) return;
+        // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+        if ((e.ctrlKey || e.metaKey) && [65, 67, 86, 88].includes(e.keyCode)) return;
+        // Block non-digit characters
+        if (!/^\d$/.test(e.key)) {
+            // Allow slash (user might type it manually)
+            if (e.key !== '/') e.preventDefault();
+        }
+    });
 }
