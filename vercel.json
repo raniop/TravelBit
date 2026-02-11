@@ -3,6 +3,9 @@
   "functions": {
     "api/**/*.js": {
       "maxDuration": 10
+    },
+    "api/dashboard/external.js": {
+      "maxDuration": 25
     }
   },
   "rewrites": [

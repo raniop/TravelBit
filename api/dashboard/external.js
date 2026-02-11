@@ -212,16 +212,65 @@ module.exports = async function handler(req, res) {
                 });
             }
 
-            // === Other companies (with agentCodes): no data yet ===
+            // === Other companies (with agentCodes): calculate from agent policies ===
+            const now2 = new Date();
+            const maxMonth = (year === now2.getFullYear()) ? Math.min(month, now2.getMonth() + 1) : month;
+            const todayStr = now2.toISOString().slice(0, 10);
+
+            // Fetch policies for all agents × all months in parallel
+            const fetchPromises = [];
+            for (const code of agentCodes) {
+                for (let m = 1; m <= maxMonth; m++) {
+                    fetchPromises.push(
+                        bituhOfirFetch(
+                            `/api/Policy/GetPolicyDetailsByAgent?agentIndex=${code}&bYear=${year}&bMonth=${m}&page=1&pageSize=500`,
+                            15000
+                        )
+                        .then(r => r.json())
+                        .then(data => {
+                            const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
+                            return items;
+                        })
+                        .catch(() => [])
+                    );
+                }
+            }
+
+            const allResults = await Promise.all(fetchPromises);
+            const allPolicies = allResults.flat();
+
+            // Deduplicate by policyIndex (same policy may appear in multiple months)
+            const seen = new Set();
+            const uniquePolicies = allPolicies.filter(p => {
+                const key = p.policyIndex || p.fullPolicyID || JSON.stringify(p);
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+
+            // KPI calculations
+            const totalPolicies = uniquePolicies.length;
+            const totalTurnover = uniquePolicies.reduce((sum, p) => sum + (Number(p.total) || 0), 0);
+            const todaySales = uniquePolicies
+                .filter(p => {
+                    if (!p.issueDate) return false;
+                    try { return new Date(p.issueDate).toISOString().slice(0, 10) === todayStr; }
+                    catch (_) { return false; }
+                })
+                .reduce((sum, p) => sum + (Number(p.total) || 0), 0);
+
             return res.json({
-                dashboardCalcData: [],
+                dashboardCalcData: [
+                    { repType: 1, curYearValue: totalTurnover, prevYearValue: 0, percentDiff: 0 },
+                    { repType: 5, curYearValue: totalPolicies, prevYearValue: 0, percentDiff: 0 },
+                    { repType: 6, curYearValue: todaySales, prevYearValue: 0, percentDiff: 0 }
+                ],
                 periods: [],
                 riders: [],
                 topPolicies: [],
                 requestedMonth: month,
                 requestedYear: year,
-                lastRefresh: new Date().toISOString(),
-                noData: true
+                lastRefresh: new Date().toISOString()
             });
         }
 
