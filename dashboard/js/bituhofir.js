@@ -1,4 +1,4 @@
-// BituhOfir Dashboard JS - v9
+// BituhOfir Dashboard JS - v10
 let regionChart, ridersChart, salesYoYChart;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -69,9 +69,14 @@ async function loadBituhOfirDashboard(month, year) {
 
     try {
         let url = '/dashboard/external/dashboard';
+        const params = [];
         if (month && year) {
-            url += `?month=${month}&year=${year}`;
+            params.push(`month=${month}`, `year=${year}`);
         }
+        // Pass ?refresh=1 from page URL to bypass cache
+        const pageParams = new URLSearchParams(window.location.search);
+        if (pageParams.get('refresh') === '1') params.push('refresh=1');
+        if (params.length > 0) url += '?' + params.join('&');
 
         const res = await apiFetch(url);
         if (!res) { if (kpiSection) kpiSection.style.opacity = ''; return; }
