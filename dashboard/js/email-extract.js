@@ -193,27 +193,48 @@ function extractEmailDataEnhanced(text, html) {
     }
 
     // 5. Phone Number — Israeli format (with context or word boundary)
+    // Blacklist: known agent/company phone numbers to exclude
+    const PHONE_BLACKLIST = [
+        '0549662335', // והדת - נייד
+        '035162039',  // והדת - פקס
+        '035107073',  // והדת - טלפון
+    ];
+    function isBlacklistedPhone(phone) {
+        const clean = phone.replace(/[\s\-()]/g, '');
+        return PHONE_BLACKLIST.some(bp => clean === bp || clean.endsWith(bp));
+    }
+
     // Try context-aware patterns first (near phone keywords)
     const phoneContextPatterns = [
-        /(?:טלפון|נייד|טל|phone|mobile|cell|tel)\s*:?\s*(0[2-9]\d[\s-]?\d{3}[\s-]?\d{4})/i,
-        /(?:טלפון|נייד|טל|phone|mobile|cell|tel)\s*:?\s*(0[2-9]\d{7,8})/i,
+        /(?:טלפון|נייד|טל|phone|mobile|cell|tel)\s*:?\s*(0[2-9]\d[\s-]?\d{3}[\s-]?\d{4})/gi,
+        /(?:טלפון|נייד|טל|phone|mobile|cell|tel)\s*:?\s*(0[2-9]\d{7,8})/gi,
     ];
     let phoneFound = false;
     for (const pattern of phoneContextPatterns) {
-        const match = searchText.match(pattern);
-        if (match) {
-            data.phone = match[1].replace(/[\s-]/g, '');
-            data._extractedFields.push('phone');
-            phoneFound = true;
-            break;
+        pattern.lastIndex = 0;
+        let match;
+        while ((match = pattern.exec(searchText)) !== null) {
+            const candidate = match[1].replace(/[\s-]/g, '');
+            if (!isBlacklistedPhone(candidate)) {
+                data.phone = candidate;
+                data._extractedFields.push('phone');
+                phoneFound = true;
+                break;
+            }
         }
+        if (phoneFound) break;
     }
     // Fallback: standalone phone pattern (must have separators to be more reliable)
     if (!phoneFound) {
-        const phoneMatch = searchText.match(/(?:^|[\s,;(])(?:0[5][0-9][\s-]?\d{3}[\s-]?\d{4}|0[2-4,8-9][\s-]?\d{3}[\s-]?\d{4})/m);
-        if (phoneMatch) {
-            data.phone = phoneMatch[0].trim().replace(/^[,;(]\s*/, '').replace(/[\s-]/g, '');
-            data._extractedFields.push('phone');
+        const phoneRegex = /(?:^|[\s,;(])(0[5][0-9][\s-]?\d{3}[\s-]?\d{4}|0[2-4,8-9][\s-]?\d{3}[\s-]?\d{4})/gm;
+        let match;
+        while ((match = phoneRegex.exec(searchText)) !== null) {
+            const candidate = match[1] ? match[1].trim().replace(/[\s-]/g, '') : match[0].trim().replace(/^[,;(]\s*/, '').replace(/[\s-]/g, '');
+            if (!isBlacklistedPhone(candidate)) {
+                data.phone = candidate;
+                data._extractedFields.push('phone');
+                break;
+            }
         }
     }
 
