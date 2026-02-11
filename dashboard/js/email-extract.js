@@ -254,6 +254,7 @@ function readEmailFile(file) {
     return new Promise((resolve) => {
         const name = file.name || '';
         const ext = name.split('.').pop().toLowerCase();
+        console.log('[readEmailFile] file:', name, 'ext:', ext, 'size:', file.size);
 
         // .eml files are plain text (RFC 822) — readable with FileReader
         if (ext === 'eml') {
@@ -267,10 +268,135 @@ function readEmailFile(file) {
                 resolve(extractFromFileName(name));
             };
             reader.readAsText(file, 'utf-8');
+        } else if (ext === 'msg') {
+            // .msg files are binary (OLE2 Compound File) — extract text from binary
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const buffer = e.target.result;
+                    const parsed = parseMsgBinary(buffer, name);
+                    console.log('[readEmailFile] MSG parsed:', parsed);
+                    resolve(parsed);
+                } catch (err) {
+                    console.error('[readEmailFile] MSG parse error:', err);
+                    resolve(extractFromFileName(name));
+                }
+            };
+            reader.onerror = function() {
+                resolve(extractFromFileName(name));
+            };
+            reader.readAsArrayBuffer(file);
         } else {
             resolve(extractFromFileName(name));
         }
     });
+}
+
+// ===== Parse .msg binary (OLE2 Compound File) =====
+// Extracts readable text strings from the binary .msg file.
+// MSG files store properties as UTF-16LE encoded streams.
+// We extract all readable UTF-16LE strings and run them through the email extractor.
+function parseMsgBinary(arrayBuffer, fileName) {
+    const bytes = new Uint8Array(arrayBuffer);
+
+    // Strategy: extract all UTF-16LE text segments from the binary file
+    // MSG files store subject, body, sender, recipients etc as UTF-16LE property streams
+    const allText = extractUtf16Strings(bytes);
+    console.log('[parseMsgBinary] extracted text length:', allText.length);
+    console.log('[parseMsgBinary] extracted text preview:', allText.substring(0, 500));
+
+    if (allText.length > 20) {
+        const data = extractEmailDataEnhanced(allText, '');
+        data.source = 'file';
+
+        // Build readable notes from subject (filename) + extracted body
+        const subjectFromFile = fileName.replace(/\.(eml|msg)$/i, '').replace(/^(Fw|Fwd|Re)[_:\s-]*/i, '').trim();
+        const bodyPreview = allText.substring(0, 400);
+        data.notes = [subjectFromFile, bodyPreview].filter(Boolean).join('\n').substring(0, 500);
+
+        return data;
+    }
+
+    // Fallback: also try ASCII extraction
+    const asciiText = extractAsciiStrings(bytes);
+    console.log('[parseMsgBinary] ASCII fallback length:', asciiText.length);
+
+    if (asciiText.length > 20) {
+        const data = extractEmailDataEnhanced(asciiText, '');
+        data.source = 'file';
+        data.notes = 'יובא מקובץ: ' + fileName;
+        return data;
+    }
+
+    return extractFromFileName(fileName);
+}
+
+// Extract UTF-16LE encoded strings from binary buffer
+// MSG files store text properties in UTF-16LE (Windows Unicode)
+function extractUtf16Strings(bytes) {
+    const segments = [];
+    let current = '';
+    let i = 0;
+
+    while (i < bytes.length - 1) {
+        const lo = bytes[i];
+        const hi = bytes[i + 1];
+        const codePoint = lo | (hi << 8);
+
+        // Check if this is a printable character (Hebrew, Latin, digits, punctuation, spaces)
+        if (
+            (codePoint >= 0x0020 && codePoint <= 0x007E) || // Basic Latin (printable ASCII)
+            (codePoint >= 0x00A0 && codePoint <= 0x00FF) || // Latin-1 Supplement
+            (codePoint >= 0x0590 && codePoint <= 0x05FF) || // Hebrew
+            (codePoint >= 0x0600 && codePoint <= 0x06FF) || // Arabic
+            (codePoint === 0x000A) || (codePoint === 0x000D) || // newline, carriage return
+            (codePoint === 0x0009) // tab
+        ) {
+            current += String.fromCharCode(codePoint);
+            i += 2;
+        } else {
+            if (current.length >= 4) {
+                // Filter out strings that are just repeated chars or binary noise
+                const trimmed = current.trim();
+                if (trimmed.length >= 3 && !/^(.)\1+$/.test(trimmed)) {
+                    segments.push(trimmed);
+                }
+            }
+            current = '';
+            i += 2;
+        }
+    }
+
+    // Don't forget the last segment
+    if (current.trim().length >= 3) {
+        segments.push(current.trim());
+    }
+
+    return segments.join('\n');
+}
+
+// Fallback: extract ASCII strings (for older MSG files or non-Unicode properties)
+function extractAsciiStrings(bytes) {
+    const segments = [];
+    let current = '';
+
+    for (let i = 0; i < bytes.length; i++) {
+        const b = bytes[i];
+        // Printable ASCII range + common whitespace
+        if ((b >= 0x20 && b <= 0x7E) || b === 0x0A || b === 0x0D || b === 0x09) {
+            current += String.fromCharCode(b);
+        } else {
+            if (current.trim().length >= 6) {
+                segments.push(current.trim());
+            }
+            current = '';
+        }
+    }
+    if (current.trim().length >= 6) {
+        segments.push(current.trim());
+    }
+
+    return segments.join('\n');
 }
 
 function parseEmlContent(raw, fileName) {

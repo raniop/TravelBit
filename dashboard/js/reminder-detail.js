@@ -371,12 +371,19 @@ function setupEmailDropZone() {
 }
 
 async function handleEmailDrop(e) {
+    console.log('[handleEmailDrop] Drop event received');
+    console.log('[handleEmailDrop] types:', Array.from(e.dataTransfer.types));
+    console.log('[handleEmailDrop] files count:', e.dataTransfer.files ? e.dataTransfer.files.length : 0);
+
     // 1. Try to get files (.eml / .msg from Outlook Desktop)
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
         const file = files[0];
+        console.log('[handleEmailDrop] File:', file.name, 'type:', file.type, 'size:', file.size);
         // Read file content and extract data
         const emailData = await readEmailFile(file);
+        console.log('[handleEmailDrop] Extracted data:', emailData);
+        console.log('[handleEmailDrop] Extracted fields:', emailData._extractedFields);
         openAddModalWithData(emailData);
         return;
     }
@@ -384,13 +391,17 @@ async function handleEmailDrop(e) {
     // 2. Try to get text (from Gmail / Outlook Web)
     const text = e.dataTransfer.getData('text/plain') || '';
     const html = e.dataTransfer.getData('text/html') || '';
+    console.log('[handleEmailDrop] text length:', text.length, 'html length:', html.length);
+    if (text) console.log('[handleEmailDrop] text preview:', text.substring(0, 200));
 
     if (text || html) {
         const extracted = extractEmailDataEnhanced(text, html);
+        console.log('[handleEmailDrop] Extracted from text:', extracted);
         openAddModalWithData(extracted);
         return;
     }
 
     // 3. Fallback: open empty modal
+    console.log('[handleEmailDrop] No data found, opening empty modal');
     openAddModal();
 }
