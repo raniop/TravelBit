@@ -93,14 +93,34 @@ async function loadBituhOfirDashboard(month, year) {
             tsEl.innerHTML = '<span class="dot"></span> עדכון אחרון: ' + lr;
         }
 
-        updateKPIs(data.dashboardCalcData || []);
-        renderRidersChart(data.riders || []);
-        renderRegionChart(data.topPolicies || []);
+        const calcData = data.dashboardCalcData || [];
+        updateKPIs(calcData);
+        hideUnusedKPIs(calcData);
 
-        // Load YoY chart separately
-        const reqMonth = month || (new Date().getMonth() + 1);
-        const reqYear = year || new Date().getFullYear();
-        loadYoYChart(reqMonth, reqYear);
+        const riders = data.riders || [];
+        const topPolicies = data.topPolicies || [];
+
+        // Hide chart sections entirely if no data
+        const chartsSection = document.getElementById('chartsSection');
+        if (riders.length === 0 && topPolicies.length === 0) {
+            if (chartsSection) chartsSection.style.display = 'none';
+        } else {
+            if (chartsSection) chartsSection.style.display = '';
+            renderRidersChart(riders);
+            renderRegionChart(topPolicies);
+        }
+
+        // Load YoY chart separately (skip for limited data)
+        const yoySection = document.getElementById('yoySection');
+        if (calcData.length < 6) {
+            // Agent-mode: no YoY data available, hide section
+            if (yoySection) yoySection.style.display = 'none';
+        } else {
+            if (yoySection) yoySection.style.display = '';
+            const reqMonth = month || (new Date().getMonth() + 1);
+            const reqYear = year || new Date().getFullYear();
+            loadYoYChart(reqMonth, reqYear);
+        }
 
     } catch (err) {
         console.error('Error loading BituhOfir data:', err);
@@ -187,6 +207,32 @@ function updateKPIs(calcData) {
             prevEl.textContent = kpi.prefix + formatNumber(item.prevYearValue);
         }
     });
+}
+
+// ==================== Hide Unused KPIs ====================
+function hideUnusedKPIs(calcData) {
+    const receivedTypes = new Set((calcData || []).map(d => String(d.repType)));
+    const kpiGrid = document.getElementById('kpiSection');
+    if (!kpiGrid) return;
+
+    const allCards = kpiGrid.querySelectorAll('.kpi-card[data-reptype]');
+    let visibleCount = 0;
+
+    allCards.forEach(card => {
+        if (receivedTypes.has(card.dataset.reptype)) {
+            card.style.display = '';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+
+    // Adjust grid: 3 visible → 3 columns, otherwise keep 2
+    if (visibleCount === 3) {
+        kpiGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+    } else {
+        kpiGrid.style.gridTemplateColumns = '';
+    }
 }
 
 // ==================== Charts ====================
