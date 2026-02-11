@@ -396,6 +396,45 @@ function logout() {
     window.location.href = '/dashboard/login.html';
 }
 
+// Prevent multiple simultaneous refresh attempts
+let _refreshPromise = null;
+
+async function tryRefreshToken() {
+    const refreshToken = localStorage.getItem('dash_refresh');
+    if (!refreshToken) return false;
+
+    // If already refreshing, wait for that to finish
+    if (_refreshPromise) return _refreshPromise;
+
+    _refreshPromise = (async () => {
+        try {
+            const res = await fetch(`${API_BASE}/auth/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken })
+            });
+
+            if (!res.ok) return false;
+
+            const data = await res.json();
+            if (data.accessToken) {
+                localStorage.setItem('dash_token', data.accessToken);
+                if (data.refreshToken) {
+                    localStorage.setItem('dash_refresh', data.refreshToken);
+                }
+                return true;
+            }
+            return false;
+        } catch {
+            return false;
+        } finally {
+            _refreshPromise = null;
+        }
+    })();
+
+    return _refreshPromise;
+}
+
 async function apiFetch(url, options = {}) {
     const token = getToken();
     const res = await fetch(`${API_BASE}${url}`, {
@@ -408,6 +447,29 @@ async function apiFetch(url, options = {}) {
     });
 
     if (res.status === 401) {
+        // Try to refresh the token before logging out
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+            // Retry the original request with the new token
+            const newToken = getToken();
+            const retryRes = await fetch(`${API_BASE}${url}`, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${newToken}`,
+                    ...options.headers
+                }
+            });
+
+            if (retryRes.status === 401) {
+                // Refresh succeeded but still 401 — force logout
+                logout();
+                return;
+            }
+            return retryRes;
+        }
+
+        // Refresh failed — logout
         logout();
         return;
     }
@@ -526,3 +588,23 @@ function updateSidebarVisibility() {
 }
 // Run immediately (script is at bottom of body, DOM is ready)
 updateSidebarVisibility();
+
+// Proactive token refresh: refresh 5 minutes before expiry
+// Access token lasts 1 hour, so refresh every 55 minutes
+(function scheduleProactiveRefresh() {
+    const REFRESH_INTERVAL = 55 * 60 * 1000; // 55 minutes
+    const currentPage = window.location.pathname;
+    if (currentPage.includes('login')) return; // Don't refresh on login page
+
+    setInterval(async () => {
+        const token = getToken();
+        if (!token) return;
+        console.log('Proactive token refresh...');
+        const ok = await tryRefreshToken();
+        if (ok) {
+            console.log('Token refreshed successfully');
+        } else {
+            console.warn('Proactive token refresh failed');
+        }
+    }, REFRESH_INTERVAL);
+})();
