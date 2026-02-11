@@ -189,11 +189,29 @@ function extractEmailDataEnhanced(text, html) {
         }
     }
 
-    // 5. Phone Number — Israeli format
-    const phoneMatch = searchText.match(/0[2-9]\d[\s-]?\d{3}[\s-]?\d{4}|0[2-9]\d{7,8}/);
-    if (phoneMatch) {
-        data.phone = phoneMatch[0].replace(/[\s-]/g, '');
-        data._extractedFields.push('phone');
+    // 5. Phone Number — Israeli format (with context or word boundary)
+    // Try context-aware patterns first (near phone keywords)
+    const phoneContextPatterns = [
+        /(?:טלפון|נייד|טל|phone|mobile|cell|tel)\s*:?\s*(0[2-9]\d[\s-]?\d{3}[\s-]?\d{4})/i,
+        /(?:טלפון|נייד|טל|phone|mobile|cell|tel)\s*:?\s*(0[2-9]\d{7,8})/i,
+    ];
+    let phoneFound = false;
+    for (const pattern of phoneContextPatterns) {
+        const match = searchText.match(pattern);
+        if (match) {
+            data.phone = match[1].replace(/[\s-]/g, '');
+            data._extractedFields.push('phone');
+            phoneFound = true;
+            break;
+        }
+    }
+    // Fallback: standalone phone pattern (must have separators to be more reliable)
+    if (!phoneFound) {
+        const phoneMatch = searchText.match(/(?:^|[\s,;(])(?:0[5][0-9][\s-]?\d{3}[\s-]?\d{4}|0[2-4,8-9][\s-]?\d{3}[\s-]?\d{4})/m);
+        if (phoneMatch) {
+            data.phone = phoneMatch[0].trim().replace(/^[,;(]\s*/, '').replace(/[\s-]/g, '');
+            data._extractedFields.push('phone');
+        }
     }
 
     // 6. Amount — with currency symbol or keyword
@@ -306,12 +324,37 @@ function parseMsgBinary(arrayBuffer, fileName) {
     console.log('[parseMsgBinary] extracted text preview:', allText.substring(0, 500));
 
     if (allText.length > 20) {
+        // Try both newline-joined and space-joined versions for better regex matching
         const data = extractEmailDataEnhanced(allText, '');
+        // If key fields are missing, try again with spaces instead of newlines
+        // (MSG binary may split what was one line into separate segments)
+        if (!data.customerName || !data.idNumber) {
+            const spaceJoined = allText.replace(/\n/g, ' ');
+            const data2 = extractEmailDataEnhanced(spaceJoined, '');
+            if (!data.customerName && data2.customerName) {
+                data.customerName = data2.customerName;
+                if (!data._extractedFields.includes('customerName')) data._extractedFields.push('customerName');
+            }
+            if (!data.idNumber && data2.idNumber) {
+                data.idNumber = data2.idNumber;
+                if (!data._extractedFields.includes('idNumber')) data._extractedFields.push('idNumber');
+            }
+        }
         data.source = 'file';
 
-        // Build readable notes from subject (filename) + extracted body
+        // Build readable notes from subject (filename) + clean extracted body
         const subjectFromFile = fileName.replace(/\.(eml|msg)$/i, '').replace(/^(Fw|Fwd|Re)[_:\s-]*/i, '').trim();
-        const bodyPreview = allText.substring(0, 400);
+        // Filter notes: keep only lines that contain Hebrew or are long enough to be meaningful
+        const cleanLines = allText.split('\n').filter(line => {
+            const t = line.trim();
+            if (t.length < 5) return false;
+            if (isMsgNoise(t)) return false;
+            // Must contain at least one Hebrew char or be a meaningful sentence
+            if (/[\u0590-\u05FF]/.test(t)) return true;
+            if (t.length > 20 && /[a-zA-Z]/.test(t)) return true; // long English text
+            return false;
+        });
+        const bodyPreview = cleanLines.join('\n').substring(0, 350);
         data.notes = [subjectFromFile, bodyPreview].filter(Boolean).join('\n').substring(0, 500);
 
         return data;
@@ -330,6 +373,43 @@ function parseMsgBinary(arrayBuffer, fileName) {
 
     return extractFromFileName(fileName);
 }
+
+// OLE2 / MSG internal strings to filter out from extracted text
+const MSG_NOISE_PATTERNS = [
+    /^Root Entry$/i,
+    /^__substg/i,
+    /^__properties_version/i,
+    /^__nameid_version/i,
+    /^__attach_version/i,
+    /^__recip_version/i,
+    /^0x[0-9A-F]{4,}/i,
+    /^[0-9A-F]{8}-[0-9A-F]{4}/i, // GUIDs
+    /^Entry$/i,
+    /^Storage$/i,
+    /^Stream$/i,
+    /^nameid$/i,
+    /^recip$/i,
+    /^attach$/i,
+    /^\{[0-9A-F-]+\}$/i, // GUID in braces
+    /^IPM\.\w+$/i, // IPM.Note, IPM.Schedule etc
+    /^SMTP$/i,
+    /^X-Mailer/i,
+    /^Content-Type/i,
+    /^Content-Transfer/i,
+    /^MIME-Version/i,
+    /^Message-ID/i,
+    /^Thread-Index/i,
+    /^X-MS-/i,
+    /^Return-Path/i,
+    /^Received:/i,
+    /^multipart\//i,
+    /^text\/html/i,
+    /^text\/plain/i,
+    /^application\//i,
+    /^charset=/i,
+    /^boundary=/i,
+    /^Content-Disposition/i,
+];
 
 // Extract UTF-16LE encoded strings from binary buffer
 // MSG files store text properties in UTF-16LE (Windows Unicode)
@@ -356,9 +436,8 @@ function extractUtf16Strings(bytes) {
             i += 2;
         } else {
             if (current.length >= 4) {
-                // Filter out strings that are just repeated chars or binary noise
                 const trimmed = current.trim();
-                if (trimmed.length >= 3 && !/^(.)\1+$/.test(trimmed)) {
+                if (trimmed.length >= 3 && !/^(.)\1+$/.test(trimmed) && !isMsgNoise(trimmed)) {
                     segments.push(trimmed);
                 }
             }
@@ -368,11 +447,25 @@ function extractUtf16Strings(bytes) {
     }
 
     // Don't forget the last segment
-    if (current.trim().length >= 3) {
+    if (current.trim().length >= 3 && !isMsgNoise(current.trim())) {
         segments.push(current.trim());
     }
 
     return segments.join('\n');
+}
+
+// Check if a string is OLE2/MSG metadata noise
+function isMsgNoise(str) {
+    if (!str) return true;
+    // Filter known OLE2 patterns
+    for (const pattern of MSG_NOISE_PATTERNS) {
+        if (pattern.test(str)) return true;
+    }
+    // Filter strings that are only hex chars (property IDs, etc)
+    if (/^[0-9A-Fa-f]+$/.test(str) && str.length <= 20) return true;
+    // Filter property-like strings like "0037001F" or "001A001F"
+    if (/^[0-9A-F]{8}$/i.test(str)) return true;
+    return false;
 }
 
 // Fallback: extract ASCII strings (for older MSG files or non-Unicode properties)
