@@ -218,26 +218,28 @@ module.exports = async function handler(req, res) {
             const todayStr = now2.toISOString().slice(0, 10);
 
             // Fetch policies for all agents × all months in parallel
+            console.log('DASH-DEBUG: agentCodes=', agentCodes, 'year=', year, 'maxMonth=', maxMonth);
             const fetchPromises = [];
             for (const code of agentCodes) {
                 for (let m = 1; m <= maxMonth; m++) {
+                    const apiPath = `/api/Policy/GetPolicyDetailsByAgent?agentIndex=${code}&bYear=${year}&bMonth=${m}&page=1&pageSize=500`;
                     fetchPromises.push(
-                        bituhOfirFetch(
-                            `/api/Policy/GetPolicyDetailsByAgent?agentIndex=${code}&bYear=${year}&bMonth=${m}&page=1&pageSize=500`,
-                            15000
-                        )
+                        bituhOfirFetch(apiPath, 15000)
                         .then(r => r.json())
                         .then(data => {
+                            // Log first request raw response for debugging
+                            if (m === 1) console.log('DASH-DEBUG: agent=' + code + ' month=1 raw=', JSON.stringify(data).slice(0, 500));
                             const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
                             return items;
                         })
-                        .catch(() => [])
+                        .catch(err => { console.log('DASH-DEBUG: fetch error agent=' + code + ' month=' + m, err.message); return []; })
                     );
                 }
             }
 
             const allResults = await Promise.all(fetchPromises);
             const allPolicies = allResults.flat();
+            console.log('DASH-DEBUG: allPolicies.length=', allPolicies.length, 'sample=', allPolicies.length > 0 ? JSON.stringify(allPolicies[0]).slice(0, 300) : 'EMPTY');
 
             // Deduplicate by policyIndex (same policy may appear in multiple months)
             const seen = new Set();
