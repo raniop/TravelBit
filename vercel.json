@@ -2,7 +2,7 @@
   "regions": ["fra1"],
   "functions": {
     "api/**/*.js": {
-      "maxDuration": 25
+      "maxDuration": 60
     }
   },
   "rewrites": [

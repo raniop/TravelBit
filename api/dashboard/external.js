@@ -197,11 +197,12 @@ async function fetchAllPoliciesByAgent(agentIndex, year, month) {
     let all = [];
     let page = 1;
     const PS = 50; // API max is 50 per page
+    const TIMEOUT = 12000; // 12s per request — enough for slow API but won't kill Vercel
 
     while (true) {
         const apiRes = await bituhOfirFetch(
             `/api/Policy/GetPolicyDetailsByAgent?agentIndex=${agentIndex}&bYear=${year}&bMonth=${month}&page=${page}&pageSize=${PS}`,
-            20000
+            TIMEOUT
         );
         const raw = await apiRes.json();
         // API might return array directly, or {items:[], totalCount:N}
@@ -224,6 +225,26 @@ async function fetchAllPoliciesByAgent(agentIndex, year, month) {
 
     console.log(`fetchAllPolicies: agent=${agentIndex} ${month}/${year}: ${all.length} policies, ${page} page(s)`);
     return all;
+}
+
+// Run tasks with limited concurrency to avoid Vercel timeout
+async function runWithConcurrency(tasks, concurrency) {
+    const results = [];
+    let index = 0;
+
+    async function worker() {
+        while (index < tasks.length) {
+            const i = index++;
+            results[i] = await tasks[i]();
+        }
+    }
+
+    const workers = [];
+    for (let w = 0; w < Math.min(concurrency, tasks.length); w++) {
+        workers.push(worker());
+    }
+    await Promise.all(workers);
+    return results;
 }
 
 module.exports = async function handler(req, res) {
@@ -348,23 +369,39 @@ module.exports = async function handler(req, res) {
                 return res.json(emptyResult);
             }
 
-            // Fetch current year + previous year policies in ONE batch
+            // Fetch current year + previous year policies with limited concurrency
+            // to avoid Vercel timeout (maxDuration=60s)
             const prevYear = year - 1;
             const allTasks = [];
+            // Prioritize current year first (more important), then previous year
             for (const idx of agentIndexes) {
                 for (let m = 1; m <= month; m++) {
                     allTasks.push({ idx, y: year, m });
+                }
+            }
+            for (const idx of agentIndexes) {
+                for (let m = 1; m <= month; m++) {
                     allTasks.push({ idx, y: prevYear, m });
                 }
             }
 
-            const allResults = await Promise.all(
-                allTasks.map(t =>
-                    fetchAllPoliciesByAgent(t.idx, t.y, t.m)
-                        .then(policies => ({ ...t, policies }))
-                        .catch(err => { console.error(`DASH: Error agent ${t.idx} y=${t.y} m=${t.m}:`, err.message); return { ...t, policies: [] }; })
-                )
+            console.log(`DASH: fetching ${allTasks.length} tasks (${agentIndexes.length} agents × ${month} months × 2 years), concurrency=2`);
+            const startTime = Date.now();
+
+            const allResults = await runWithConcurrency(
+                allTasks.map(t => async () => {
+                    try {
+                        const policies = await fetchAllPoliciesByAgent(t.idx, t.y, t.m);
+                        return { ...t, policies };
+                    } catch (err) {
+                        console.error(`DASH: Error agent ${t.idx} y=${t.y} m=${t.m}:`, err.message);
+                        return { ...t, policies: [] };
+                    }
+                }),
+                2 // max 2 concurrent requests — prevents overwhelming external API
             );
+
+            console.log(`DASH: all fetches done in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
 
             // Split into current year and previous year
             const curPolicies = allResults.filter(r => r.y === year).flatMap(r => r.policies);
@@ -446,13 +483,17 @@ module.exports = async function handler(req, res) {
                     }
                 }
 
-                // Execute all in parallel (limited by external API speed)
-                const results = await Promise.all(
-                    tasks.map(t =>
-                        fetchAllPoliciesByAgent(t.idx, t.y, t.m)
-                            .then(policies => ({ m: t.m, y: t.y, total: policies.reduce((s, p) => s + (Number(p.total) || 0), 0) }))
-                            .catch(() => ({ m: t.m, y: t.y, total: 0 }))
-                    )
+                // Execute with limited concurrency
+                const results = await runWithConcurrency(
+                    tasks.map(t => async () => {
+                        try {
+                            const policies = await fetchAllPoliciesByAgent(t.idx, t.y, t.m);
+                            return { m: t.m, y: t.y, total: policies.reduce((s, p) => s + (Number(p.total) || 0), 0) };
+                        } catch (err) {
+                            return { m: t.m, y: t.y, total: 0 };
+                        }
+                    }),
+                    2
                 );
 
                 // Aggregate by month+year
