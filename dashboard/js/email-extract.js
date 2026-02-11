@@ -345,13 +345,20 @@ function parseMsgBinary(arrayBuffer, fileName) {
         // Build readable notes from subject (filename) + clean extracted body
         const subjectFromFile = fileName.replace(/\.(eml|msg)$/i, '').replace(/^(Fw|Fwd|Re)[_:\s-]*/i, '').trim();
         // Filter notes: keep only lines that contain Hebrew or are long enough to be meaningful
+        const seen = new Set(); // deduplicate identical lines
+        if (subjectFromFile) seen.add(subjectFromFile); // subject will be first, skip duplicates of it
         const cleanLines = allText.split('\n').filter(line => {
             const t = line.trim();
             if (t.length < 5) return false;
             if (isMsgNoise(t)) return false;
-            // Must contain at least one Hebrew char or be a meaningful sentence
+            // Skip lines that are just Fw:/Re: + subject (duplicate subject)
+            const withoutPrefix = t.replace(/^(?:Fw|Fwd|Re)\s*:\s*/i, '').trim();
+            if (withoutPrefix === subjectFromFile) return false;
+            // Deduplicate: skip lines we've already seen
+            if (seen.has(t)) return false;
+            seen.add(t);
+            // Must contain at least one Hebrew char to be meaningful content
             if (/[\u0590-\u05FF]/.test(t)) return true;
-            if (t.length > 20 && /[a-zA-Z]/.test(t)) return true; // long English text
             return false;
         });
         const bodyPreview = cleanLines.join('\n').substring(0, 350);
@@ -411,7 +418,7 @@ const MSG_NOISE_PATTERNS = [
     /^Content-Disposition/i,
     // Exchange / Outlook internal properties
     /Exchange/i,
-    /^HasQuotedText$/i,
+    /^HasQuotedText/i,
     /Antispam/i,
     /EntityExtract/i,
     /Inference/i,
@@ -430,6 +437,33 @@ const MSG_NOISE_PATTERNS = [
     /^nExchangeAp/i,
     /^ibutedmessage/i,
     /^eoptenantattributed/i,
+    // More Exchange / Outlook noise (CamelCase with trailing chars)
+    /ConversationWas/i,
+    /FocusedInbox/i,
+    /InboxModel/i,
+    /^Focused/i,
+    // Exchange DN / LDAP paths
+    /CN=RECIPIENTS/i,
+    /CN=[0-9A-F]{10,}/i,
+    /FYDIBOHF/i,
+    /NISTRATIVE GROUP/i,
+    /\/O=.*\/OU=/i,
+    /\/CN=.*\/CN=/i,
+    // Outlook signatures and app labels
+    /Get Outlook for/i,
+    /Sent from Outlook/i,
+    /Sent from my iPhone/i,
+    /Sent from my iPad/i,
+    /Sent from Mail/i,
+    // Hebrew noise labels
+    /^תיבת דואר נכנס$/,
+    /^תיבת דואר יוצא$/,
+    /^טיוטות$/,
+    /^דואר שנשלח$/,
+    /^פריטים שנשלחו$/,
+    /^פריטים שנמחקו$/,
+    // Fw/Fwd/Re prefix-only lines (subject duplicates)
+    /^(?:Fw|Fwd|Re)\s*:\s*/i,
 ];
 
 // Extract UTF-16LE encoded strings from binary buffer
@@ -478,18 +512,24 @@ function extractUtf16Strings(bytes) {
 // Check if a string is OLE2/MSG metadata noise
 function isMsgNoise(str) {
     if (!str) return true;
-    // Filter known OLE2 patterns
+    // Strip trailing special chars like \ ^ ~ etc. that OLE2 sometimes appends
+    const cleaned = str.replace(/[\\^~|`]+$/, '').trim();
+    if (!cleaned) return true;
+    // Filter known OLE2 patterns (check both original and cleaned)
     for (const pattern of MSG_NOISE_PATTERNS) {
-        if (pattern.test(str)) return true;
+        if (pattern.test(str) || pattern.test(cleaned)) return true;
     }
     // Filter strings that are only hex chars (property IDs, etc)
-    if (/^[0-9A-Fa-f]+$/.test(str) && str.length <= 20) return true;
+    if (/^[0-9A-Fa-f]+$/.test(cleaned) && cleaned.length <= 20) return true;
     // Filter property-like strings like "0037001F" or "001A001F"
-    if (/^[0-9A-F]{8}$/i.test(str)) return true;
+    if (/^[0-9A-F]{8}$/i.test(cleaned)) return true;
     // Filter CamelCase technical terms (like ExchangeApplicationFlags, HasQuotedText)
-    if (/^[A-Z][a-z]+([A-Z][a-z]+){2,}$/.test(str)) return true;
+    // Now also handles trailing special chars stripped above
+    if (/^[A-Z][a-z]+([A-Z][a-z]+){1,}$/.test(cleaned)) return true;
     // Filter strings that are mostly non-Hebrew ASCII with no spaces (likely technical)
-    if (str.length > 5 && /^[a-zA-Z0-9._\-]+$/.test(str) && !str.includes(' ') && !/[\u0590-\u05FF]/.test(str)) return true;
+    if (cleaned.length > 5 && /^[a-zA-Z0-9._\-\/=@]+$/.test(cleaned) && !/[\u0590-\u05FF]/.test(cleaned)) return true;
+    // Filter strings with LDAP/DN path patterns
+    if (/\/[A-Z]{2}=/.test(str)) return true;
     return false;
 }
 
