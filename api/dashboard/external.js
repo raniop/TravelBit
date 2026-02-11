@@ -650,6 +650,9 @@ module.exports = async function handler(req, res) {
                     const items = Array.isArray(raw) ? raw : (raw && raw.items ? raw.items : []);
                     if (items.length === 0) break;
                     const found = items.filter(a => codesSet.has(String(Math.round(Number(a[matchField])))));
+                    if (found.length > 0) {
+                        console.log('agents-report: found agents, sample:', JSON.stringify(found[0]));
+                    }
                     matchedAgents = matchedAgents.concat(found);
                     // Stop early if we found all
                     if (matchedAgents.length >= agentCodes.length) break;
