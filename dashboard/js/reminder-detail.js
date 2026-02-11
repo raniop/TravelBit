@@ -75,10 +75,13 @@ let agentCodes = [];
 })();
 
 async function loadReminders() {
+    console.log('[loadReminders] Loading type:', currentType);
     try {
         const res = await apiFetch(`/dashboard/reminders?type=${currentType}`);
+        console.log('[loadReminders] Response:', res ? `status=${res.status} ok=${res.ok}` : 'null');
         if (!res || !res.ok) throw new Error('Failed to load');
         const data = await res.json();
+        console.log('[loadReminders] Got', (data.reminders || []).length, 'reminders');
 
         allReminders = data.reminders || [];
         agentCodes = data.agentCodes || [];
@@ -86,7 +89,7 @@ async function loadReminders() {
         populateAgentDropdowns();
         renderTable();
     } catch (err) {
-        console.error('Load reminders error:', err);
+        console.error('[loadReminders] Error:', err);
         document.getElementById('remindersBody').innerHTML =
             '<tr><td colspan="11" style="text-align:center; padding:40px; color:var(--gray-400);">שגיאה בטעינת תזכורות</td></tr>';
     }
@@ -285,6 +288,10 @@ async function saveReminder() {
         body.status = document.getElementById('formStatus').value;
     }
 
+    console.log('[saveReminder] isEdit:', isEdit, 'editId:', editId);
+    console.log('[saveReminder] body:', JSON.stringify(body, null, 2));
+    console.log('[saveReminder] currentType:', currentType);
+
     const saveBtn = document.getElementById('saveBtn');
     saveBtn.disabled = true;
     saveBtn.textContent = 'שומר...';
@@ -297,19 +304,28 @@ async function saveReminder() {
             method = 'PUT';
         }
 
+        console.log('[saveReminder] Sending', method, 'to', url);
+
         const res = await apiFetch(url, {
             method,
             body: JSON.stringify(body)
         });
 
+        console.log('[saveReminder] Response:', res ? `status=${res.status} ok=${res.ok}` : 'null (possibly logged out)');
+
         if (!res || !res.ok) {
             const data = await res.json().catch(() => ({}));
+            console.error('[saveReminder] Error response data:', data);
             throw new Error(data.message || 'שגיאה בשמירה');
         }
+
+        const result = await res.json();
+        console.log('[saveReminder] Success:', result);
 
         closeModal();
         await loadReminders();
     } catch (err) {
+        console.error('[saveReminder] Catch error:', err);
         alert(err.message);
     } finally {
         saveBtn.disabled = false;
