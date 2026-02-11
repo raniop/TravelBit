@@ -152,7 +152,6 @@ function updateReportKPIs(agents) {
         ? agents.reduce((s, a) => s + (a.totalCommission || 0), 0)
         : agents.reduce((s, a) => s + (a.totalAgentRate || 0), 0);
 
-    document.getElementById('kpiAgentCount').textContent = agents.length;
     document.getElementById('kpiTotalPolicies').textContent = formatNumber(totalPolicies);
     document.getElementById('kpiTotalPremiums').textContent = '$' + formatNumber(totalPremiums);
     document.getElementById('kpiTotalCommissions').textContent = '$' + formatNumber(totalCommissions);

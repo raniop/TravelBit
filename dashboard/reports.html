@@ -14,7 +14,7 @@
     <style>
         /* ===== KPI Grid ===== */
         .kpi-grid {
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;
         }
         @media (max-width: 768px) { .kpi-grid { grid-template-columns: 1fr 1fr; } }
         @media (max-width: 480px) { .kpi-grid { gap: 8px; } }
@@ -30,7 +30,6 @@
         .kpi-card:nth-child(1)::after { background: #3B82F6; }
         .kpi-card:nth-child(2)::after { background: #00B67A; }
         .kpi-card:nth-child(3)::after { background: #FF6B2C; }
-        .kpi-card:nth-child(4)::after { background: #8B5CF6; }
 
         .kpi-header { font-size: 13px; font-weight: 700; color: var(--gray-500); margin-bottom: 8px; }
         .kpi-value { font-size: 24px; font-weight: 800; color: var(--dark); }
@@ -246,10 +245,6 @@
                 <!-- Summary KPIs -->
                 <div class="kpi-grid">
                     <div class="kpi-card">
-                        <div class="kpi-header">סה"כ סוכנים</div>
-                        <div class="kpi-value" id="kpiAgentCount">-</div>
-                    </div>
-                    <div class="kpi-card">
                         <div class="kpi-header">סה"כ פוליסות</div>
                         <div class="kpi-value" id="kpiTotalPolicies">-</div>
                     </div>
@@ -264,7 +259,7 @@
                 </div>
 
                 <!-- Date Filter -->
-                <div class="date-filter-bar" style="flex-direction: column; align-items: stretch;">
+                <div class="date-filter-bar">
                     <h3>📅 סינון תאריך</h3>
                     <div class="date-group">
                         <label>מתאריך:</label>
@@ -276,7 +271,7 @@
                         <select id="toMonth"></select>
                         <select id="toYear"></select>
                     </div>
-                    <button class="btn-load" id="btnLoadReport" onclick="onDateChange()" style="align-self: flex-start;">טען דוח</button>
+                    <button class="btn-load" id="btnLoadReport" onclick="onDateChange()">טען דוח</button>
                 </div>
 
                 <!-- Search Bar -->
