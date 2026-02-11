@@ -59,6 +59,10 @@ function renderDashboard() {
     const container = document.getElementById('cardsContainer');
     if (!container) return;
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let totalOverdue = 0;
+
     let html = '<div class="reminder-cards-grid">';
 
     for (const [key, label] of Object.entries(REMINDER_TYPES)) {
@@ -69,6 +73,16 @@ function renderDashboard() {
         const openCount = typeReminders.filter(r => r.status === 'open').length;
         const inProgressCount = typeReminders.filter(r => r.status === 'inProgress').length;
         const completedCount = typeReminders.filter(r => r.status === 'completed').length;
+
+        // Count overdue (open/inProgress with past due date)
+        const overdueCount = typeReminders.filter(r => {
+            if (!r.date || r.status === 'completed' || r.status === 'cancelled') return false;
+            const dueDate = new Date(r.date);
+            dueDate.setHours(0, 0, 0, 0);
+            return dueDate < today;
+        }).length;
+        totalOverdue += overdueCount;
+
         const icon = CARD_ICONS[key] || '';
 
         html += `
@@ -77,6 +91,7 @@ function renderDashboard() {
             <div class="reminder-card-title">${label}</div>
             <div class="reminder-card-count">${total}</div>
             <div class="reminder-card-statuses">
+                ${overdueCount ? `<span class="mini-badge mini-overdue">${overdueCount} באיחור</span>` : ''}
                 ${openCount ? `<span class="mini-badge mini-open">${openCount} פתוח</span>` : ''}
                 ${inProgressCount ? `<span class="mini-badge mini-inProgress">${inProgressCount} בטיפול</span>` : ''}
                 ${completedCount ? `<span class="mini-badge mini-completed">${completedCount} הושלם</span>` : ''}
@@ -86,6 +101,39 @@ function renderDashboard() {
 
     html += '</div>';
     container.innerHTML = html;
+
+    // Show sidebar badge
+    if (totalOverdue > 0) {
+        const sidebarLink = document.getElementById('sidebarRemindersLink');
+        if (sidebarLink) {
+            const existing = sidebarLink.querySelector('.overdue-badge');
+            if (existing) existing.remove();
+            const badge = document.createElement('span');
+            badge.className = 'overdue-badge';
+            badge.textContent = totalOverdue;
+            sidebarLink.appendChild(badge);
+        }
+    }
+
+    // Show banner
+    if (totalOverdue > 0 && !sessionStorage.getItem('overdue_banner_dismissed')) {
+        showOverdueBanner(totalOverdue);
+    }
+}
+
+function showOverdueBanner(count) {
+    const pageBody = document.querySelector('.page-body');
+    if (!pageBody) return;
+    if (pageBody.querySelector('.overdue-banner')) return;
+
+    const banner = document.createElement('div');
+    banner.className = 'overdue-banner';
+    banner.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="overdue-banner-text">יש לך <strong>${count}</strong> תזכורות שעבר תאריך היעד שלהן</span>
+        <button class="overdue-banner-close" onclick="this.parentElement.remove(); sessionStorage.setItem('overdue_banner_dismissed','1')">&times;</button>
+    `;
+    pageBody.insertBefore(banner, pageBody.firstChild);
 }
 
 // ===== Email Drop Zone =====

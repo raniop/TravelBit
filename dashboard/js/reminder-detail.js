@@ -135,13 +135,18 @@ function renderTable() {
         const statusClass = `status-${r.status || 'open'}`;
         const statusLabel = STATUS_LABELS[r.status] || 'פתוח';
 
-        return `<tr>
+        // Due date coloring (only for open/inProgress reminders)
+        const dueStatus = getDueDateStatus(r);
+        const rowClass = dueStatus === 'overdue' ? 'row-overdue' : dueStatus === 'warning' ? 'row-warning' : '';
+        const dateClass = dueStatus === 'overdue' ? 'due-overdue' : dueStatus === 'warning' ? 'due-warning' : '';
+
+        return `<tr class="${rowClass}">
             <td><strong>${escHtml(r.customerName || '-')}</strong></td>
             <td>${escHtml(r.idNumber || '-')}</td>
             <td>${escHtml(r.phone || '-')}</td>
             <td>${escHtml(r.policyNumber || '-')}</td>
             <td>${escHtml(r.insuranceCompany || '-')}</td>
-            <td>${dateStr}</td>
+            <td class="${dateClass}">${dateStr}</td>
             <td>${amountStr}</td>
             <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
             <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.notes || '')}">${escHtml(r.notes || '-')}</td>
@@ -445,3 +450,94 @@ function setupDateAutoFormat() {
         }
     });
 }
+
+// ===== Due Date Status =====
+// Returns 'overdue' | 'warning' | 'normal' based on reminder's due date vs today
+function getDueDateStatus(reminder) {
+    // Only flag open/inProgress reminders
+    if (!reminder.date || reminder.status === 'completed' || reminder.status === 'cancelled') return 'normal';
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dueDate = new Date(reminder.date);
+    dueDate.setHours(0, 0, 0, 0);
+
+    const diffMs = dueDate - today;
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return 'overdue';      // past due
+    if (diffDays <= 3) return 'warning';      // due within 3 days
+    return 'normal';
+}
+
+// ===== Overdue Badge + Banner =====
+// Loads overdue count and shows badge in sidebar + banner at top
+async function loadOverdueBadge() {
+    try {
+        const res = await apiFetch('/dashboard/reminders?status=open');
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        const reminders = data.reminders || [];
+
+        // Also load inProgress
+        const res2 = await apiFetch('/dashboard/reminders?status=inProgress');
+        let inProgressReminders = [];
+        if (res2 && res2.ok) {
+            const data2 = await res2.json();
+            inProgressReminders = data2.reminders || [];
+        }
+
+        const allActive = [...reminders, ...inProgressReminders];
+
+        // Count overdue
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let overdueCount = 0;
+        for (const r of allActive) {
+            if (!r.date) continue;
+            const dueDate = new Date(r.date);
+            dueDate.setHours(0, 0, 0, 0);
+            if (dueDate < today) overdueCount++;
+        }
+
+        // Show badge in sidebar
+        const sidebarLink = document.getElementById('sidebarRemindersLink');
+        if (sidebarLink && overdueCount > 0) {
+            // Remove existing badge if any
+            const existing = sidebarLink.querySelector('.overdue-badge');
+            if (existing) existing.remove();
+            const badge = document.createElement('span');
+            badge.className = 'overdue-badge';
+            badge.textContent = overdueCount;
+            sidebarLink.appendChild(badge);
+        }
+
+        // Show banner (only once per session per page)
+        const bannerKey = 'overdue_banner_dismissed';
+        if (overdueCount > 0 && !sessionStorage.getItem(bannerKey)) {
+            showOverdueBanner(overdueCount);
+        }
+    } catch (err) {
+        console.error('[loadOverdueBadge] Error:', err);
+    }
+}
+
+function showOverdueBanner(count) {
+    const pageBody = document.querySelector('.page-body');
+    if (!pageBody) return;
+    // Don't show if already shown
+    if (pageBody.querySelector('.overdue-banner')) return;
+
+    const banner = document.createElement('div');
+    banner.className = 'overdue-banner';
+    banner.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="overdue-banner-text">יש לך <strong>${count}</strong> תזכורות שעבר תאריך היעד שלהן — <a href="/dashboard/reminders.html">לצפייה</a></span>
+        <button class="overdue-banner-close" onclick="this.parentElement.remove(); sessionStorage.setItem('overdue_banner_dismissed','1')">&times;</button>
+    `;
+    pageBody.insertBefore(banner, pageBody.firstChild);
+}
+
+// Load overdue badge on page init
+loadOverdueBadge();
