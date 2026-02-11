@@ -191,10 +191,11 @@ async function resolveAgentIndexes(agentCodes) {
 }
 
 // Fetch ALL policies for a single agent+month (handles pagination)
+// NOTE: External API limits to 50 items per page regardless of pageSize param
 async function fetchAllPoliciesByAgent(agentIndex, year, month) {
     let all = [];
     let page = 1;
-    const PS = 500;
+    const PS = 50; // API max is 50 per page
 
     while (true) {
         const apiRes = await bituhOfirFetch(
@@ -204,11 +205,14 @@ async function fetchAllPoliciesByAgent(agentIndex, year, month) {
         const data = await apiRes.json();
         const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
         all = all.concat(items);
-        if (items.length < PS || items.length === 0) break;
+        if (items.length === 0) break;
+        // If we got exactly PS items, there might be more pages
+        if (items.length < PS) break;
         page++;
-        if (page > 20) break;
+        if (page > 100) break; // safety: max 5000 policies per agent/month
     }
 
+    if (page > 1) console.log(`fetchAllPolicies: agent=${agentIndex} ${month}/${year}: ${all.length} policies across ${page} pages`);
     return all;
 }
 
