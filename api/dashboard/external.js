@@ -313,8 +313,7 @@ module.exports = async function handler(req, res) {
                 });
             }
 
-            // === Other companies (with agentCodes): two-step approach ===
-            // Step 1: Get agentIndexes — skip resolve if already stored as indexes
+            // === Other companies (with agentCodes): fetch policies + compute KPIs + YoY in one shot ===
             const agentIndexes = isAlreadyIndexes
                 ? agentCodes.map(Number)
                 : await resolveAgentIndexes(agentCodes);
@@ -328,38 +327,59 @@ module.exports = async function handler(req, res) {
                         { repType: 6, curYearValue: 0, prevYearValue: 0, percentDiff: 0 }
                     ],
                     periods: [], riders: [], topPolicies: [],
+                    yoyData: [], yoyYear: year, yoyPrevYear: year - 1,
                     requestedMonth: month, requestedYear: year,
                     lastRefresh: new Date().toISOString()
                 });
             }
 
-            // Step 2: For each agentIndex, fetch policies for all months YTD
-            // Use sequential fetching to avoid overloading external API
-            let allPolicies = [];
+            // Fetch current year + previous year policies in ONE batch (for KPIs + YoY)
+            const prevYear = year - 1;
+            const allTasks = [];
             for (const idx of agentIndexes) {
-                // Fetch all months for this agent in parallel (max ~12 concurrent)
-                const monthPromises = [];
                 for (let m = 1; m <= month; m++) {
-                    monthPromises.push(
-                        fetchAllPoliciesByAgent(idx, year, m)
-                            .catch(err => { console.error(`DASH: Error agent ${idx} month ${m}:`, err.message); return []; })
-                    );
-                }
-                const monthResults = await Promise.all(monthPromises);
-                for (const policies of monthResults) {
-                    allPolicies = allPolicies.concat(policies);
+                    allTasks.push({ idx, y: year, m });
+                    allTasks.push({ idx, y: prevYear, m });
                 }
             }
-            console.log('DASH: total policies fetched=', allPolicies.length);
 
-            // Step 3: Calculate KPIs from real policy data
-            const calcData = calculateKPIs(allPolicies, [], month, year);
-            // Only send repType 1 (turnover), 5 (policies), 6 (today's sales)
+            const allResults = await Promise.all(
+                allTasks.map(t =>
+                    fetchAllPoliciesByAgent(t.idx, t.y, t.m)
+                        .then(policies => ({ ...t, policies }))
+                        .catch(err => { console.error(`DASH: Error agent ${t.idx} y=${t.y} m=${t.m}:`, err.message); return { ...t, policies: [] }; })
+                )
+            );
+
+            // Split into current year and previous year
+            const curPolicies = allResults.filter(r => r.y === year).flatMap(r => r.policies);
+            const prevPolicies = allResults.filter(r => r.y === prevYear).flatMap(r => r.policies);
+            console.log('DASH: curPolicies=', curPolicies.length, 'prevPolicies=', prevPolicies.length);
+
+            // Calculate KPIs
+            const calcData = calculateKPIs(curPolicies, prevPolicies, month, year);
             const filteredCalc = calcData.filter(c => [1, 5, 6].includes(c.repType));
+
+            // Build YoY data from the same results (no extra API calls!)
+            const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+            const yoyData = [];
+            for (let m = 1; m <= month; m++) {
+                const curTotal = allResults.filter(r => r.m === m && r.y === year)
+                    .reduce((s, r) => s + r.policies.reduce((ps, p) => ps + (Number(p.total) || 0), 0), 0);
+                const prevTotal = allResults.filter(r => r.m === m && r.y === prevYear)
+                    .reduce((s, r) => s + r.policies.reduce((ps, p) => ps + (Number(p.total) || 0), 0), 0);
+                yoyData.push({
+                    month: monthNames[m - 1],
+                    monthNum: m,
+                    currentYear: curTotal,
+                    previousYear: prevTotal
+                });
+            }
 
             return res.json({
                 dashboardCalcData: filteredCalc,
                 periods: [], riders: [], topPolicies: [],
+                yoyData, yoyYear: year, yoyPrevYear: prevYear,
                 requestedMonth: month, requestedYear: year,
                 lastRefresh: new Date().toISOString()
             });

@@ -1,4 +1,4 @@
-// BituhOfir Dashboard JS - v4
+// BituhOfir Dashboard JS - v9
 let regionChart, ridersChart, salesYoYChart;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -119,14 +119,20 @@ async function loadBituhOfirDashboard(month, year) {
         }
 
         // Load YoY chart — show for all companies that have at least some KPI data
-        const yoySection = document.getElementById('yoySection');
+        const yoySection2 = document.getElementById('yoySection');
         if (calcData.length > 0) {
-            if (yoySection) yoySection.style.display = '';
-            const reqMonth = month || (new Date().getMonth() + 1);
-            const reqYear = year || new Date().getFullYear();
-            loadYoYChart(reqMonth, reqYear);
+            if (yoySection2) yoySection2.style.display = '';
+            // If YoY data is embedded in dashboard response (agent-mode), use it directly
+            if (data.yoyData && data.yoyData.length > 0) {
+                renderSalesYoYChart({ year: data.yoyYear, prevYear: data.yoyPrevYear, yoyData: data.yoyData });
+            } else {
+                // Ophir (non-agent): fetch YoY separately
+                const reqMonth = month || (new Date().getMonth() + 1);
+                const reqYear = year || new Date().getFullYear();
+                loadYoYChart(reqMonth, reqYear);
+            }
         } else {
-            if (yoySection) yoySection.style.display = 'none';
+            if (yoySection2) yoySection2.style.display = 'none';
         }
 
     } catch (err) {
