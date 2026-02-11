@@ -230,9 +230,13 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ message: 'אין הרשאה לנתוני ביטוח.' });
     }
     // If agentCodes exist → filter by them; if empty → show all (no filtering)
-    const agentCodes = (Array.isArray(company.agentCodes) && company.agentCodes.length > 0)
+    // agentCodes may contain agentIndex values (large numbers like 14179) or agentCode values (small like 54)
+    const rawAgentCodes = (Array.isArray(company.agentCodes) && company.agentCodes.length > 0)
         ? company.agentCodes.map(String)
         : null;
+    // Detect if these are already agentIndexes (large numbers) — skip resolve step
+    const isAlreadyIndexes = rawAgentCodes && rawAgentCodes.every(c => Number(c) > 1000);
+    const agentCodes = rawAgentCodes;
 
     const ip = company.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
 
@@ -288,9 +292,11 @@ module.exports = async function handler(req, res) {
             }
 
             // === Other companies (with agentCodes): two-step approach ===
-            // Step 1: Translate agentCode → agentIndex via GetAgentsReport
-            const agentIndexes = await resolveAgentIndexes(agentCodes);
-            console.log('DASH: agentCodes=', agentCodes, 'resolved agentIndexes=', agentIndexes);
+            // Step 1: Get agentIndexes — skip resolve if already stored as indexes
+            const agentIndexes = isAlreadyIndexes
+                ? agentCodes.map(Number)
+                : await resolveAgentIndexes(agentCodes);
+            console.log('DASH: agentCodes=', agentCodes, 'isAlreadyIndexes=', isAlreadyIndexes, 'agentIndexes=', agentIndexes);
 
             if (agentIndexes.length === 0) {
                 return res.json({
@@ -345,7 +351,9 @@ module.exports = async function handler(req, res) {
 
             // === Other companies (with agentCodes): build YoY from GetPolicyDetailsByAgent ===
             if (agentCodes) {
-                const agentIndexes = await resolveAgentIndexes(agentCodes);
+                const agentIndexes = isAlreadyIndexes
+                    ? agentCodes.map(Number)
+                    : await resolveAgentIndexes(agentCodes);
                 if (agentIndexes.length === 0) {
                     return res.json({ year, prevYear, yoyData: [] });
                 }
@@ -498,19 +506,23 @@ module.exports = async function handler(req, res) {
 
         // Route: /api/dashboard/external/agents-report
         if (url.includes('/external/agents-report')) {
-            // For companies with agentCodes, we need to search all pages to find their agents
+            // For companies with agentCodes, search all pages to find their agents
             if (agentCodes) {
                 const codesSet = new Set(agentCodes);
+                // Determine which field to match against
+                const matchField = isAlreadyIndexes ? 'agentIndex' : 'agentCode';
                 let matchedAgents = [];
                 let pg = 1;
                 const pgSize = 500;
                 while (true) {
-                    const apiRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${pg}&pageSize=${pgSize}`, 15000);
+                    const apiRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${pg}&pageSize=${pgSize}`, 20000);
                     const raw = await apiRes.json();
                     const items = Array.isArray(raw) ? raw : (raw && raw.items ? raw.items : []);
                     if (items.length === 0) break;
-                    const found = items.filter(a => codesSet.has(String(a.agentCode)));
+                    const found = items.filter(a => codesSet.has(String(Math.round(Number(a[matchField])))));
                     matchedAgents = matchedAgents.concat(found);
+                    // Stop early if we found all
+                    if (matchedAgents.length >= agentCodes.length) break;
                     if (items.length < pgSize) break;
                     pg++;
                     if (pg > 20) break;
@@ -534,13 +546,13 @@ module.exports = async function handler(req, res) {
                 return res.status(400).json({ message: 'חובה לציין קוד סוכן (agentIndex).' });
             }
 
-            // Verify agent belongs to company (agentIndex param may actually be agentCode)
+            // Verify agent belongs to company
             if (agentCodes && !agentCodes.includes(String(agentIndex))) {
                 return res.status(403).json({ message: 'אין הרשאה לנתוני סוכן זה.' });
             }
 
-            // If agentCodes exist, the param is likely an agentCode — translate to real agentIndex
-            if (agentCodes) {
+            // If agentCodes contains small agentCode values (not agentIndex), translate
+            if (agentCodes && !isAlreadyIndexes) {
                 const resolved = await resolveAgentIndexes([String(agentIndex)]);
                 if (resolved.length > 0) {
                     agentIndex = resolved[0];

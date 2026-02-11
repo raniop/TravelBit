@@ -61,6 +61,11 @@ function initDateFilters() {
 
 async function loadBituhOfirDashboard(month, year) {
     showError(null);
+    // Show loading state
+    const kpiSection = document.getElementById('kpiSection');
+    if (kpiSection) kpiSection.style.opacity = '0.4';
+    const yoySection = document.getElementById('yoySection');
+    if (yoySection) yoySection.style.display = 'none';
 
     try {
         let url = '/dashboard/external/dashboard';
@@ -69,19 +74,22 @@ async function loadBituhOfirDashboard(month, year) {
         }
 
         const res = await apiFetch(url);
-        if (!res) return;
+        if (!res) { if (kpiSection) kpiSection.style.opacity = ''; return; }
 
         if (res.status === 403) {
+            if (kpiSection) kpiSection.style.opacity = '';
             showError('אין הרשאה לצפות בנתוני ביטוח.');
             return;
         }
 
         if (!res.ok) {
+            if (kpiSection) kpiSection.style.opacity = '';
             showError('שגיאה בטעינת נתונים מהביטוח (קוד: ' + res.status + ')');
             return;
         }
 
         const data = await res.json();
+        if (kpiSection) kpiSection.style.opacity = '';
         console.log('BituhOfir Dashboard Data:', data);
 
         // Update timestamp
@@ -122,6 +130,7 @@ async function loadBituhOfirDashboard(month, year) {
         }
 
     } catch (err) {
+        if (kpiSection) kpiSection.style.opacity = '';
         console.error('Error loading BituhOfir data:', err);
         showError('שגיאת תקשורת עם מערכת הביטוח.');
     }
