@@ -212,60 +212,29 @@ module.exports = async function handler(req, res) {
                 });
             }
 
-            // === Other companies (with agentCodes): calculate from agent policies ===
-            const now2 = new Date();
-            const maxMonth = (year === now2.getFullYear()) ? Math.min(month, now2.getMonth() + 1) : month;
-            const todayStr = now2.toISOString().slice(0, 10);
+            // === Other companies (with agentCodes): use GetAgentsReport ===
+            // agentCodes stores agentCode (e.g. '54'), NOT agentIndex (e.g. 14179).
+            // GetAgentsReport returns aggregate data and lets us filter by agentCode.
+            const reportRes = await bituhOfirFetch('/api/Policy/GetAgentsReport?page=1&pageSize=500', 15000);
+            const reportData = await reportRes.json();
+            const allAgents = Array.isArray(reportData) ? reportData : (reportData && reportData.items ? reportData.items : []);
 
-            // Fetch policies for all agents × all months in parallel
-            console.log('DASH-DEBUG: agentCodes=', agentCodes, 'year=', year, 'maxMonth=', maxMonth);
-            const fetchPromises = [];
-            for (const code of agentCodes) {
-                for (let m = 1; m <= maxMonth; m++) {
-                    const apiPath = `/api/Policy/GetPolicyDetailsByAgent?agentIndex=${code}&bYear=${year}&bMonth=${m}&page=1&pageSize=500`;
-                    fetchPromises.push(
-                        bituhOfirFetch(apiPath, 15000)
-                        .then(r => r.json())
-                        .then(data => {
-                            // Log first request raw response for debugging
-                            if (m === 1) console.log('DASH-DEBUG: agent=' + code + ' month=1 raw=', JSON.stringify(data).slice(0, 500));
-                            const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
-                            return items;
-                        })
-                        .catch(err => { console.log('DASH-DEBUG: fetch error agent=' + code + ' month=' + m, err.message); return []; })
-                    );
-                }
-            }
+            // Filter to only this company's agents
+            const myAgents = allAgents.filter(a =>
+                agentCodes.includes(String(a.agentCode)) || agentCodes.includes(String(a.agentIndex))
+            );
+            console.log('DASH-DEBUG: agentCodes=', agentCodes, 'allAgents=', allAgents.length, 'myAgents=', myAgents.length);
+            if (myAgents.length > 0) console.log('DASH-DEBUG: myAgents[0]=', JSON.stringify(myAgents[0]).slice(0, 500));
 
-            const allResults = await Promise.all(fetchPromises);
-            const allPolicies = allResults.flat();
-            console.log('DASH-DEBUG: allPolicies.length=', allPolicies.length, 'sample=', allPolicies.length > 0 ? JSON.stringify(allPolicies[0]).slice(0, 300) : 'EMPTY');
-
-            // Deduplicate by policyIndex (same policy may appear in multiple months)
-            const seen = new Set();
-            const uniquePolicies = allPolicies.filter(p => {
-                const key = p.policyIndex || p.fullPolicyID || JSON.stringify(p);
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            });
-
-            // KPI calculations
-            const totalPolicies = uniquePolicies.length;
-            const totalTurnover = uniquePolicies.reduce((sum, p) => sum + (Number(p.total) || 0), 0);
-            const todaySales = uniquePolicies
-                .filter(p => {
-                    if (!p.issueDate) return false;
-                    try { return new Date(p.issueDate).toISOString().slice(0, 10) === todayStr; }
-                    catch (_) { return false; }
-                })
-                .reduce((sum, p) => sum + (Number(p.total) || 0), 0);
+            // KPI calculations from aggregate agent data
+            const totalPolicies = myAgents.reduce((s, a) => s + (Number(a.policyCount) || Number(a.totalPolicies) || Number(a.count) || 0), 0);
+            const totalTurnover = myAgents.reduce((s, a) => s + (Number(a.totalPremium) || Number(a.total) || Number(a.premium) || 0), 0);
 
             return res.json({
                 dashboardCalcData: [
                     { repType: 1, curYearValue: totalTurnover, prevYearValue: 0, percentDiff: 0 },
                     { repType: 5, curYearValue: totalPolicies, prevYearValue: 0, percentDiff: 0 },
-                    { repType: 6, curYearValue: todaySales, prevYearValue: 0, percentDiff: 0 }
+                    { repType: 6, curYearValue: 0, prevYearValue: 0, percentDiff: 0 }
                 ],
                 periods: [],
                 riders: [],
