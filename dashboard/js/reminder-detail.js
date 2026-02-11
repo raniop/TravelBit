@@ -176,6 +176,7 @@ function openAddModal() {
     document.getElementById('editId').value = '';
     document.getElementById('modalTitle').textContent = 'הוסף תזכורת';
     document.getElementById('formStatusRow').style.display = 'none';
+    document.getElementById('formTypeRow').style.display = 'none';
 
     // Clear form
     document.getElementById('formCustomerName').value = '';
@@ -251,6 +252,8 @@ function openEditModal(id) {
     document.getElementById('editId').value = r._id;
     document.getElementById('modalTitle').textContent = 'ערוך תזכורת';
     document.getElementById('formStatusRow').style.display = 'block';
+    document.getElementById('formTypeRow').style.display = 'block';
+    document.getElementById('formReminderType').value = r.type || currentType;
 
     document.getElementById('formCustomerName').value = r.customerName || '';
     document.getElementById('formIdNumber').value = r.idNumber || '';
@@ -287,6 +290,7 @@ async function saveReminder() {
 
     if (isEdit) {
         body.status = document.getElementById('formStatus').value;
+        body.type = document.getElementById('formReminderType').value;
     }
 
     console.log('[saveReminder] isEdit:', isEdit, 'editId:', editId);

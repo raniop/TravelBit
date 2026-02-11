@@ -98,7 +98,7 @@ module.exports = async function handler(req, res) {
             if (!reminder) return res.status(404).json({ message: 'תזכורת לא נמצאה.' });
 
             const { customerName, idNumber, phone, policyNumber,
-                    insuranceCompany, date, amount, status, notes, agentCode } = req.body;
+                    insuranceCompany, date, amount, status, notes, agentCode, type } = req.body;
 
             if (customerName !== undefined) reminder.customerName = customerName;
             if (idNumber !== undefined) reminder.idNumber = idNumber;
@@ -110,6 +110,7 @@ module.exports = async function handler(req, res) {
             if (status !== undefined) reminder.status = status;
             if (notes !== undefined) reminder.notes = notes;
             if (agentCode !== undefined) reminder.agentCode = agentCode;
+            if (type !== undefined) reminder.type = type;
 
             await reminder.save();
             return res.json({ message: 'התזכורת עודכנה בהצלחה!', reminder });
