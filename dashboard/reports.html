@@ -189,7 +189,7 @@
                         <div class="kpi-value" id="kpiTotalPremiums">-</div>
                     </div>
                     <div class="kpi-card">
-                        <div class="kpi-header">סה"כ עמלות</div>
+                        <div class="kpi-header" id="kpiCommissionLabel">סה"כ עמלות</div>
                         <div class="kpi-value" id="kpiTotalCommissions">-</div>
                     </div>
                 </div>
@@ -220,7 +220,7 @@
                                     <th>תאריך התחלה</th>
                                     <th>תאריך סיום</th>
                                     <th>פרמיה</th>
-                                    <th>עמלה</th>
+                                    <th id="thCommission">עמלה</th>
                                 </tr>
                             </thead>
                             <tbody id="reportBody">
@@ -235,7 +235,7 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/reports.js?v=3"></script>
+    <script src="js/reports.js?v=4"></script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
     function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}

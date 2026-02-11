@@ -1,6 +1,7 @@
-// Reports Page JS - v3 — All Policies Table with totals
+// Reports Page JS - v4 — agentRateTotal for non-Ophir, hatamTotal for Ophir
 let allAgentData = [];
 let allPolicies = [];
+let isOphir = false; // true = admin (Ophir), false = company (non-Ophir)
 
 document.addEventListener('DOMContentLoaded', () => {
     initUser();
@@ -10,12 +11,22 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initUser() {
     let user = getUser();
     if (user) {
+        isOphir = (user.role === 'admin');
+
         const nameEl = document.getElementById('userName');
         const avatarEl = document.getElementById('userAvatar');
         const companyEl = document.getElementById('companyName');
         if (nameEl) nameEl.textContent = user.name || 'משתמש';
         if (avatarEl) avatarEl.textContent = (user.name || 'C').charAt(0);
         if (companyEl) companyEl.textContent = user.companyName || user.name || 'חברה';
+
+        // Update column header and KPI label based on role
+        const thComm = document.getElementById('thCommission');
+        const kpiLabel = document.getElementById('kpiCommissionLabel');
+        if (!isOphir) {
+            if (thComm) thComm.textContent = 'עמלת סוכן';
+            if (kpiLabel) kpiLabel.textContent = 'סה"כ עמלות סוכן';
+        }
 
         if (!user.companyName) {
             user = await syncCompanyName();
@@ -77,7 +88,10 @@ async function loadReport() {
 function updateReportKPIs(agents) {
     const totalPolicies = agents.reduce((s, a) => s + (a.policyCount || 0), 0);
     const totalPremiums = agents.reduce((s, a) => s + (a.totalPremium || 0), 0);
-    const totalCommissions = agents.reduce((s, a) => s + (a.totalCommission || 0), 0);
+    // Ophir: hatamTotal (עמלה), non-Ophir: agentRateTotal (עמלת סוכן)
+    const totalCommissions = isOphir
+        ? agents.reduce((s, a) => s + (a.totalCommission || 0), 0)
+        : agents.reduce((s, a) => s + (a.totalAgentRate || 0), 0);
 
     document.getElementById('kpiAgentCount').textContent = agents.length;
     document.getElementById('kpiTotalPolicies').textContent = formatNumber(totalPolicies);
@@ -139,7 +153,8 @@ function renderPoliciesTable(policies) {
 
     tbody.innerHTML = policies.map((p, i) => {
         const premium = Number(p.total) || 0;
-        const commission = Number(p.hatamTotal) || 0;
+        // Ophir: hatamTotal, non-Ophir: agentRateTotal
+        const commission = isOphir ? (Number(p.hatamTotal) || 0) : (Number(p.agentRateTotal) || 0);
         totalPremium += premium;
         totalCommission += commission;
 

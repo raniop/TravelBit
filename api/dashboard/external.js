@@ -682,12 +682,14 @@ module.exports = async function handler(req, res) {
 
                         const totalPremium = allPolicies.reduce((s, p) => s + (Number(p.total) || 0), 0);
                         const totalCommission = allPolicies.reduce((s, p) => s + (Number(p.hatamTotal) || 0), 0);
+                        const totalAgentRate = allPolicies.reduce((s, p) => s + (Number(p.agentRateTotal) || 0), 0);
                         const policyCount = uniquePolicies.size || allPolicies.length;
 
                         return {
                             ...agent,
                             totalPremium,
                             totalCommission,
+                            totalAgentRate,
                             policyCount,
                             avgPremium: policyCount > 0 ? totalPremium / policyCount : 0,
                             policies: allPolicies
