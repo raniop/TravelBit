@@ -92,20 +92,22 @@ function renderDashboard() {
             <div class="card-urgent-panel${denseClass}">
                 <div class="urgent-panel-title">דורשים טיפול</div>
                 <ul class="card-urgent-list">
-                    ${urgentItems.map(item => `
+                    ${urgentItems.map(item => {
+                        const metaParts = [];
+                        if (item.dateLabel) metaParts.push(`<span class="urgent-date ${item.urgency}">${item.dateLabel}</span>`);
+                        if (item.insuranceCompany) metaParts.push(`<span>${escHtml(item.insuranceCompany)}</span>`);
+                        if (item.policyNumber) metaParts.push(`<span>פוליסה ${escHtml(item.policyNumber)}</span>`);
+                        if (item.statusLabel) metaParts.push(`<span class="urgent-status-${item.statusKey}">${item.statusLabel}</span>`);
+                        const metaHtml = metaParts.join('<span class="urgent-sep">·</span>');
+                        return `
                         <li>
                             <span class="urgent-dot ${item.urgency}"></span>
                             <div class="urgent-info">
                                 <span class="urgent-name">${escHtml(item.name)}</span>
-                                <span class="urgent-details">
-                                    ${item.insuranceCompany ? `<span>${escHtml(item.insuranceCompany)}</span>` : ''}
-                                    ${item.policyNumber ? `<span>פוליסה ${escHtml(item.policyNumber)}</span>` : ''}
-                                    ${item.statusLabel ? `<span class="urgent-status-${item.statusKey}">${item.statusLabel}</span>` : ''}
-                                </span>
+                                <div class="urgent-meta">${metaHtml}</div>
                             </div>
-                            <span class="urgent-date ${item.urgency}">${item.dateLabel}</span>
-                        </li>
-                    `).join('')}
+                        </li>`;
+                    }).join('')}
                 </ul>
             </div>` : '';
 

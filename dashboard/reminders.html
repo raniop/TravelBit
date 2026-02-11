@@ -83,10 +83,14 @@
             list-style: none; padding: 0; margin: 0;
         }
         .card-urgent-list li {
-            display: flex; align-items: flex-start; gap: 8px; padding: 6px 0;
+            display: flex; align-items: flex-start; gap: 8px; padding: 10px 0;
             font-size: 14px; color: var(--gray-600); line-height: 1.4;
+            position: relative;
         }
-        .card-urgent-list li + li { border-top: 1px dashed var(--gray-100); }
+        .card-urgent-list li + li::before {
+            content: ''; position: absolute; top: 0; right: 0; left: 0; height: 1px;
+            background: linear-gradient(to left, var(--gray-100), transparent);
+        }
         .urgent-dot {
             width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px;
         }
@@ -94,30 +98,32 @@
         .urgent-dot.warning { background: #F59E0B; }
         .urgent-dot.normal { background: #9CA3AF; }
         .urgent-info {
-            flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+            flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;
         }
         .urgent-name {
             font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .urgent-details {
-            display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--gray-400);
+        .urgent-meta {
+            display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+            font-size: 12px; color: var(--gray-400);
         }
-        .urgent-details span { white-space: nowrap; }
+        .urgent-meta span { white-space: nowrap; }
+        .urgent-meta .urgent-date { font-size: 12px; }
+        .urgent-meta .urgent-sep { color: var(--gray-200); }
         .urgent-status-open { color: #856404; }
         .urgent-status-inProgress { color: #004085; }
         .urgent-date {
-            font-size: 13px; color: var(--gray-400); white-space: nowrap; direction: ltr;
-            flex-shrink: 0; margin-top: 3px;
+            font-size: 12px; color: var(--gray-400); white-space: nowrap;
         }
         .urgent-date.overdue { color: #DC2626; font-weight: 700; }
         .urgent-date.warning { color: #D97706; font-weight: 600; }
 
         /* Dense mode: 4+ items — smaller font to fit */
         .card-urgent-panel.urgent-dense .urgent-panel-title { font-size: 10px; margin-bottom: 4px; }
-        .card-urgent-panel.urgent-dense .card-urgent-list li { font-size: 11px; padding: 4px 0; line-height: 1.3; }
+        .card-urgent-panel.urgent-dense .card-urgent-list li { font-size: 11px; padding: 6px 0; line-height: 1.3; }
         .card-urgent-panel.urgent-dense .urgent-dot { width: 6px; height: 6px; margin-top: 5px; }
-        .card-urgent-panel.urgent-dense .urgent-details { font-size: 9px; gap: 5px; }
-        .card-urgent-panel.urgent-dense .urgent-date { font-size: 10px; }
+        .card-urgent-panel.urgent-dense .urgent-meta { font-size: 9px; gap: 5px; }
+        .card-urgent-panel.urgent-dense .urgent-date { font-size: 9px; }
 
         /* Small cards: stack vertically when space is tight */
         @media (max-width: 600px) {
