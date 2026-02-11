@@ -137,18 +137,30 @@ function calculateKPIs(curPolicies, prevPolicies, month, year) {
     ];
 }
 
+// Module-level cache for resolved agent indexes (survives warm invocations)
+const agentIndexCache = new Map(); // agentCode → agentIndex
+let agentIndexCacheTime = 0;
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
 // Translate agentCodes (e.g. ['54']) → agentIndexes (e.g. [14179]) via GetAgentsReport
-// Paginates through all pages until all codes are found or all pages exhausted
+// Uses cache to avoid repeated slow API calls
 async function resolveAgentIndexes(agentCodes) {
+    const now = Date.now();
+    // Check cache first
+    if (now - agentIndexCacheTime < CACHE_TTL) {
+        const cached = agentCodes.map(c => agentIndexCache.get(String(c))).filter(Boolean);
+        if (cached.length === agentCodes.length) return cached;
+    }
+
     const resolved = [];
     const codesSet = new Set(agentCodes.map(c => String(c)));
     const foundCodes = new Set();
     let page = 1;
-    const PS = 500;
+    const PS = 100; // smaller pages = faster response from external API
 
     while (foundCodes.size < codesSet.size) {
         try {
-            const apiRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${page}&pageSize=${PS}`, 15000);
+            const apiRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${page}&pageSize=${PS}`, 20000);
             const data = await apiRes.json();
             const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
             if (items.length === 0) break;
@@ -157,19 +169,24 @@ async function resolveAgentIndexes(agentCodes) {
                 const code = String(agent.agentCode);
                 if (codesSet.has(code) && !foundCodes.has(code)) {
                     foundCodes.add(code);
-                    resolved.push(Math.round(Number(agent.agentIndex)));
+                    const idx = Math.round(Number(agent.agentIndex));
+                    resolved.push(idx);
+                    agentIndexCache.set(code, idx);
                 }
             }
 
+            // Stop early if we found all codes
+            if (foundCodes.size >= codesSet.size) break;
             if (items.length < PS) break; // last page
             page++;
-            if (page > 20) break; // safety limit
+            if (page > 50) break; // safety limit for 1000+ agents at 100/page
         } catch (err) {
             console.error('resolveAgentIndexes error page', page, err.message);
             break;
         }
     }
 
+    if (resolved.length > 0) agentIndexCacheTime = now;
     return resolved;
 }
 
@@ -182,7 +199,7 @@ async function fetchAllPoliciesByAgent(agentIndex, year, month) {
     while (true) {
         const apiRes = await bituhOfirFetch(
             `/api/Policy/GetPolicyDetailsByAgent?agentIndex=${agentIndex}&bYear=${year}&bMonth=${month}&page=${page}&pageSize=${PS}`,
-            15000
+            20000
         );
         const data = await apiRes.json();
         const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
@@ -289,18 +306,22 @@ module.exports = async function handler(req, res) {
             }
 
             // Step 2: For each agentIndex, fetch policies for all months YTD
+            // Use sequential fetching to avoid overloading external API
             let allPolicies = [];
-            const fetchPromises = [];
             for (const idx of agentIndexes) {
+                // Fetch all months for this agent in parallel (max ~12 concurrent)
+                const monthPromises = [];
                 for (let m = 1; m <= month; m++) {
-                    fetchPromises.push(
+                    monthPromises.push(
                         fetchAllPoliciesByAgent(idx, year, m)
-                            .then(policies => { allPolicies = allPolicies.concat(policies); })
-                            .catch(err => { console.error(`DASH: Error fetching agent ${idx} month ${m}:`, err.message); })
+                            .catch(err => { console.error(`DASH: Error agent ${idx} month ${m}:`, err.message); return []; })
                     );
                 }
+                const monthResults = await Promise.all(monthPromises);
+                for (const policies of monthResults) {
+                    allPolicies = allPolicies.concat(policies);
+                }
             }
-            await Promise.all(fetchPromises);
             console.log('DASH: total policies fetched=', allPolicies.length);
 
             // Step 3: Calculate KPIs from real policy data
