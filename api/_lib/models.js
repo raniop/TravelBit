@@ -134,6 +134,16 @@ const reminderSchema = new mongoose.Schema({
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
+// ===== DASHBOARD CACHE =====
+const dashboardCacheSchema = new mongoose.Schema({
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+    cacheKey: { type: String, required: true }, // e.g. "dashboard:2:2026" or "agents-report"
+    data: { type: mongoose.Schema.Types.Mixed, required: true },
+    cachedAt: { type: Date, default: Date.now }
+}, { timestamps: false });
+dashboardCacheSchema.index({ companyId: 1, cacheKey: 1 }, { unique: true });
+dashboardCacheSchema.index({ cachedAt: 1 }, { expireAfterSeconds: 86400 }); // auto-delete after 24h
+
 // Normalize dashboardModules: supports both old string format and new object format
 function normalizeDashboardModules(raw) {
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
@@ -155,5 +165,6 @@ const Employee = mongoose.models.Employee || mongoose.model('Employee', employee
 const Trip = mongoose.models.Trip || mongoose.model('Trip', tripSchema);
 const Policy = mongoose.models.Policy || mongoose.model('Policy', policySchema);
 const Reminder = mongoose.models.Reminder || mongoose.model('Reminder', reminderSchema);
+const DashboardCache = mongoose.models.DashboardCache || mongoose.model('DashboardCache', dashboardCacheSchema);
 
-module.exports = { User, Company, Employee, Trip, Policy, Reminder, normalizeDashboardModules };
+module.exports = { User, Company, Employee, Trip, Policy, Reminder, DashboardCache, normalizeDashboardModules };

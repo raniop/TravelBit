@@ -1,6 +1,6 @@
 const { verifyAuth, cors } = require('../_lib/auth');
 const connectDB = require('../_lib/db');
-const { Company, normalizeDashboardModules } = require('../_lib/models');
+const { Company, DashboardCache, normalizeDashboardModules } = require('../_lib/models');
 
 // Module-level token cache (survives warm invocations)
 let bituhOfirToken = {
@@ -313,14 +313,25 @@ module.exports = async function handler(req, res) {
                 });
             }
 
-            // === Other companies (with agentCodes): fetch policies + compute KPIs + YoY in one shot ===
+            // === Other companies (with agentCodes): use cache for fast load ===
+            const cacheKey = `dashboard:${month}:${year}`;
+            const CACHE_MAX_AGE = 30 * 60 * 1000; // 30 minutes
+
+            // Try to return cached data immediately
+            const cached = await DashboardCache.findOne({ companyId: user.companyId, cacheKey }).lean();
+            if (cached && (Date.now() - new Date(cached.cachedAt).getTime()) < CACHE_MAX_AGE) {
+                console.log('DASH: returning cached data, age=', Math.round((Date.now() - new Date(cached.cachedAt).getTime()) / 1000), 's');
+                return res.json(cached.data);
+            }
+
+            // No cache or stale — fetch fresh data
             const agentIndexes = isAlreadyIndexes
                 ? agentCodes.map(Number)
                 : await resolveAgentIndexes(agentCodes);
             console.log('DASH: agentCodes=', agentCodes, 'isAlreadyIndexes=', isAlreadyIndexes, 'agentIndexes=', agentIndexes);
 
             if (agentIndexes.length === 0) {
-                return res.json({
+                const emptyResult = {
                     dashboardCalcData: [
                         { repType: 1, curYearValue: 0, prevYearValue: 0, percentDiff: 0 },
                         { repType: 5, curYearValue: 0, prevYearValue: 0, percentDiff: 0 },
@@ -330,10 +341,11 @@ module.exports = async function handler(req, res) {
                     yoyData: [], yoyYear: year, yoyPrevYear: year - 1,
                     requestedMonth: month, requestedYear: year,
                     lastRefresh: new Date().toISOString()
-                });
+                };
+                return res.json(emptyResult);
             }
 
-            // Fetch current year + previous year policies in ONE batch (for KPIs + YoY)
+            // Fetch current year + previous year policies in ONE batch
             const prevYear = year - 1;
             const allTasks = [];
             for (const idx of agentIndexes) {
@@ -360,7 +372,7 @@ module.exports = async function handler(req, res) {
             const calcData = calculateKPIs(curPolicies, prevPolicies, month, year);
             const filteredCalc = calcData.filter(c => [1, 5, 6].includes(c.repType));
 
-            // Build YoY data from the same results (no extra API calls!)
+            // Build YoY data from the same results
             const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
             const yoyData = [];
             for (let m = 1; m <= month; m++) {
@@ -376,13 +388,22 @@ module.exports = async function handler(req, res) {
                 });
             }
 
-            return res.json({
+            const freshResult = {
                 dashboardCalcData: filteredCalc,
                 periods: [], riders: [], topPolicies: [],
                 yoyData, yoyYear: year, yoyPrevYear: prevYear,
                 requestedMonth: month, requestedYear: year,
                 lastRefresh: new Date().toISOString()
-            });
+            };
+
+            // Save to cache (upsert, don't await — fire and forget)
+            DashboardCache.updateOne(
+                { companyId: user.companyId, cacheKey },
+                { $set: { data: freshResult, cachedAt: new Date() } },
+                { upsert: true }
+            ).catch(err => console.error('Cache save error:', err.message));
+
+            return res.json(freshResult);
         }
 
         // Route: /api/dashboard/external/yoy - Build YoY monthly comparison
