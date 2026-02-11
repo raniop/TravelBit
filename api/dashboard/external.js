@@ -230,11 +230,33 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ message: 'אין הרשאה לנתוני ביטוח.' });
     }
     // If agentCodes exist → filter by them; if empty → show all (no filtering)
-    // agentCodes may contain agentIndex values (large numbers like 14179) or agentCode values (small like 54)
-    const rawAgentCodes = (Array.isArray(company.agentCodes) && company.agentCodes.length > 0)
+    let rawAgentCodes = (Array.isArray(company.agentCodes) && company.agentCodes.length > 0)
         ? company.agentCodes.map(String)
         : null;
-    // Detect if these are already agentIndexes (large numbers) — skip resolve step
+
+    // Auto-resolve: if any agentCode is small (≤1000), it's an agentCode not agentIndex.
+    // Resolve once and save back to DB so future requests are instant.
+    if (rawAgentCodes && rawAgentCodes.some(c => Number(c) <= 1000)) {
+        const smallCodes = rawAgentCodes.filter(c => Number(c) <= 1000);
+        const alreadyResolved = rawAgentCodes.filter(c => Number(c) > 1000);
+        try {
+            const resolved = await resolveAgentIndexes(smallCodes);
+            if (resolved.length > 0) {
+                const newCodes = [...alreadyResolved, ...resolved.map(String)];
+                // Update DB so next time it's instant
+                await Company.updateOne(
+                    { _id: user.companyId },
+                    { $set: { agentCodes: newCodes } }
+                );
+                rawAgentCodes = newCodes;
+                console.log('AUTO-RESOLVE: updated agentCodes', smallCodes, '→', resolved, 'saved to DB');
+            }
+        } catch (err) {
+            console.error('AUTO-RESOLVE error:', err.message);
+            // Continue with what we have
+        }
+    }
+
     const isAlreadyIndexes = rawAgentCodes && rawAgentCodes.every(c => Number(c) > 1000);
     const agentCodes = rawAgentCodes;
 
