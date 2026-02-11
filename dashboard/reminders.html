@@ -15,13 +15,28 @@
         .reminder-cards-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;
         }
-        @media (max-width: 600px) { .reminder-cards-grid { grid-template-columns: 1fr; gap: 12px; } }
+        .reminder-card.has-urgent {
+            grid-column: span 2;
+        }
+        @media (max-width: 900px) {
+            .reminder-cards-grid { grid-template-columns: 1fr; gap: 12px; }
+            .reminder-card.has-urgent { grid-column: span 1; }
+        }
 
         .reminder-card {
             background: white; border-radius: 12px; padding: 22px 24px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-100);
             cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
-            text-decoration: none; display: block; color: inherit;
+            text-decoration: none; display: flex; color: inherit; gap: 0;
+        }
+        .reminder-card.has-urgent {
+            gap: 20px;
+        }
+        .card-main-info {
+            flex-shrink: 0;
+        }
+        .reminder-card:not(.has-urgent) .card-main-info {
+            flex: 1;
         }
         .reminder-card:hover {
             box-shadow: 0 4px 14px rgba(0,0,0,0.1); transform: translateY(-2px);
@@ -66,30 +81,53 @@
         .mini-inProgress { background: #CCE5FF; color: #004085; }
         .mini-completed { background: #D4EDDA; color: #155724; }
 
-        /* ===== Urgent Items List in Cards ===== */
+        /* ===== Urgent Items Panel (Left Side of Card) ===== */
+        .card-urgent-panel {
+            flex: 1; min-width: 0;
+            border-right: 1px solid var(--gray-100); padding-right: 18px;
+        }
+        .urgent-panel-title {
+            font-size: 11px; font-weight: 700; color: var(--gray-400);
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+        }
         .card-urgent-list {
-            margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--gray-100);
-            list-style: none; padding-right: 0; padding-left: 0;
+            list-style: none; padding: 0; margin: 0;
         }
         .card-urgent-list li {
-            display: flex; align-items: center; gap: 8px; padding: 5px 0;
+            display: flex; align-items: flex-start; gap: 8px; padding: 5px 0;
             font-size: 12px; color: var(--gray-600); line-height: 1.3;
         }
         .card-urgent-list li + li { border-top: 1px dashed var(--gray-100); }
         .urgent-dot {
-            width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+            width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
         }
         .urgent-dot.overdue { background: #EF4444; }
         .urgent-dot.warning { background: #F59E0B; }
         .urgent-dot.normal { background: #9CA3AF; }
-        .urgent-name {
-            flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        .urgent-info {
+            flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;
         }
+        .urgent-name {
+            font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .urgent-details {
+            display: flex; gap: 6px; flex-wrap: wrap; font-size: 10px; color: var(--gray-400);
+        }
+        .urgent-details span { white-space: nowrap; }
+        .urgent-status-open { color: #856404; }
+        .urgent-status-inProgress { color: #004085; }
         .urgent-date {
             font-size: 11px; color: var(--gray-400); white-space: nowrap; direction: ltr;
+            flex-shrink: 0; margin-top: 2px;
         }
         .urgent-date.overdue { color: #DC2626; font-weight: 700; }
         .urgent-date.warning { color: #D97706; font-weight: 600; }
+
+        /* Mobile: stack vertically */
+        @media (max-width: 600px) {
+            .reminder-card.has-urgent { flex-direction: column; gap: 14px; }
+            .card-urgent-panel { border-right: none; padding-right: 0; border-top: 1px solid var(--gray-100); padding-top: 12px; }
+        }
 
         /* ===== Email Drop Zone ===== */
         .email-drop-zone {

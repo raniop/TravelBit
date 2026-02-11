@@ -88,26 +88,38 @@ function renderDashboard() {
         // Get top urgent reminders (open/inProgress, sorted by due date urgency)
         const urgentItems = getUrgentItems(typeReminders, today, 5);
         const urgentHtml = urgentItems.length ? `
-            <ul class="card-urgent-list">
-                ${urgentItems.map(item => `
-                    <li>
-                        <span class="urgent-dot ${item.urgency}"></span>
-                        <span class="urgent-name">${escHtml(item.name)}</span>
-                        <span class="urgent-date ${item.urgency}">${item.dateLabel}</span>
-                    </li>
-                `).join('')}
-            </ul>` : '';
+            <div class="card-urgent-panel">
+                <div class="urgent-panel-title">דורשים טיפול</div>
+                <ul class="card-urgent-list">
+                    ${urgentItems.map(item => `
+                        <li>
+                            <span class="urgent-dot ${item.urgency}"></span>
+                            <div class="urgent-info">
+                                <span class="urgent-name">${escHtml(item.name)}</span>
+                                <span class="urgent-details">
+                                    ${item.insuranceCompany ? `<span>${escHtml(item.insuranceCompany)}</span>` : ''}
+                                    ${item.policyNumber ? `<span>פוליסה ${escHtml(item.policyNumber)}</span>` : ''}
+                                    ${item.statusLabel ? `<span class="urgent-status-${item.statusKey}">${item.statusLabel}</span>` : ''}
+                                </span>
+                            </div>
+                            <span class="urgent-date ${item.urgency}">${item.dateLabel}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>` : '';
 
         html += `
-        <a class="reminder-card" href="reminder-detail.html?type=${key}">
-            <div class="card-icon">${icon}</div>
-            <div class="reminder-card-title">${label}</div>
-            <div class="reminder-card-count">${total}</div>
-            <div class="reminder-card-statuses">
-                ${overdueCount ? `<span class="mini-badge mini-overdue">${overdueCount} באיחור</span>` : ''}
-                ${openCount ? `<span class="mini-badge mini-open">${openCount} פתוח</span>` : ''}
-                ${inProgressCount ? `<span class="mini-badge mini-inProgress">${inProgressCount} בטיפול</span>` : ''}
-                ${completedCount ? `<span class="mini-badge mini-completed">${completedCount} הושלם</span>` : ''}
+        <a class="reminder-card ${urgentItems.length ? 'has-urgent' : ''}" href="reminder-detail.html?type=${key}">
+            <div class="card-main-info">
+                <div class="card-icon">${icon}</div>
+                <div class="reminder-card-title">${label}</div>
+                <div class="reminder-card-count">${total}</div>
+                <div class="reminder-card-statuses">
+                    ${overdueCount ? `<span class="mini-badge mini-overdue">${overdueCount} באיחור</span>` : ''}
+                    ${openCount ? `<span class="mini-badge mini-open">${openCount} פתוח</span>` : ''}
+                    ${inProgressCount ? `<span class="mini-badge mini-inProgress">${inProgressCount} בטיפול</span>` : ''}
+                    ${completedCount ? `<span class="mini-badge mini-completed">${completedCount} הושלם</span>` : ''}
+                </div>
             </div>
             ${urgentHtml}
         </a>`;
@@ -248,6 +260,8 @@ function getUrgentItems(reminders, today, maxItems) {
         return aDate - bDate;
     });
 
+    const STATUS_LABELS = { open: 'פתוח', inProgress: 'בטיפול' };
+
     return active.slice(0, maxItems).map(r => {
         const name = r.customerName || r.notes?.substring(0, 30) || 'ללא שם';
         let urgency = 'normal';
@@ -275,7 +289,15 @@ function getUrgentItems(reminders, today, maxItems) {
             dateLabel = 'ללא תאריך';
         }
 
-        return { name, urgency, dateLabel };
+        return {
+            name,
+            urgency,
+            dateLabel,
+            insuranceCompany: r.insuranceCompany || '',
+            policyNumber: r.policyNumber || '',
+            statusLabel: STATUS_LABELS[r.status] || '',
+            statusKey: r.status || 'open'
+        };
     });
 }
 
