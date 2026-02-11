@@ -1,4 +1,4 @@
-// Reports Page JS - v2 — All Policies Table
+// Reports Page JS - v3 — All Policies Table with totals
 let allAgentData = [];
 let allPolicies = [];
 
@@ -99,6 +99,7 @@ function filterAndRender() {
                 p.policyIndex,
                 p.customerName || p.insuredName || p.clientName,
                 p.policyTypeName || p.insuranceType || p.type,
+                p.policyDoc,
                 String(p._agentCode)
             ].filter(Boolean).map(v => String(v).toLowerCase());
             return fields.some(f => f.includes(query));
@@ -124,33 +125,58 @@ function sortAndRender() {
 // ==================== Render Policies Table ====================
 function renderPoliciesTable(policies) {
     const tbody = document.getElementById('reportBody');
+    const tfoot = document.getElementById('reportFoot');
 
     if (!policies || policies.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9"><div class="empty-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>לא נמצאו נתונים</p></div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10"><div class="empty-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>לא נמצאו נתונים</p></div></td></tr>';
+        if (tfoot) tfoot.innerHTML = '';
         return;
     }
+
+    // Calculate totals
+    let totalPremium = 0;
+    let totalCommission = 0;
 
     tbody.innerHTML = policies.map((p, i) => {
         const premium = Number(p.total) || 0;
         const commission = Number(p.hatamTotal) || 0;
+        totalPremium += premium;
+        totalCommission += commission;
+
         const policyNum = p.fullPolicyID || p.policyIndex || '-';
+        const supplement = p.policyDoc || '-';
         const customerName = p.customerName || p.insuredName || p.clientName || '-';
         const insuranceType = p.policyTypeName || p.insuranceType || p.type || '-';
         const startDate = formatDate(p.policyStartDate || p.startDate);
         const endDate = formatDate(p.policyEndDate || p.endDate);
 
+        const premiumClass = premium < 0 ? 'td-premium td-negative' : 'td-premium';
+        const commissionClass = commission < 0 ? 'td-premium td-negative' : 'td-premium';
+
         return `<tr>
             <td class="td-center">${i + 1}</td>
             <td><strong>${esc(p._agentName)}</strong></td>
             <td class="td-center">${esc(String(policyNum))}</td>
+            <td class="td-center">${esc(String(supplement))}</td>
             <td>${esc(customerName)}</td>
             <td>${esc(insuranceType)}</td>
             <td class="td-center">${startDate}</td>
             <td class="td-center">${endDate}</td>
-            <td class="td-premium">$${formatNumber(premium)}</td>
-            <td class="td-premium">$${formatNumber(commission)}</td>
+            <td class="${premiumClass}">${formatCurrency(premium)}</td>
+            <td class="${commissionClass}">${formatCurrency(commission)}</td>
         </tr>`;
     }).join('');
+
+    // Totals row
+    if (tfoot) {
+        const totalPremClass = totalPremium < 0 ? 'td-premium td-negative' : 'td-premium';
+        const totalCommClass = totalCommission < 0 ? 'td-premium td-negative' : 'td-premium';
+        tfoot.innerHTML = `<tr>
+            <td colspan="8" style="text-align: right; font-weight: 800;">סה"כ</td>
+            <td class="${totalPremClass}">${formatCurrency(totalPremium)}</td>
+            <td class="${totalCommClass}">${formatCurrency(totalCommission)}</td>
+        </tr>`;
+    }
 }
 
 // ==================== Utilities ====================
@@ -165,6 +191,15 @@ function showError(msg) {
 function formatNumber(n) {
     if (n === null || n === undefined) return '0';
     return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+function formatCurrency(n) {
+    if (n === null || n === undefined) return '$0';
+    const val = Number(n);
+    if (val < 0) {
+        return '-$' + formatNumber(Math.abs(val));
+    }
+    return '$' + formatNumber(val);
 }
 
 function formatDate(dateStr) {

@@ -657,16 +657,15 @@ module.exports = async function handler(req, res) {
                     if (pg > 20) break;
                 }
 
-                // Step 2: For each agent, fetch YTD policies to calculate totals
+                // Step 2: For each agent, fetch ALL months (1-12) to get all policies for the year
                 const now = new Date();
                 const year = now.getFullYear();
-                const month = now.getMonth() + 1;
 
                 const enrichedAgents = await runWithConcurrency(
                     matchedAgents.map(agent => async () => {
                         const idx = Math.round(Number(agent.agentIndex));
                         let allPolicies = [];
-                        for (let m = 1; m <= month; m++) {
+                        for (let m = 1; m <= 12; m++) {
                             try {
                                 const policies = await fetchAllPoliciesByAgent(idx, year, m);
                                 allPolicies = allPolicies.concat(policies);

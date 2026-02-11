@@ -89,8 +89,13 @@
             padding: 9px 10px; font-size: 12px; color: var(--gray-700);
             border-bottom: 1px solid var(--gray-100); white-space: nowrap;
         }
-        .report-table .td-premium { font-weight: 700; color: #059669; }
+        .report-table .td-premium { font-weight: 700; color: #059669; direction: ltr; text-align: right; }
+        .report-table .td-negative { color: #DC2626; }
         .report-table .td-center { text-align: center; }
+        .report-table tfoot td {
+            background: #f8fafc; font-weight: 800; font-size: 13px; color: var(--dark);
+            border-top: 2px solid var(--gray-300); padding: 12px 10px;
+        }
 
         /* Loading / Empty / Error states */
         .loading-overlay { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--gray-400); }
@@ -209,6 +214,7 @@
                                     <th>#</th>
                                     <th>שם סוכן</th>
                                     <th>מס' פוליסה</th>
+                                    <th>תוספת</th>
                                     <th>שם לקוח</th>
                                     <th>סוג ביטוח</th>
                                     <th>תאריך התחלה</th>
@@ -218,8 +224,9 @@
                                 </tr>
                             </thead>
                             <tbody id="reportBody">
-                                <tr><td colspan="9"><div class="loading-overlay"><div class="spinner"></div> טוען דוח...</div></td></tr>
+                                <tr><td colspan="10"><div class="loading-overlay"><div class="spinner"></div> טוען דוח...</div></td></tr>
                             </tbody>
+                            <tfoot id="reportFoot"></tfoot>
                         </table>
                     </div>
                 </div>
@@ -228,7 +235,7 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/reports.js?v=2"></script>
+    <script src="js/reports.js?v=3"></script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
     function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}
