@@ -690,7 +690,8 @@ module.exports = async function handler(req, res) {
                             totalPremium,
                             totalCommission,
                             policyCount,
-                            avgPremium: policyCount > 0 ? totalPremium / policyCount : 0
+                            avgPremium: policyCount > 0 ? totalPremium / policyCount : 0,
+                            policies: allPolicies
                         };
                     }),
                     2 // concurrency

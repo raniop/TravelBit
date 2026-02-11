@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="css/dashboard.css">
     <script src="js/sidebar-init.js"></script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4" defer></script>
+    <!-- chart.js removed - no longer needed -->
     <style>
         /* ===== KPI Grid ===== */
         .kpi-grid {
@@ -36,28 +36,7 @@
         .kpi-value { font-size: 24px; font-weight: 800; color: var(--dark); }
         @media (max-width: 480px) { .kpi-value { font-size: 18px; } .kpi-header { font-size: 11px; } }
 
-        /* ===== Chart ===== */
-        .chart-card {
-            background: white; border-radius: 14px; padding: 20px 24px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-100);
-            margin-bottom: 24px;
-        }
-        .chart-card h3 {
-            font-size: 14px; font-weight: 700; color: var(--dark); margin: 0 0 14px 0;
-            padding-bottom: 10px; border-bottom: 1px solid var(--gray-100);
-            display: flex; align-items: center; gap: 8px;
-        }
-        .chart-card h3 .chart-icon {
-            width: 26px; height: 26px; border-radius: 6px; display: flex;
-            align-items: center; justify-content: center; font-size: 13px;
-        }
-        .chart-container { position: relative; height: 320px; }
-        .chart-empty {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            height: 100%; color: var(--gray-400); gap: 8px;
-        }
-        .chart-empty svg { width: 36px; height: 36px; opacity: 0.3; }
-        .chart-empty p { font-size: 13px; }
+        /* Chart section removed */
 
         /* ===== Filter / Sort Bar ===== */
         .filter-bar {
@@ -210,35 +189,17 @@
                     </div>
                 </div>
 
-                <!-- Chart: Top 10 Agents -->
-                <div class="chart-card">
-                    <h3>
-                        <span class="chart-icon" style="background:#EFF6FF;color:#3B82F6;">&#128202;</span>
-                        Top 10 סוכנים לפי פרמיות
-                    </h3>
-                    <div class="chart-container" id="agentsChartWrap">
-                        <canvas id="agentsChart"></canvas>
-                    </div>
-                </div>
-
                 <!-- Filter / Sort Bar -->
                 <div class="filter-bar">
-                    <label>מיון:</label>
-                    <select id="sortField" onchange="sortAndRender()">
-                        <option value="premium">פרמיות (גבוה לנמוך)</option>
-                        <option value="policies">מספר פוליסות</option>
-                        <option value="commission">עמלות</option>
-                        <option value="name">שם סוכן</option>
-                    </select>
                     <label>חיפוש:</label>
-                    <input type="text" class="search-input" id="searchInput" placeholder="שם סוכן, קוד..." oninput="filterReport()">
+                    <input type="text" class="search-input" id="searchInput" placeholder="חיפוש לפי שם לקוח, מספר פוליסה..." oninput="filterReport()">
                     <span class="search-count" id="searchCount"></span>
                 </div>
 
-                <!-- Report Table -->
+                <!-- All Policies Table -->
                 <div class="report-table-wrap">
                     <div class="report-table-header">
-                        <h2>דוח סוכנים</h2>
+                        <h2>כל הפוליסות</h2>
                         <span class="count-badge" id="totalCount">טוען...</span>
                     </div>
                     <div class="table-scroll">
@@ -247,16 +208,17 @@
                                 <tr>
                                     <th>#</th>
                                     <th>שם סוכן</th>
-                                    <th>קוד סוכן</th>
-                                    <th>מספר פוליסות</th>
-                                    <th>סה"כ פרמיות</th>
-                                    <th>סה"כ עמלות</th>
-                                    <th>פרמיה ממוצעת</th>
-                                    <th>% מהמחזור</th>
+                                    <th>מס' פוליסה</th>
+                                    <th>שם לקוח</th>
+                                    <th>סוג ביטוח</th>
+                                    <th>תאריך התחלה</th>
+                                    <th>תאריך סיום</th>
+                                    <th>פרמיה</th>
+                                    <th>עמלה</th>
                                 </tr>
                             </thead>
                             <tbody id="reportBody">
-                                <tr><td colspan="8"><div class="loading-overlay"><div class="spinner"></div> טוען דוח...</div></td></tr>
+                                <tr><td colspan="9"><div class="loading-overlay"><div class="spinner"></div> טוען דוח...</div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -266,7 +228,7 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/reports.js?v=1"></script>
+    <script src="js/reports.js?v=2"></script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
     function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}
