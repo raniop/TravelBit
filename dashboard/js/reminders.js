@@ -86,8 +86,8 @@ function renderDashboard() {
         const icon = CARD_ICONS[key] || '';
 
         // Get top urgent reminders (open/inProgress, sorted by due date urgency)
-        const urgentItems = getUrgentItems(typeReminders, today, 5);
-        const denseClass = urgentItems.length >= 4 ? ' urgent-dense' : urgentItems.length >= 3 ? ' urgent-medium' : '';
+        const urgentItems = getUrgentItems(typeReminders, today, 3);
+        const denseClass = urgentItems.length >= 3 ? ' urgent-dense' : '';
         const urgentHtml = urgentItems.length ? `
             <div class="card-urgent-panel${denseClass}">
                 <div class="urgent-panel-title">דורשים טיפול</div>
