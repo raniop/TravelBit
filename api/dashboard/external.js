@@ -197,7 +197,7 @@ async function fetchAllPoliciesByAgent(agentIndex, year, month) {
     let all = [];
     let page = 1;
     const PS = 50; // API max is 50 per page
-    const TIMEOUT = 20000; // 20s per request
+    const TIMEOUT = 12000; // 12s per request — enough for slow API but won't kill Vercel
 
     while (true) {
         const apiRes = await bituhOfirFetch(
