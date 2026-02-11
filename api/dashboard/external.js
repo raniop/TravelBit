@@ -660,7 +660,10 @@ module.exports = async function handler(req, res) {
                     pg++;
                     if (pg > 20) break;
                 }
-                return res.json({ items: matchedAgents, totalCount: matchedAgents.length });
+                // Include debug info: field names of first agent for frontend diagnostics
+                const debugFields = matchedAgents.length > 0 ? Object.keys(matchedAgents[0]) : [];
+                console.log('agents-report: returning', matchedAgents.length, 'agents, fields:', debugFields);
+                return res.json({ items: matchedAgents, totalCount: matchedAgents.length, _debugFields: debugFields });
             }
 
             // Ophir (no agentCodes): pass through as-is
