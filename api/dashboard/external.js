@@ -343,9 +343,47 @@ module.exports = async function handler(req, res) {
             const prevYear = year - 1;
             const maxMonth = Number(req.query.month) || 12;
 
-            // === Other companies (with agentCodes): no data yet ===
+            // === Other companies (with agentCodes): build YoY from GetPolicyDetailsByAgent ===
             if (agentCodes) {
-                return res.json({ year, prevYear, yoyData: [], noData: true });
+                const agentIndexes = await resolveAgentIndexes(agentCodes);
+                if (agentIndexes.length === 0) {
+                    return res.json({ year, prevYear, yoyData: [] });
+                }
+
+                const monthNames = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+
+                // Build all fetch tasks: { month, yearVal, agentIdx } → turnover
+                const tasks = [];
+                for (let m = 1; m <= maxMonth; m++) {
+                    for (const idx of agentIndexes) {
+                        tasks.push({ m, y: year, idx });
+                        tasks.push({ m, y: prevYear, idx });
+                    }
+                }
+
+                // Execute all in parallel (limited by external API speed)
+                const results = await Promise.all(
+                    tasks.map(t =>
+                        fetchAllPoliciesByAgent(t.idx, t.y, t.m)
+                            .then(policies => ({ m: t.m, y: t.y, total: policies.reduce((s, p) => s + (Number(p.total) || 0), 0) }))
+                            .catch(() => ({ m: t.m, y: t.y, total: 0 }))
+                    )
+                );
+
+                // Aggregate by month+year
+                const yoyData = [];
+                for (let m = 1; m <= maxMonth; m++) {
+                    const curTotal = results.filter(r => r.m === m && r.y === year).reduce((s, r) => s + r.total, 0);
+                    const prevTotal = results.filter(r => r.m === m && r.y === prevYear).reduce((s, r) => s + r.total, 0);
+                    yoyData.push({
+                        month: monthNames[m - 1],
+                        monthNum: m,
+                        currentYear: curTotal,
+                        previousYear: prevTotal
+                    });
+                }
+
+                return res.json({ year, prevYear, yoyData });
             }
 
             // === Ophir (no agentCodes): use original BituhOfir Dashboard API ===

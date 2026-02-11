@@ -110,16 +110,15 @@ async function loadBituhOfirDashboard(month, year) {
             renderRegionChart(topPolicies);
         }
 
-        // Load YoY chart separately (skip for limited data)
+        // Load YoY chart — show for all companies that have at least some KPI data
         const yoySection = document.getElementById('yoySection');
-        if (calcData.length < 6) {
-            // Agent-mode: no YoY data available, hide section
-            if (yoySection) yoySection.style.display = 'none';
-        } else {
+        if (calcData.length > 0) {
             if (yoySection) yoySection.style.display = '';
             const reqMonth = month || (new Date().getMonth() + 1);
             const reqYear = year || new Date().getFullYear();
             loadYoYChart(reqMonth, reqYear);
+        } else {
+            if (yoySection) yoySection.style.display = 'none';
         }
 
     } catch (err) {
