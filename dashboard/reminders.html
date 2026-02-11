@@ -22,7 +22,7 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-100);
             cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
             text-decoration: none; display: flex; color: inherit; gap: 16px;
-            align-items: stretch;
+            align-items: stretch; min-height: 180px; height: 180px;
         }
         .card-main-info {
             flex-shrink: 0;
@@ -72,12 +72,12 @@
 
         /* ===== Urgent Items Panel (Left Side of Card) ===== */
         .card-urgent-panel {
-            flex: 1; min-width: 0;
+            flex: 1; min-width: 0; overflow: hidden;
             border-right: 1px solid var(--gray-100); padding-right: 14px;
         }
         .urgent-panel-title {
             font-size: 11px; font-weight: 700; color: var(--gray-400);
-            letter-spacing: 0.3px; margin-bottom: 8px;
+            letter-spacing: 0.3px; margin-bottom: 6px;
         }
         .card-urgent-list {
             list-style: none; padding: 0; margin: 0;
@@ -118,11 +118,19 @@
         .urgent-date.overdue { color: #DC2626; font-weight: 700; }
         .urgent-date.warning { color: #D97706; font-weight: 600; }
 
-        /* Dense mode: 4+ items — smaller font to fit */
-        .card-urgent-panel.urgent-dense .urgent-panel-title { font-size: 10px; margin-bottom: 4px; }
-        .card-urgent-panel.urgent-dense .card-urgent-list li { font-size: 11px; padding: 6px 0; line-height: 1.3; }
-        .card-urgent-panel.urgent-dense .urgent-dot { width: 6px; height: 6px; margin-top: 5px; }
-        .card-urgent-panel.urgent-dense .urgent-meta { font-size: 9px; gap: 5px; }
+        /* Medium mode: 3 items */
+        .card-urgent-panel.urgent-medium .urgent-panel-title { font-size: 10px; margin-bottom: 4px; }
+        .card-urgent-panel.urgent-medium .card-urgent-list li { font-size: 12px; padding: 6px 0; line-height: 1.3; }
+        .card-urgent-panel.urgent-medium .urgent-dot { width: 7px; height: 7px; margin-top: 5px; }
+        .card-urgent-panel.urgent-medium .urgent-meta { font-size: 10px; gap: 6px; }
+        .card-urgent-panel.urgent-medium .urgent-date { font-size: 10px; }
+
+        /* Dense mode: 4+ items */
+        .card-urgent-panel.urgent-dense .urgent-panel-title { font-size: 9px; margin-bottom: 3px; }
+        .card-urgent-panel.urgent-dense .card-urgent-list li { font-size: 11px; padding: 4px 0; line-height: 1.2; }
+        .card-urgent-panel.urgent-dense .urgent-dot { width: 6px; height: 6px; margin-top: 4px; }
+        .card-urgent-panel.urgent-dense .urgent-info { gap: 1px; }
+        .card-urgent-panel.urgent-dense .urgent-meta { font-size: 9px; gap: 4px; }
         .card-urgent-panel.urgent-dense .urgent-date { font-size: 9px; }
 
         /* Small cards: stack vertically when space is tight */
