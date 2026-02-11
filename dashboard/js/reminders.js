@@ -87,8 +87,9 @@ function renderDashboard() {
 
         // Get top urgent reminders (open/inProgress, sorted by due date urgency)
         const urgentItems = getUrgentItems(typeReminders, today, 5);
+        const denseClass = urgentItems.length >= 4 ? ' urgent-dense' : '';
         const urgentHtml = urgentItems.length ? `
-            <div class="card-urgent-panel">
+            <div class="card-urgent-panel${denseClass}">
                 <div class="urgent-panel-title">דורשים טיפול</div>
                 <ul class="card-urgent-list">
                     ${urgentItems.map(item => `
