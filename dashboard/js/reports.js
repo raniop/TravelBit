@@ -120,8 +120,12 @@ function filterAndRender() {
         });
     }
 
-    // Sort by premium descending
-    filtered.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
+    // Sort by policy number descending (highest first)
+    filtered.sort((a, b) => {
+        const aNum = Number(a.fullPolicyID || a.policyIndex || 0);
+        const bNum = Number(b.fullPolicyID || b.policyIndex || 0);
+        return bNum - aNum;
+    });
 
     document.getElementById('searchCount').textContent = filtered.length + ' תוצאות';
     renderPoliciesTable(filtered);
