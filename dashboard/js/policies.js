@@ -293,11 +293,15 @@ function renderPolicyDetails(p) {
     // === Financial Section ===
     html += '<div class="details-section">';
     html += '<h3><span class="icon">💰</span> נתונים כספיים</h3>';
+    const _user = getUser();
+    const _isOphir = _user && _user.role === 'admin';
     const finFields = [
         ['סה"כ פרמיה', '$' + formatNumber(p.total)],
         ['פרמיה בסיסית', p.basePolicyTotal ? '$' + formatNumber(p.basePolicyTotal) : null],
         ['פרמיית ריידרים', p.riderTotal ? '$' + formatNumber(p.riderTotal) : null],
-        ['עמלת חתם', p.hatamTotal ? '$' + formatNumber(p.hatamTotal) : null],
+        _isOphir
+            ? ['עמלת חתם', p.hatamTotal ? '$' + formatNumber(p.hatamTotal) : null]
+            : ['עמלת סוכן', p.agentRateTotal ? '$' + formatNumber(p.agentRateTotal) : null],
     ];
     finFields.forEach(([label, value]) => {
         if (value !== null && value !== undefined) {
