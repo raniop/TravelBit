@@ -224,6 +224,11 @@ module.exports = async function handler(req, res) {
                 agentCodes.includes(String(a.agentCode)) || agentCodes.includes(String(a.agentIndex))
             );
             console.log('DASH-DEBUG: agentCodes=', agentCodes, 'allAgents=', allAgents.length, 'myAgents=', myAgents.length);
+            // Debug: show first agent keys + values, and search for '54' in all fields
+            if (allAgents.length > 0) console.log('DASH-DEBUG: sample agent keys=', Object.keys(allAgents[0]), 'values=', JSON.stringify(allAgents[0]).slice(0, 600));
+            const found54 = allAgents.find(a => Object.values(a).some(v => String(v) === '54'));
+            if (found54) console.log('DASH-DEBUG: found agent with value 54=', JSON.stringify(found54).slice(0, 600));
+            else console.log('DASH-DEBUG: NO agent has any field with value "54"');
             if (myAgents.length > 0) console.log('DASH-DEBUG: myAgents[0]=', JSON.stringify(myAgents[0]).slice(0, 500));
 
             // KPI calculations from aggregate agent data
