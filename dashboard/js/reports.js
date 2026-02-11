@@ -1,10 +1,13 @@
-// Reports Page JS - v4 — agentRateTotal for non-Ophir, hatamTotal for Ophir
+// Reports Page JS - v5 — month/year selector
 let allAgentData = [];
 let allPolicies = [];
-let isOphir = false; // true = admin (Ophir), false = company (non-Ophir)
+let isOphir = false;
+
+const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
 document.addEventListener('DOMContentLoaded', () => {
     initUser();
+    initDateSelectors();
     loadReport();
 });
 
@@ -20,7 +23,6 @@ async function initUser() {
         if (avatarEl) avatarEl.textContent = (user.name || 'C').charAt(0);
         if (companyEl) companyEl.textContent = user.companyName || user.name || 'חברה';
 
-        // Update column header and KPI label based on role
         const thComm = document.getElementById('thCommission');
         const kpiLabel = document.getElementById('kpiCommissionLabel');
         if (!isOphir) {
@@ -37,11 +39,67 @@ async function initUser() {
     }
 }
 
+// ==================== Date Selectors ====================
+function initDateSelectors() {
+    const now = new Date();
+    const curMonth = now.getMonth() + 1;
+    const curYear = now.getFullYear();
+
+    const fromMonthEl = document.getElementById('fromMonth');
+    const toMonthEl = document.getElementById('toMonth');
+    const fromYearEl = document.getElementById('fromYear');
+    const toYearEl = document.getElementById('toYear');
+
+    // Populate months
+    for (let m = 1; m <= 12; m++) {
+        const opt1 = new Option(MONTH_NAMES[m - 1], m);
+        const opt2 = new Option(MONTH_NAMES[m - 1], m);
+        fromMonthEl.appendChild(opt1);
+        toMonthEl.appendChild(opt2);
+    }
+
+    // Populate years (current year and 2 years back)
+    for (let y = curYear; y >= curYear - 2; y--) {
+        fromYearEl.appendChild(new Option(y, y));
+        toYearEl.appendChild(new Option(y, y));
+    }
+
+    // Default: current month/year for both from and to
+    fromMonthEl.value = curMonth;
+    toMonthEl.value = curMonth;
+    fromYearEl.value = curYear;
+    toYearEl.value = curYear;
+}
+
+function getSelectedDates() {
+    return {
+        fromMonth: Number(document.getElementById('fromMonth').value),
+        fromYear: Number(document.getElementById('fromYear').value),
+        toMonth: Number(document.getElementById('toMonth').value),
+        toYear: Number(document.getElementById('toYear').value)
+    };
+}
+
+function onDateChange() {
+    loadReport();
+}
+
 // ==================== Load Report ====================
 async function loadReport() {
     showError(null);
+    const btn = document.getElementById('btnLoadReport');
+    const tbody = document.getElementById('reportBody');
+    const tfoot = document.getElementById('reportFoot');
+
+    // Show loading
+    if (btn) { btn.disabled = true; btn.textContent = 'טוען...'; }
+    tbody.innerHTML = '<tr><td colspan="10"><div class="loading-overlay"><div class="spinner"></div> טוען דוח...</div></td></tr>';
+    if (tfoot) tfoot.innerHTML = '';
+
     try {
-        const res = await apiFetch('/dashboard/external/agents-report?pageSize=500');
+        const { fromMonth, fromYear, toMonth, toYear } = getSelectedDates();
+        const url = `/dashboard/external/agents-report?pageSize=500&fromMonth=${fromMonth}&fromYear=${fromYear}&toMonth=${toMonth}&toYear=${toYear}`;
+        const res = await apiFetch(url);
         if (!res) return;
 
         if (res.status === 403) {
@@ -57,7 +115,7 @@ async function loadReport() {
         console.log('Report Data:', data);
         allAgentData = Array.isArray(data) ? data : (data.items || data.agents || []);
 
-        // Extract all individual policies from agents, attach agent info to each
+        // Extract all individual policies from agents
         allPolicies = [];
         allAgentData.forEach(agent => {
             const agentName = agent.agentName || '-';
@@ -81,6 +139,8 @@ async function loadReport() {
     } catch (err) {
         console.error('Error loading report:', err);
         showError('שגיאת תקשורת עם מערכת הביטוח.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'טען דוח'; }
     }
 }
 
@@ -88,7 +148,6 @@ async function loadReport() {
 function updateReportKPIs(agents) {
     const totalPolicies = agents.reduce((s, a) => s + (a.policyCount || 0), 0);
     const totalPremiums = agents.reduce((s, a) => s + (a.totalPremium || 0), 0);
-    // Ophir: hatamTotal (עמלה), non-Ophir: agentRateTotal (עמלת סוכן)
     const totalCommissions = isOphir
         ? agents.reduce((s, a) => s + (a.totalCommission || 0), 0)
         : agents.reduce((s, a) => s + (a.totalAgentRate || 0), 0);
@@ -103,7 +162,6 @@ function updateReportKPIs(agents) {
 function filterAndRender() {
     let filtered = [...allPolicies];
 
-    // Apply search filter
     const query = (document.getElementById('searchInput').value || '').trim().toLowerCase();
     if (query) {
         filtered = filtered.filter(p => {
@@ -135,7 +193,6 @@ function filterReport() {
     filterAndRender();
 }
 
-// For backward compatibility
 function sortAndRender() {
     filterAndRender();
 }
@@ -151,13 +208,11 @@ function renderPoliciesTable(policies) {
         return;
     }
 
-    // Calculate totals
     let totalPremium = 0;
     let totalCommission = 0;
 
     tbody.innerHTML = policies.map((p, i) => {
         const premium = Number(p.total) || 0;
-        // Ophir: hatamTotal, non-Ophir: agentRateTotal
         const commission = isOphir ? (Number(p.hatamTotal) || 0) : (Number(p.agentRateTotal) || 0);
         totalPremium += premium;
         totalCommission += commission;
@@ -186,7 +241,6 @@ function renderPoliciesTable(policies) {
         </tr>`;
     }).join('');
 
-    // Totals row
     if (tfoot) {
         const totalPremClass = totalPremium < 0 ? 'td-premium td-negative' : 'td-premium';
         const totalCommClass = totalCommission < 0 ? 'td-premium td-negative' : 'td-premium';

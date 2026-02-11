@@ -36,7 +36,30 @@
         .kpi-value { font-size: 24px; font-weight: 800; color: var(--dark); }
         @media (max-width: 480px) { .kpi-value { font-size: 18px; } .kpi-header { font-size: 11px; } }
 
-        /* Chart section removed */
+        /* ===== Date Filter ===== */
+        .date-filter-bar {
+            display: flex; gap: 16px; margin-bottom: 16px; align-items: center; flex-wrap: wrap;
+            background: white; padding: 14px 20px; border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-100);
+        }
+        .date-filter-bar h3 {
+            font-size: 14px; font-weight: 700; color: var(--dark); margin: 0;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .date-group { display: flex; align-items: center; gap: 8px; }
+        .date-group label { font-weight: 600; font-size: 13px; color: var(--gray-600); white-space: nowrap; }
+        .date-group select {
+            padding: 7px 12px; border-radius: 8px; border: 1px solid var(--gray-200);
+            font-family: 'Heebo', sans-serif; font-size: 13px; background: white; cursor: pointer;
+        }
+        .date-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,107,44,0.1); }
+        .date-filter-bar .btn-load {
+            padding: 8px 20px; border-radius: 8px; border: none;
+            background: var(--primary, #FF6B2C); color: white; font-family: 'Heebo', sans-serif;
+            font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.2s;
+        }
+        .date-filter-bar .btn-load:hover { opacity: 0.9; }
+        .date-filter-bar .btn-load:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* ===== Filter / Sort Bar ===== */
         .filter-bar {
@@ -194,7 +217,23 @@
                     </div>
                 </div>
 
-                <!-- Filter / Sort Bar -->
+                <!-- Date Filter -->
+                <div class="date-filter-bar">
+                    <h3>📅 סינון תאריך</h3>
+                    <div class="date-group">
+                        <label>מתאריך:</label>
+                        <select id="fromMonth"></select>
+                        <select id="fromYear"></select>
+                    </div>
+                    <div class="date-group">
+                        <label>עד תאריך:</label>
+                        <select id="toMonth"></select>
+                        <select id="toYear"></select>
+                    </div>
+                    <button class="btn-load" id="btnLoadReport" onclick="onDateChange()">טען דוח</button>
+                </div>
+
+                <!-- Search Bar -->
                 <div class="filter-bar">
                     <label>חיפוש:</label>
                     <input type="text" class="search-input" id="searchInput" placeholder="חיפוש לפי שם לקוח, מספר פוליסה..." oninput="filterReport()">
@@ -235,7 +274,7 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/reports.js?v=4"></script>
+    <script src="js/reports.js?v=5"></script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
     function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}

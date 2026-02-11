@@ -657,20 +657,34 @@ module.exports = async function handler(req, res) {
                     if (pg > 20) break;
                 }
 
-                // Step 2: For each agent, fetch ALL months (1-12) to get all policies for the year
+                // Step 2: Fetch policies for the requested month range
                 const now = new Date();
-                const year = now.getFullYear();
+                const fromMonth = Number(req.query.fromMonth) || (now.getMonth() + 1);
+                const fromYear = Number(req.query.fromYear) || now.getFullYear();
+                const toMonth = Number(req.query.toMonth) || fromMonth;
+                const toYear = Number(req.query.toYear) || fromYear;
+
+                // Build list of {year, month} to fetch
+                const monthsToFetch = [];
+                let fy = fromYear, fm = fromMonth;
+                while (fy < toYear || (fy === toYear && fm <= toMonth)) {
+                    monthsToFetch.push({ y: fy, m: fm });
+                    fm++;
+                    if (fm > 12) { fm = 1; fy++; }
+                    if (monthsToFetch.length > 24) break; // safety: max 2 years
+                }
+                console.log(`agents-report: fetching months:`, monthsToFetch.map(x => `${x.m}/${x.y}`).join(', '));
 
                 const enrichedAgents = await runWithConcurrency(
                     matchedAgents.map(agent => async () => {
                         const idx = Math.round(Number(agent.agentIndex));
                         let allPolicies = [];
-                        for (let m = 1; m <= 12; m++) {
+                        for (const { y, m } of monthsToFetch) {
                             try {
-                                const policies = await fetchAllPoliciesByAgent(idx, year, m);
+                                const policies = await fetchAllPoliciesByAgent(idx, y, m);
                                 allPolicies = allPolicies.concat(policies);
                             } catch (err) {
-                                console.error(`agents-report: error fetching agent ${idx} month ${m}:`, err.message);
+                                console.error(`agents-report: error fetching agent ${idx} month ${m}/${y}:`, err.message);
                             }
                         }
                         // Count unique policies
