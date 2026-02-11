@@ -318,7 +318,8 @@ module.exports = async function handler(req, res) {
             const CACHE_MAX_AGE = 30 * 60 * 1000; // 30 minutes
 
             // Try to return cached data immediately
-            const cached = await DashboardCache.findOne({ companyId: user.companyId, cacheKey }).lean();
+            const forceRefresh = req.query.refresh === '1';
+            const cached = !forceRefresh ? await DashboardCache.findOne({ companyId: user.companyId, cacheKey }).lean() : null;
             if (cached && (Date.now() - new Date(cached.cachedAt).getTime()) < CACHE_MAX_AGE) {
                 console.log('DASH: returning cached data, age=', Math.round((Date.now() - new Date(cached.cachedAt).getTime()) / 1000), 's');
                 return res.json(cached.data);
@@ -366,10 +367,35 @@ module.exports = async function handler(req, res) {
             // Split into current year and previous year
             const curPolicies = allResults.filter(r => r.y === year).flatMap(r => r.policies);
             const prevPolicies = allResults.filter(r => r.y === prevYear).flatMap(r => r.policies);
-            console.log('DASH: curPolicies=', curPolicies.length, 'prevPolicies=', prevPolicies.length);
+            // Detailed per-month log
+            for (let m = 1; m <= month; m++) {
+                const curM = allResults.filter(r => r.m === m && r.y === year).reduce((s, r) => s + r.policies.length, 0);
+                const prevM = allResults.filter(r => r.m === m && r.y === prevYear).reduce((s, r) => s + r.policies.length, 0);
+                console.log(`DASH: month ${m}/${year}: ${curM} policies | month ${m}/${prevYear}: ${prevM} policies`);
+            }
+            console.log('DASH: TOTAL curPolicies=', curPolicies.length, 'prevPolicies=', prevPolicies.length);
 
-            // Calculate KPIs
-            const calcData = calculateKPIs(curPolicies, prevPolicies, month, year);
+            // Deduplicate policies by policyIndex (same policy can appear in multiple months)
+            function dedup(policies) {
+                const seen = new Set();
+                return policies.filter(p => {
+                    const key = p.policyIndex || p.fullPolicyID || JSON.stringify(p);
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+            }
+            const dedupCur = dedup(curPolicies);
+            const dedupPrev = dedup(prevPolicies);
+            console.log('DASH: after dedup: cur=', dedupCur.length, '(was', curPolicies.length, ') prev=', dedupPrev.length, '(was', prevPolicies.length, ')');
+            // Log sample policy for debugging
+            if (curPolicies.length > 0) {
+                console.log('DASH: sample policy keys:', Object.keys(curPolicies[0]));
+                console.log('DASH: sample policy:', JSON.stringify(curPolicies[0]).slice(0, 500));
+            }
+
+            // Calculate KPIs (use deduplicated)
+            const calcData = calculateKPIs(dedupCur, dedupPrev, month, year);
             const filteredCalc = calcData.filter(c => [1, 5, 6].includes(c.repType));
 
             // Build YoY data from the same results
