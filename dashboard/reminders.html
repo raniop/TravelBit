@@ -15,28 +15,17 @@
         .reminder-cards-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;
         }
-        .reminder-card.has-urgent {
-            grid-column: span 2;
-        }
-        @media (max-width: 900px) {
-            .reminder-cards-grid { grid-template-columns: 1fr; gap: 12px; }
-            .reminder-card.has-urgent { grid-column: span 1; }
-        }
+        @media (max-width: 600px) { .reminder-cards-grid { grid-template-columns: 1fr; gap: 12px; } }
 
         .reminder-card {
             background: white; border-radius: 12px; padding: 22px 24px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-100);
             cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
-            text-decoration: none; display: flex; color: inherit; gap: 0;
-        }
-        .reminder-card.has-urgent {
-            gap: 20px;
+            text-decoration: none; display: flex; color: inherit; gap: 16px;
+            align-items: stretch;
         }
         .card-main-info {
             flex-shrink: 0;
-        }
-        .reminder-card:not(.has-urgent) .card-main-info {
-            flex: 1;
         }
         .reminder-card:hover {
             box-shadow: 0 4px 14px rgba(0,0,0,0.1); transform: translateY(-2px);
@@ -84,11 +73,11 @@
         /* ===== Urgent Items Panel (Left Side of Card) ===== */
         .card-urgent-panel {
             flex: 1; min-width: 0;
-            border-right: 1px solid var(--gray-100); padding-right: 18px;
+            border-right: 1px solid var(--gray-100); padding-right: 14px;
         }
         .urgent-panel-title {
-            font-size: 11px; font-weight: 700; color: var(--gray-400);
-            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+            font-size: 10px; font-weight: 700; color: var(--gray-400);
+            letter-spacing: 0.3px; margin-bottom: 6px;
         }
         .card-urgent-list {
             list-style: none; padding: 0; margin: 0;
@@ -123,10 +112,10 @@
         .urgent-date.overdue { color: #DC2626; font-weight: 700; }
         .urgent-date.warning { color: #D97706; font-weight: 600; }
 
-        /* Mobile: stack vertically */
+        /* Small cards: stack vertically when space is tight */
         @media (max-width: 600px) {
-            .reminder-card.has-urgent { flex-direction: column; gap: 14px; }
-            .card-urgent-panel { border-right: none; padding-right: 0; border-top: 1px solid var(--gray-100); padding-top: 12px; }
+            .reminder-card { flex-direction: column; gap: 12px; }
+            .card-urgent-panel { border-right: none; padding-right: 0; border-top: 1px solid var(--gray-100); padding-top: 10px; }
         }
 
         /* ===== Email Drop Zone ===== */
