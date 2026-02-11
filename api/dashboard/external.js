@@ -94,14 +94,15 @@ async function bituhOfirFetch(path, timeoutMs = 8000) {
 
 // Calculate KPIs from filtered policy data
 // repType: 1=מחזור שנתי, 2=רווח שנתי, 3=מכירות יומיות, 4=פרמיה ממוצעת, 5=פוליסות, 6=מכירות יום נוכחי
-function calculateKPIs(curPolicies, prevPolicies, month, year) {
+// uniqueCountFn: optional function to count unique policies (for agent-mode where same policy spans months)
+function calculateKPIs(curPolicies, prevPolicies, month, year, uniqueCountFn) {
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
 
     // Current year values
     const curTurnover = curPolicies.reduce((sum, p) => sum + (Number(p.total) || 0), 0);
     const curProfit = curPolicies.reduce((sum, p) => sum + (Number(p.hatamTotal) || 0), 0);
-    const curPolicyCount = curPolicies.length;
+    const curPolicyCount = uniqueCountFn ? uniqueCountFn(curPolicies) : curPolicies.length;
     const curAvgPremium = curPolicyCount > 0 ? curTurnover / curPolicyCount : 0;
 
     // Daily sales: turnover / number of days elapsed in month
@@ -118,7 +119,7 @@ function calculateKPIs(curPolicies, prevPolicies, month, year) {
     // Previous year values
     const prevTurnover = prevPolicies.reduce((sum, p) => sum + (Number(p.total) || 0), 0);
     const prevProfit = prevPolicies.reduce((sum, p) => sum + (Number(p.hatamTotal) || 0), 0);
-    const prevPolicyCount = prevPolicies.length;
+    const prevPolicyCount = uniqueCountFn ? uniqueCountFn(prevPolicies) : prevPolicies.length;
     const prevAvgPremium = prevPolicyCount > 0 ? prevTurnover / prevPolicyCount : 0;
     const prevDailySales = daysInMonth > 0 ? prevTurnover / daysInMonth : 0;
 
@@ -379,27 +380,20 @@ module.exports = async function handler(req, res) {
             }
             console.log('DASH: TOTAL curPolicies=', curPolicies.length, 'prevPolicies=', prevPolicies.length);
 
-            // Deduplicate policies by policyIndex (same policy can appear in multiple months)
-            function dedup(policies) {
+            // NO dedup — same policy can appear in multiple months with different premiums.
+            // Each month is a separate billing period, so we sum ALL entries.
+            // For policy COUNT, we count unique policies across all months.
+            function countUniquePolicies(policies) {
                 const seen = new Set();
-                return policies.filter(p => {
-                    const key = p.policyIndex || p.fullPolicyID || JSON.stringify(p);
-                    if (seen.has(key)) return false;
-                    seen.add(key);
-                    return true;
+                policies.forEach(p => {
+                    const key = p.policyIndex || p.fullPolicyID || '';
+                    if (key) seen.add(key);
                 });
-            }
-            const dedupCur = dedup(curPolicies);
-            const dedupPrev = dedup(prevPolicies);
-            console.log('DASH: after dedup: cur=', dedupCur.length, '(was', curPolicies.length, ') prev=', dedupPrev.length, '(was', prevPolicies.length, ')');
-            // Log sample policy for debugging
-            if (curPolicies.length > 0) {
-                console.log('DASH: sample policy keys:', Object.keys(curPolicies[0]));
-                console.log('DASH: sample policy:', JSON.stringify(curPolicies[0]).slice(0, 500));
+                return seen.size || policies.length;
             }
 
-            // Calculate KPIs (use deduplicated)
-            const calcData = calculateKPIs(dedupCur, dedupPrev, month, year);
+            // Calculate KPIs — use all policies for turnover, unique count for policy count
+            const calcData = calculateKPIs(curPolicies, prevPolicies, month, year, countUniquePolicies);
             const filteredCalc = calcData.filter(c => [1, 5, 6].includes(c.repType));
 
             // Build YoY data from the same results
