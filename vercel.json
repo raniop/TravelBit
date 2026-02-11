@@ -2,9 +2,6 @@
   "regions": ["fra1"],
   "functions": {
     "api/**/*.js": {
-      "maxDuration": 10
-    },
-    "api/dashboard/external.js": {
       "maxDuration": 25
     }
   },
