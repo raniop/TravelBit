@@ -213,27 +213,34 @@ module.exports = async function handler(req, res) {
             }
 
             // === Other companies (with agentCodes): use GetAgentsReport ===
-            // agentCodes stores agentCode (e.g. '54'), NOT agentIndex (e.g. 14179).
-            // GetAgentsReport returns aggregate data and lets us filter by agentCode.
-            const reportRes = await bituhOfirFetch('/api/Policy/GetAgentsReport?page=1&pageSize=500', 15000);
-            const reportData = await reportRes.json();
-            const allAgents = Array.isArray(reportData) ? reportData : (reportData && reportData.items ? reportData.items : []);
+            // Fetch ALL pages of agents report until we find our agents
+            let allAgents = [];
+            let page = 1;
+            const PS = 500;
+            while (true) {
+                const reportRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${page}&pageSize=${PS}`, 15000);
+                const reportData = await reportRes.json();
+                const items = Array.isArray(reportData) ? reportData : (reportData && reportData.items ? reportData.items : []);
+                allAgents = allAgents.concat(items);
+                // Stop if less than full page (last page) or no items
+                if (items.length < PS || items.length === 0) break;
+                page++;
+                if (page > 20) break; // safety limit
+            }
 
-            // Filter to only this company's agents
+            // Debug: log keys of first agent so we know field names
+            if (allAgents.length > 0) console.log('DASH-DEBUG: totalAgents=', allAgents.length, 'keys=', Object.keys(allAgents[0]));
+
+            // Filter: try matching agentCodes against ALL string values in each agent object
             const myAgents = allAgents.filter(a =>
-                agentCodes.includes(String(a.agentCode)) || agentCodes.includes(String(a.agentIndex))
+                Object.values(a).some(v => agentCodes.includes(String(v)))
             );
             console.log('DASH-DEBUG: agentCodes=', agentCodes, 'allAgents=', allAgents.length, 'myAgents=', myAgents.length);
-            // Debug: show first agent keys + values, and search for '54' in all fields
-            if (allAgents.length > 0) console.log('DASH-DEBUG: sample agent keys=', Object.keys(allAgents[0]), 'values=', JSON.stringify(allAgents[0]).slice(0, 600));
-            const found54 = allAgents.find(a => Object.values(a).some(v => String(v) === '54'));
-            if (found54) console.log('DASH-DEBUG: found agent with value 54=', JSON.stringify(found54).slice(0, 600));
-            else console.log('DASH-DEBUG: NO agent has any field with value "54"');
-            if (myAgents.length > 0) console.log('DASH-DEBUG: myAgents[0]=', JSON.stringify(myAgents[0]).slice(0, 500));
+            if (myAgents.length > 0) console.log('DASH-DEBUG: myAgents[0]=', JSON.stringify(myAgents[0]).slice(0, 600));
 
-            // KPI calculations from aggregate agent data
-            const totalPolicies = myAgents.reduce((s, a) => s + (Number(a.policyCount) || Number(a.totalPolicies) || Number(a.count) || 0), 0);
-            const totalTurnover = myAgents.reduce((s, a) => s + (Number(a.totalPremium) || Number(a.total) || Number(a.premium) || 0), 0);
+            // KPI calculations from aggregate agent data — try all possible field names
+            const totalPolicies = myAgents.reduce((s, a) => s + (Number(a.policyCount) || Number(a.totalPolicies) || Number(a.count) || Number(a.numberOfPolicies) || 0), 0);
+            const totalTurnover = myAgents.reduce((s, a) => s + (Number(a.totalPremium) || Number(a.total) || Number(a.premium) || Number(a.totalAmount) || 0), 0);
 
             return res.json({
                 dashboardCalcData: [
