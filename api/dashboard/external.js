@@ -1,6 +1,6 @@
 const { verifyAuth, cors } = require('../_lib/auth');
 const connectDB = require('../_lib/db');
-const { Company, DashboardCache, normalizeDashboardModules } = require('../_lib/models');
+const { Company, normalizeDashboardModules } = require('../_lib/models');
 
 // Module-level token cache (survives warm invocations)
 let bituhOfirToken = {
@@ -203,17 +203,26 @@ async function fetchAllPoliciesByAgent(agentIndex, year, month) {
             `/api/Policy/GetPolicyDetailsByAgent?agentIndex=${agentIndex}&bYear=${year}&bMonth=${month}&page=${page}&pageSize=${PS}`,
             20000
         );
-        const data = await apiRes.json();
-        const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
+        const raw = await apiRes.json();
+        // API might return array directly, or {items:[], totalCount:N}
+        let items;
+        if (Array.isArray(raw)) {
+            items = raw;
+        } else if (raw && raw.items) {
+            items = raw.items;
+        } else {
+            // Log unexpected format on first page only
+            if (page === 1) console.log(`fetchAllPolicies: agent=${agentIndex} ${month}/${year} unexpected format:`, JSON.stringify(raw).slice(0, 300));
+            items = [];
+        }
         all = all.concat(items);
         if (items.length === 0) break;
-        // If we got exactly PS items, there might be more pages
         if (items.length < PS) break;
         page++;
         if (page > 100) break; // safety: max 5000 policies per agent/month
     }
 
-    if (page > 1) console.log(`fetchAllPolicies: agent=${agentIndex} ${month}/${year}: ${all.length} policies across ${page} pages`);
+    console.log(`fetchAllPolicies: agent=${agentIndex} ${month}/${year}: ${all.length} policies, ${page} page(s)`);
     return all;
 }
 
@@ -318,19 +327,7 @@ module.exports = async function handler(req, res) {
                 });
             }
 
-            // === Other companies (with agentCodes): use cache for fast load ===
-            const cacheKey = `dashboard:${month}:${year}`;
-            const CACHE_MAX_AGE = 30 * 60 * 1000; // 30 minutes
-
-            // Try to return cached data immediately
-            const forceRefresh = req.query.refresh === '1';
-            const cached = !forceRefresh ? await DashboardCache.findOne({ companyId: user.companyId, cacheKey }).lean() : null;
-            if (cached && (Date.now() - new Date(cached.cachedAt).getTime()) < CACHE_MAX_AGE) {
-                console.log('DASH: returning cached data, age=', Math.round((Date.now() - new Date(cached.cachedAt).getTime()) / 1000), 's');
-                return res.json(cached.data);
-            }
-
-            // No cache or stale — fetch fresh data
+            // === Other companies (with agentCodes): always fetch live data ===
             const agentIndexes = isAlreadyIndexes
                 ? agentCodes.map(Number)
                 : await resolveAgentIndexes(agentCodes);
@@ -419,13 +416,6 @@ module.exports = async function handler(req, res) {
                 requestedMonth: month, requestedYear: year,
                 lastRefresh: new Date().toISOString()
             };
-
-            // Save to cache (upsert, don't await — fire and forget)
-            DashboardCache.updateOne(
-                { companyId: user.companyId, cacheKey },
-                { $set: { data: freshResult, cachedAt: new Date() } },
-                { upsert: true }
-            ).catch(err => console.error('Cache save error:', err.message));
 
             return res.json(freshResult);
         }
