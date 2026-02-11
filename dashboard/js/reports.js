@@ -47,9 +47,7 @@ async function loadReport() {
 
         const data = await res.json();
         console.log('Report Data:', data);
-        if (data._debugFields) console.log('API fields:', data._debugFields);
         allReportData = Array.isArray(data) ? data : (data.items || data.agents || []);
-        if (allReportData.length > 0) console.log('First agent raw:', JSON.stringify(allReportData[0]));
         document.getElementById('totalCount').textContent = allReportData.length + ' סוכנים';
 
         updateReportKPIs(allReportData);

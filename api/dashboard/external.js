@@ -636,11 +636,11 @@ module.exports = async function handler(req, res) {
 
         // Route: /api/dashboard/external/agents-report
         if (url.includes('/external/agents-report')) {
-            // For companies with agentCodes, search all pages to find their agents
+            // For companies with agentCodes: get agent info + calculate totals from policies
             if (agentCodes) {
                 const codesSet = new Set(agentCodes);
-                // Always match by agentCode (what the admin enters)
-                const matchField = 'agentCode';
+
+                // Step 1: Get agent info from GetAgentsReport
                 let matchedAgents = [];
                 let pg = 1;
                 const pgSize = 500;
@@ -649,21 +649,55 @@ module.exports = async function handler(req, res) {
                     const raw = await apiRes.json();
                     const items = Array.isArray(raw) ? raw : (raw && raw.items ? raw.items : []);
                     if (items.length === 0) break;
-                    const found = items.filter(a => codesSet.has(String(Math.round(Number(a[matchField])))));
-                    if (found.length > 0) {
-                        console.log('agents-report: found agents, sample:', JSON.stringify(found[0]));
-                    }
+                    const found = items.filter(a => codesSet.has(String(Math.round(Number(a.agentCode)))));
                     matchedAgents = matchedAgents.concat(found);
-                    // Stop early if we found all
                     if (matchedAgents.length >= agentCodes.length) break;
                     if (items.length < pgSize) break;
                     pg++;
                     if (pg > 20) break;
                 }
-                // Include debug info: field names of first agent for frontend diagnostics
-                const debugFields = matchedAgents.length > 0 ? Object.keys(matchedAgents[0]) : [];
-                console.log('agents-report: returning', matchedAgents.length, 'agents, fields:', debugFields);
-                return res.json({ items: matchedAgents, totalCount: matchedAgents.length, _debugFields: debugFields });
+
+                // Step 2: For each agent, fetch YTD policies to calculate totals
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth() + 1;
+
+                const enrichedAgents = await runWithConcurrency(
+                    matchedAgents.map(agent => async () => {
+                        const idx = Math.round(Number(agent.agentIndex));
+                        let allPolicies = [];
+                        for (let m = 1; m <= month; m++) {
+                            try {
+                                const policies = await fetchAllPoliciesByAgent(idx, year, m);
+                                allPolicies = allPolicies.concat(policies);
+                            } catch (err) {
+                                console.error(`agents-report: error fetching agent ${idx} month ${m}:`, err.message);
+                            }
+                        }
+                        // Count unique policies
+                        const uniquePolicies = new Set();
+                        allPolicies.forEach(p => {
+                            const key = p.policyIndex || p.fullPolicyID || '';
+                            if (key) uniquePolicies.add(key);
+                        });
+
+                        const totalPremium = allPolicies.reduce((s, p) => s + (Number(p.total) || 0), 0);
+                        const totalCommission = allPolicies.reduce((s, p) => s + (Number(p.hatamTotal) || 0), 0);
+                        const policyCount = uniquePolicies.size || allPolicies.length;
+
+                        return {
+                            ...agent,
+                            totalPremium,
+                            totalCommission,
+                            policyCount,
+                            avgPremium: policyCount > 0 ? totalPremium / policyCount : 0
+                        };
+                    }),
+                    2 // concurrency
+                );
+
+                console.log('agents-report: returning', enrichedAgents.length, 'agents with calculated totals');
+                return res.json({ items: enrichedAgents, totalCount: enrichedAgents.length });
             }
 
             // Ophir (no agentCodes): pass through as-is
