@@ -137,6 +137,64 @@ function calculateKPIs(curPolicies, prevPolicies, month, year) {
     ];
 }
 
+// Translate agentCodes (e.g. ['54']) → agentIndexes (e.g. [14179]) via GetAgentsReport
+// Paginates through all pages until all codes are found or all pages exhausted
+async function resolveAgentIndexes(agentCodes) {
+    const resolved = [];
+    const codesSet = new Set(agentCodes.map(c => String(c)));
+    const foundCodes = new Set();
+    let page = 1;
+    const PS = 500;
+
+    while (foundCodes.size < codesSet.size) {
+        try {
+            const apiRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${page}&pageSize=${PS}`, 15000);
+            const data = await apiRes.json();
+            const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
+            if (items.length === 0) break;
+
+            for (const agent of items) {
+                const code = String(agent.agentCode);
+                if (codesSet.has(code) && !foundCodes.has(code)) {
+                    foundCodes.add(code);
+                    resolved.push(Math.round(Number(agent.agentIndex)));
+                }
+            }
+
+            if (items.length < PS) break; // last page
+            page++;
+            if (page > 20) break; // safety limit
+        } catch (err) {
+            console.error('resolveAgentIndexes error page', page, err.message);
+            break;
+        }
+    }
+
+    return resolved;
+}
+
+// Fetch ALL policies for a single agent+month (handles pagination)
+async function fetchAllPoliciesByAgent(agentIndex, year, month) {
+    let all = [];
+    let page = 1;
+    const PS = 500;
+
+    while (true) {
+        const apiRes = await bituhOfirFetch(
+            `/api/Policy/GetPolicyDetailsByAgent?agentIndex=${agentIndex}&bYear=${year}&bMonth=${month}&page=${page}&pageSize=${PS}`,
+            15000
+        );
+        const data = await apiRes.json();
+        const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
+        all = all.concat(items);
+        if (items.length < PS || items.length === 0) break;
+        page++;
+        if (page > 20) break;
+    }
+
+    return all;
+}
+
 module.exports = async function handler(req, res) {
     cors(res);
     if (req.method === 'OPTIONS') return res.status(200).end();
@@ -212,47 +270,48 @@ module.exports = async function handler(req, res) {
                 });
             }
 
-            // === Other companies (with agentCodes): use GetAgentsReport ===
-            // Fetch ALL pages of agents report until we find our agents
-            let allAgents = [];
-            let page = 1;
-            const PS = 500;
-            while (true) {
-                const reportRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${page}&pageSize=${PS}`, 15000);
-                const reportData = await reportRes.json();
-                const items = Array.isArray(reportData) ? reportData : (reportData && reportData.items ? reportData.items : []);
-                allAgents = allAgents.concat(items);
-                // Stop if less than full page (last page) or no items
-                if (items.length < PS || items.length === 0) break;
-                page++;
-                if (page > 20) break; // safety limit
+            // === Other companies (with agentCodes): two-step approach ===
+            // Step 1: Translate agentCode → agentIndex via GetAgentsReport
+            const agentIndexes = await resolveAgentIndexes(agentCodes);
+            console.log('DASH: agentCodes=', agentCodes, 'resolved agentIndexes=', agentIndexes);
+
+            if (agentIndexes.length === 0) {
+                return res.json({
+                    dashboardCalcData: [
+                        { repType: 1, curYearValue: 0, prevYearValue: 0, percentDiff: 0 },
+                        { repType: 5, curYearValue: 0, prevYearValue: 0, percentDiff: 0 },
+                        { repType: 6, curYearValue: 0, prevYearValue: 0, percentDiff: 0 }
+                    ],
+                    periods: [], riders: [], topPolicies: [],
+                    requestedMonth: month, requestedYear: year,
+                    lastRefresh: new Date().toISOString()
+                });
             }
 
-            // Debug: log keys of first agent so we know field names
-            if (allAgents.length > 0) console.log('DASH-DEBUG: totalAgents=', allAgents.length, 'keys=', Object.keys(allAgents[0]));
+            // Step 2: For each agentIndex, fetch policies for all months YTD
+            let allPolicies = [];
+            const fetchPromises = [];
+            for (const idx of agentIndexes) {
+                for (let m = 1; m <= month; m++) {
+                    fetchPromises.push(
+                        fetchAllPoliciesByAgent(idx, year, m)
+                            .then(policies => { allPolicies = allPolicies.concat(policies); })
+                            .catch(err => { console.error(`DASH: Error fetching agent ${idx} month ${m}:`, err.message); })
+                    );
+                }
+            }
+            await Promise.all(fetchPromises);
+            console.log('DASH: total policies fetched=', allPolicies.length);
 
-            // Filter: try matching agentCodes against ALL string values in each agent object
-            const myAgents = allAgents.filter(a =>
-                Object.values(a).some(v => agentCodes.includes(String(v)))
-            );
-            console.log('DASH-DEBUG: agentCodes=', agentCodes, 'allAgents=', allAgents.length, 'myAgents=', myAgents.length);
-            if (myAgents.length > 0) console.log('DASH-DEBUG: myAgents[0]=', JSON.stringify(myAgents[0]).slice(0, 600));
-
-            // KPI calculations from aggregate agent data — try all possible field names
-            const totalPolicies = myAgents.reduce((s, a) => s + (Number(a.policyCount) || Number(a.totalPolicies) || Number(a.count) || Number(a.numberOfPolicies) || 0), 0);
-            const totalTurnover = myAgents.reduce((s, a) => s + (Number(a.totalPremium) || Number(a.total) || Number(a.premium) || Number(a.totalAmount) || 0), 0);
+            // Step 3: Calculate KPIs from real policy data
+            const calcData = calculateKPIs(allPolicies, [], month, year);
+            // Only send repType 1 (turnover), 5 (policies), 6 (today's sales)
+            const filteredCalc = calcData.filter(c => [1, 5, 6].includes(c.repType));
 
             return res.json({
-                dashboardCalcData: [
-                    { repType: 1, curYearValue: totalTurnover, prevYearValue: 0, percentDiff: 0 },
-                    { repType: 5, curYearValue: totalPolicies, prevYearValue: 0, percentDiff: 0 },
-                    { repType: 6, curYearValue: 0, prevYearValue: 0, percentDiff: 0 }
-                ],
-                periods: [],
-                riders: [],
-                topPolicies: [],
-                requestedMonth: month,
-                requestedYear: year,
+                dashboardCalcData: filteredCalc,
+                periods: [], riders: [], topPolicies: [],
+                requestedMonth: month, requestedYear: year,
                 lastRefresh: new Date().toISOString()
             });
         }
@@ -380,37 +439,53 @@ module.exports = async function handler(req, res) {
 
         // Route: /api/dashboard/external/agents-report
         if (url.includes('/external/agents-report')) {
-            const page = Number(req.query.page) || 1;
-            const pageSize = Number(req.query.pageSize) || 100;
-
-            const apiRes = await bituhOfirFetch(
-                `/api/Policy/GetAgentsReport?page=${page}&pageSize=${pageSize}`
-            );
-            let data = await apiRes.json();
-
-            // Filter by company's agentCodes if set
+            // For companies with agentCodes, we need to search all pages to find their agents
             if (agentCodes) {
-                if (Array.isArray(data)) {
-                    data = data.filter(a => agentCodes.includes(String(a.agentCode || a.agentIndex)));
-                } else if (data && !Array.isArray(data) && Array.isArray(data.items)) {
-                    data.items = data.items.filter(a => agentCodes.includes(String(a.agentCode || a.agentIndex)));
+                const codesSet = new Set(agentCodes);
+                let matchedAgents = [];
+                let pg = 1;
+                const pgSize = 500;
+                while (true) {
+                    const apiRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${pg}&pageSize=${pgSize}`, 15000);
+                    const raw = await apiRes.json();
+                    const items = Array.isArray(raw) ? raw : (raw && raw.items ? raw.items : []);
+                    if (items.length === 0) break;
+                    const found = items.filter(a => codesSet.has(String(a.agentCode)));
+                    matchedAgents = matchedAgents.concat(found);
+                    if (items.length < pgSize) break;
+                    pg++;
+                    if (pg > 20) break;
                 }
+                return res.json({ items: matchedAgents, totalCount: matchedAgents.length });
             }
 
+            // Ophir (no agentCodes): pass through as-is
+            const page = Number(req.query.page) || 1;
+            const pageSize = Number(req.query.pageSize) || 100;
+            const apiRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${page}&pageSize=${pageSize}`);
+            const data = await apiRes.json();
             return res.json(data);
         }
 
         // Route: /api/dashboard/external/agents (agent drill-down — policies by agent)
         if (url.includes('/external/agents')) {
-            const { agentIndex, year, month, page, pageSize } = req.query;
+            let { agentIndex, year, month, page, pageSize } = req.query;
 
             if (!agentIndex) {
                 return res.status(400).json({ message: 'חובה לציין קוד סוכן (agentIndex).' });
             }
 
-            // Verify agent belongs to company
+            // Verify agent belongs to company (agentIndex param may actually be agentCode)
             if (agentCodes && !agentCodes.includes(String(agentIndex))) {
                 return res.status(403).json({ message: 'אין הרשאה לנתוני סוכן זה.' });
+            }
+
+            // If agentCodes exist, the param is likely an agentCode — translate to real agentIndex
+            if (agentCodes) {
+                const resolved = await resolveAgentIndexes([String(agentIndex)]);
+                if (resolved.length > 0) {
+                    agentIndex = resolved[0];
+                }
             }
 
             const bYear = Number(year) || new Date().getFullYear();
