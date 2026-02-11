@@ -197,7 +197,7 @@ async function fetchAllPoliciesByAgent(agentIndex, year, month) {
     let all = [];
     let page = 1;
     const PS = 50; // API max is 50 per page
-    const TIMEOUT = 12000; // 12s per request — enough for slow API but won't kill Vercel
+    const TIMEOUT = 20000; // 20s per request
 
     while (true) {
         const apiRes = await bituhOfirFetch(
@@ -265,35 +265,9 @@ module.exports = async function handler(req, res) {
         return res.status(403).json({ message: 'אין הרשאה לנתוני ביטוח.' });
     }
     // If agentCodes exist → filter by them; if empty → show all (no filtering)
-    let rawAgentCodes = (Array.isArray(company.agentCodes) && company.agentCodes.length > 0)
+    const agentCodes = (Array.isArray(company.agentCodes) && company.agentCodes.length > 0)
         ? company.agentCodes.map(String)
         : null;
-
-    // Auto-resolve: if any agentCode is small (≤1000), it's an agentCode not agentIndex.
-    // Resolve once and save back to DB so future requests are instant.
-    if (rawAgentCodes && rawAgentCodes.some(c => Number(c) <= 1000)) {
-        const smallCodes = rawAgentCodes.filter(c => Number(c) <= 1000);
-        const alreadyResolved = rawAgentCodes.filter(c => Number(c) > 1000);
-        try {
-            const resolved = await resolveAgentIndexes(smallCodes);
-            if (resolved.length > 0) {
-                const newCodes = [...alreadyResolved, ...resolved.map(String)];
-                // Update DB so next time it's instant
-                await Company.updateOne(
-                    { _id: user.companyId },
-                    { $set: { agentCodes: newCodes } }
-                );
-                rawAgentCodes = newCodes;
-                console.log('AUTO-RESOLVE: updated agentCodes', smallCodes, '→', resolved, 'saved to DB');
-            }
-        } catch (err) {
-            console.error('AUTO-RESOLVE error:', err.message);
-            // Continue with what we have
-        }
-    }
-
-    const isAlreadyIndexes = rawAgentCodes && rawAgentCodes.every(c => Number(c) > 1000);
-    const agentCodes = rawAgentCodes;
 
     const ip = company.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
 
@@ -349,10 +323,9 @@ module.exports = async function handler(req, res) {
             }
 
             // === Other companies (with agentCodes): always fetch live data ===
-            const agentIndexes = isAlreadyIndexes
-                ? agentCodes.map(Number)
-                : await resolveAgentIndexes(agentCodes);
-            console.log('DASH: agentCodes=', agentCodes, 'isAlreadyIndexes=', isAlreadyIndexes, 'agentIndexes=', agentIndexes);
+            // Always resolve agentCode→agentIndex via GetAgentsReport (cached in-memory 30min)
+            const agentIndexes = await resolveAgentIndexes(agentCodes);
+            console.log('DASH: agentCodes=', agentCodes, 'agentIndexes=', agentIndexes);
 
             if (agentIndexes.length === 0) {
                 const emptyResult = {
@@ -465,9 +438,7 @@ module.exports = async function handler(req, res) {
 
             // === Other companies (with agentCodes): build YoY from GetPolicyDetailsByAgent ===
             if (agentCodes) {
-                const agentIndexes = isAlreadyIndexes
-                    ? agentCodes.map(Number)
-                    : await resolveAgentIndexes(agentCodes);
+                const agentIndexes = await resolveAgentIndexes(agentCodes);
                 if (agentIndexes.length === 0) {
                     return res.json({ year, prevYear, yoyData: [] });
                 }
@@ -627,8 +598,8 @@ module.exports = async function handler(req, res) {
             // For companies with agentCodes, search all pages to find their agents
             if (agentCodes) {
                 const codesSet = new Set(agentCodes);
-                // Determine which field to match against
-                const matchField = isAlreadyIndexes ? 'agentIndex' : 'agentCode';
+                // Always match by agentCode (what the admin enters)
+                const matchField = 'agentCode';
                 let matchedAgents = [];
                 let pg = 1;
                 const pgSize = 500;
@@ -669,8 +640,8 @@ module.exports = async function handler(req, res) {
                 return res.status(403).json({ message: 'אין הרשאה לנתוני סוכן זה.' });
             }
 
-            // If agentCodes contains small agentCode values (not agentIndex), translate
-            if (agentCodes && !isAlreadyIndexes) {
+            // Always translate agentCode → agentIndex via GetAgentsReport
+            if (agentCodes) {
                 const resolved = await resolveAgentIndexes([String(agentIndex)]);
                 if (resolved.length > 0) {
                     agentIndex = resolved[0];
