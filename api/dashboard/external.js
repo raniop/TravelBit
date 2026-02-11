@@ -144,20 +144,41 @@ let agentIndexCacheTime = 0;
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
 // Translate agentCodes (e.g. ['54']) → agentIndexes (e.g. [14179]) via GetAgentsReport
-// Uses cache to avoid repeated slow API calls
+// If a value is already large (>1000), treat it as an agentIndex directly (no translation needed).
+// Uses cache to avoid repeated slow API calls.
 async function resolveAgentIndexes(agentCodes) {
     const now = Date.now();
-    // Check cache first
+
+    // Split: large numbers are already agentIndexes, small ones need resolution
+    const alreadyIndexes = [];
+    const needResolve = [];
+    for (const c of agentCodes) {
+        if (Number(c) > 1000) {
+            alreadyIndexes.push(Number(c));
+        } else {
+            needResolve.push(String(c));
+        }
+    }
+
+    // If nothing needs resolving, return immediately
+    if (needResolve.length === 0) {
+        console.log('resolveAgentIndexes: all already indexes:', alreadyIndexes);
+        return alreadyIndexes;
+    }
+
+    // Check cache first for the ones that need resolving
     if (now - agentIndexCacheTime < CACHE_TTL) {
-        const cached = agentCodes.map(c => agentIndexCache.get(String(c))).filter(Boolean);
-        if (cached.length === agentCodes.length) return cached;
+        const cached = needResolve.map(c => agentIndexCache.get(c)).filter(Boolean);
+        if (cached.length === needResolve.length) {
+            return [...alreadyIndexes, ...cached];
+        }
     }
 
     const resolved = [];
-    const codesSet = new Set(agentCodes.map(c => String(c)));
+    const codesSet = new Set(needResolve);
     const foundCodes = new Set();
     let page = 1;
-    const PS = 100; // smaller pages = faster response from external API
+    const PS = 100;
 
     while (foundCodes.size < codesSet.size) {
         try {
@@ -166,6 +187,12 @@ async function resolveAgentIndexes(agentCodes) {
             const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
             if (items.length === 0) break;
 
+            // Log first page to see API response structure
+            if (page === 1) {
+                console.log('resolveAgentIndexes: looking for codes:', [...codesSet]);
+                console.log('resolveAgentIndexes: first 3 items sample:', JSON.stringify(items.slice(0, 3)));
+            }
+
             for (const agent of items) {
                 const code = String(agent.agentCode);
                 if (codesSet.has(code) && !foundCodes.has(code)) {
@@ -173,14 +200,14 @@ async function resolveAgentIndexes(agentCodes) {
                     const idx = Math.round(Number(agent.agentIndex));
                     resolved.push(idx);
                     agentIndexCache.set(code, idx);
+                    console.log(`resolveAgentIndexes: agentCode ${code} → agentIndex ${idx}`);
                 }
             }
 
-            // Stop early if we found all codes
             if (foundCodes.size >= codesSet.size) break;
-            if (items.length < PS) break; // last page
+            if (items.length < PS) break;
             page++;
-            if (page > 50) break; // safety limit for 1000+ agents at 100/page
+            if (page > 50) break;
         } catch (err) {
             console.error('resolveAgentIndexes error page', page, err.message);
             break;
@@ -188,7 +215,7 @@ async function resolveAgentIndexes(agentCodes) {
     }
 
     if (resolved.length > 0) agentIndexCacheTime = now;
-    return resolved;
+    return [...alreadyIndexes, ...resolved];
 }
 
 // Fetch ALL policies for a single agent+month (handles pagination)
