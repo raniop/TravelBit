@@ -85,6 +85,19 @@ function renderDashboard() {
 
         const icon = CARD_ICONS[key] || '';
 
+        // Get top urgent reminders (open/inProgress, sorted by due date urgency)
+        const urgentItems = getUrgentItems(typeReminders, today, 5);
+        const urgentHtml = urgentItems.length ? `
+            <ul class="card-urgent-list">
+                ${urgentItems.map(item => `
+                    <li>
+                        <span class="urgent-dot ${item.urgency}"></span>
+                        <span class="urgent-name">${escHtml(item.name)}</span>
+                        <span class="urgent-date ${item.urgency}">${item.dateLabel}</span>
+                    </li>
+                `).join('')}
+            </ul>` : '';
+
         html += `
         <a class="reminder-card" href="reminder-detail.html?type=${key}">
             <div class="card-icon">${icon}</div>
@@ -96,6 +109,7 @@ function renderDashboard() {
                 ${inProgressCount ? `<span class="mini-badge mini-inProgress">${inProgressCount} בטיפול</span>` : ''}
                 ${completedCount ? `<span class="mini-badge mini-completed">${completedCount} הושלם</span>` : ''}
             </div>
+            ${urgentHtml}
         </a>`;
     }
 
@@ -211,4 +225,62 @@ function navigateToDetailWithEmail(emailData) {
     if (!targetType) targetType = 'agentAppointment';
 
     window.location.href = `reminder-detail.html?type=${targetType}&fromEmail=1`;
+}
+
+// ===== Urgent Items Helper =====
+// Returns the top N most urgent reminders (open/inProgress), sorted by due date
+function getUrgentItems(reminders, today, maxItems) {
+    // Filter to active reminders only
+    const active = reminders.filter(r => r.status === 'open' || r.status === 'inProgress');
+    if (!active.length) return [];
+
+    // Sort: overdue first (oldest first), then by nearest due date, then no-date last
+    active.sort((a, b) => {
+        const aDate = a.date ? new Date(a.date) : null;
+        const bDate = b.date ? new Date(b.date) : null;
+
+        // No date goes to the end
+        if (!aDate && !bDate) return 0;
+        if (!aDate) return 1;
+        if (!bDate) return -1;
+
+        // Both have dates — sort by date ascending (earliest/most overdue first)
+        return aDate - bDate;
+    });
+
+    return active.slice(0, maxItems).map(r => {
+        const name = r.customerName || r.notes?.substring(0, 30) || 'ללא שם';
+        let urgency = 'normal';
+        let dateLabel = '';
+
+        if (r.date) {
+            const dueDate = new Date(r.date);
+            dueDate.setHours(0, 0, 0, 0);
+            const diffMs = dueDate - today;
+            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 0) {
+                urgency = 'overdue';
+                dateLabel = diffDays === -1 ? 'אתמול' : `לפני ${Math.abs(diffDays)} ימים`;
+            } else if (diffDays === 0) {
+                urgency = 'warning';
+                dateLabel = 'היום';
+            } else if (diffDays <= 3) {
+                urgency = 'warning';
+                dateLabel = diffDays === 1 ? 'מחר' : `בעוד ${diffDays} ימים`;
+            } else {
+                dateLabel = isoToIL(r.date.substring(0, 10));
+            }
+        } else {
+            dateLabel = 'ללא תאריך';
+        }
+
+        return { name, urgency, dateLabel };
+    });
+}
+
+function escHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
