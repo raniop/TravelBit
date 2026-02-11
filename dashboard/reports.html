@@ -120,6 +120,52 @@
             border-top: 2px solid var(--gray-300); padding: 12px 10px;
         }
 
+        /* ===== Policy Modal ===== */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            align-items: center; justify-content: center; padding: 24px;
+            animation: fadeIn 0.2s ease;
+        }
+        .modal-overlay.show { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-content {
+            background: white; border-radius: 16px; width: 100%; max-width: 900px;
+            max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-header {
+            padding: 20px 24px; border-bottom: 1px solid var(--gray-100);
+            display: flex; align-items: center; justify-content: space-between;
+            background: linear-gradient(135deg, #FF6B2C 0%, #FF8F5E 100%);
+            border-radius: 16px 16px 0 0; color: white; flex-shrink: 0;
+        }
+        .modal-header h2 { font-size: 18px; font-weight: 700; margin: 0; }
+        .modal-header .subtitle { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+        .modal-close {
+            background: rgba(255,255,255,0.2); border: none; color: white;
+            width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
+            font-size: 22px; display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s; flex-shrink: 0;
+        }
+        .modal-close:hover { background: rgba(255,255,255,0.35); }
+        .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+        .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .details-grid { grid-template-columns: 1fr; } .modal-content { max-width: 100%; margin: 8px; } .modal-overlay { padding: 8px; } }
+        .details-section { background: var(--gray-50); border-radius: 10px; padding: 16px; border: 1px solid var(--gray-100); }
+        .details-section h3 { font-size: 14px; font-weight: 700; color: var(--dark); margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 1px solid var(--gray-200); display: flex; align-items: center; gap: 8px; }
+        .details-section h3 .icon { font-size: 16px; }
+        .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 13px; }
+        .detail-row:not(:last-child) { border-bottom: 1px solid var(--gray-100); }
+        .detail-label { color: var(--gray-500); font-weight: 500; }
+        .detail-value { color: var(--dark); font-weight: 600; }
+        .detail-value.premium { color: #059669; font-size: 15px; }
+        .customers-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        .customers-table th { background: var(--gray-100); padding: 8px 12px; font-size: 11px; font-weight: 700; color: var(--gray-500); text-align: right; }
+        .customers-table td { padding: 8px 12px; font-size: 12px; color: var(--gray-700); border-bottom: 1px solid var(--gray-100); }
+        .report-table tbody tr { cursor: pointer; }
+
         /* Loading / Empty / Error states */
         .loading-overlay { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--gray-400); }
         .loading-overlay .spinner { margin-left: 10px; }
@@ -273,8 +319,24 @@
         </main>
     </div>
 
+    <!-- Policy Details Modal -->
+    <div class="modal-overlay" id="policyModal" onclick="closeModalOverlay(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalTitle">פרטי פוליסה</h2>
+                    <div class="subtitle" id="modalSubtitle"></div>
+                </div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="loading-overlay"><div class="spinner"></div> טוען פרטים...</div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/auth.js"></script>
-    <script src="js/reports.js?v=5"></script>
+    <script src="js/reports.js?v=6"></script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
     function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}

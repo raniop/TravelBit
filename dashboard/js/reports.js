@@ -227,7 +227,8 @@ function renderPoliciesTable(policies) {
         const premiumClass = premium < 0 ? 'td-premium td-negative' : 'td-premium';
         const commissionClass = commission < 0 ? 'td-premium td-negative' : 'td-premium';
 
-        return `<tr>
+        const pIdx = p.policyIndex || '';
+        return `<tr onclick="openPolicy(${pIdx})">
             <td class="td-center">${i + 1}</td>
             <td><strong>${esc(p._agentName)}</strong></td>
             <td class="td-center">${esc(String(policyNum))}</td>
@@ -291,4 +292,158 @@ function esc(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+// ==================== Policy Modal ====================
+async function openPolicy(policyIndex) {
+    if (!policyIndex) return;
+
+    const modal = document.getElementById('policyModal');
+    const body = document.getElementById('modalBody');
+    const title = document.getElementById('modalTitle');
+    const subtitle = document.getElementById('modalSubtitle');
+
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    body.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> טוען פרטי פוליסה...</div>';
+    title.textContent = 'פוליסה ' + policyIndex;
+    subtitle.textContent = '';
+
+    try {
+        const res = await apiFetch('/dashboard/external/policies?policyIndex=' + policyIndex);
+        if (!res || !res.ok) {
+            body.innerHTML = '<div class="empty-msg"><p>שגיאה בטעינת פרטי הפוליסה</p></div>';
+            return;
+        }
+
+        const data = await res.json();
+        if (data.fullPolicyID) title.textContent = 'פוליסה ' + data.fullPolicyID;
+        if (data.clientName) subtitle.textContent = data.clientName + (data.areaName ? ' | ' + data.areaName : '');
+
+        renderPolicyDetails(data);
+    } catch (err) {
+        console.error('Error loading policy details:', err);
+        body.innerHTML = '<div class="empty-msg"><p>שגיאה בטעינת פרטי הפוליסה</p></div>';
+    }
+}
+
+function renderPolicyDetails(p) {
+    const body = document.getElementById('modalBody');
+    if (!p) { body.innerHTML = '<div class="empty-msg"><p>לא נמצאו פרטים</p></div>'; return; }
+
+    let html = '<div class="details-grid">';
+
+    // Policy Info
+    html += '<div class="details-section">';
+    html += '<h3><span class="icon">📋</span> פרטי פוליסה</h3>';
+    [
+        ['מספר פוליסה', p.fullPolicyID],
+        ['אינדקס', p.policyIndex],
+        ['מוצר', p.branchName],
+        ['אזור', p.areaName],
+        ['תאריך הנפקה', formatDate(p.issueDate)],
+        ['תאריך התחלה', formatDate(p.startDate)],
+        ['תאריך סיום', formatDate(p.endDate)],
+        ['סה"כ ימים', p.totalDays],
+        ['מספר מבוטחים', p.customerCount],
+        ['דוכת', p.doketNumber],
+        ['תוספת', p.policyDoc],
+    ].forEach(([label, value]) => {
+        if (value !== null && value !== undefined && value !== '' && value !== 0) {
+            html += `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${esc(String(value))}</span></div>`;
+        }
+    });
+    html += '</div>';
+
+    // Financial
+    html += '<div class="details-section">';
+    html += '<h3><span class="icon">💰</span> נתונים כספיים</h3>';
+    const finFields = [
+        ['סה"כ פרמיה', '$' + formatNumber(p.total)],
+        ['פרמיה בסיסית', p.basePolicyTotal ? '$' + formatNumber(p.basePolicyTotal) : null],
+        ['פרמיית ריידרים', p.riderTotal ? '$' + formatNumber(p.riderTotal) : null],
+        isOphir
+            ? ['עמלת חתם', p.hatamTotal ? '$' + formatNumber(p.hatamTotal) : null]
+            : ['עמלת סוכן', p.agentRateTotal ? '$' + formatNumber(p.agentRateTotal) : null],
+    ];
+    finFields.forEach(([label, value]) => {
+        if (value !== null && value !== undefined) {
+            html += `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value premium">${value}</span></div>`;
+        }
+    });
+
+    // Agent info
+    [
+        ['סוכן', p.agentName],
+        ['קוד סוכן', p.agentCode || null],
+        ['סניף סוכן', p.snifAgentName],
+        ['מזהה הראל', p.harelAgentId],
+    ].forEach(([label, value]) => {
+        if (value !== null && value !== undefined && value !== '' && value !== 0) {
+            html += `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${esc(String(value))}</span></div>`;
+        }
+    });
+    html += '</div>';
+
+    // Payer
+    if (p.payerFirstName || p.payerLastaName || p.payerTz) {
+        html += '<div class="details-section">';
+        html += '<h3><span class="icon">💳</span> פרטי משלם</h3>';
+        [
+            ['שם', [p.payerFirstName, p.payerLastaName].filter(Boolean).join(' ')],
+            ['ת.ז', p.payerTz],
+        ].forEach(([label, value]) => {
+            if (value) html += `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${esc(value)}</span></div>`;
+        });
+        html += '</div>';
+    }
+
+    // Customers
+    const custs = p.customers || [];
+    if (custs.length > 0) {
+        html += '<div class="details-section" style="grid-column: 1 / -1;">';
+        html += '<h3><span class="icon">👥</span> מבוטחים (' + custs.length + ')</h3>';
+        custs.forEach((c, i) => {
+            const name = [c.firstName, c.hebLname].filter(Boolean).join(' ') || c.clientName || '-';
+            const engName = [c.engFname, c.engLname].filter(Boolean).join(' ');
+            html += '<div style="' + (i > 0 ? 'margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-200);' : '') + '">';
+            html += '<div style="font-weight:700;font-size:14px;margin-bottom:8px;color:var(--dark);">' + esc(name);
+            if (engName) html += ' <span style="color:var(--gray-400);font-weight:400;">(' + esc(engName) + ')</span>';
+            html += '</div>';
+            [
+                ['ת.ז / דרכון', c.personId],
+                ['תאריך לידה', formatDate(c.birthDate)],
+                ['טלפון', c.phone || c.mobile],
+                ['אימייל', c.email],
+                ['כתובת', c.address],
+            ].forEach(([label, value]) => {
+                if (value && value !== '-') {
+                    html += `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${esc(String(value))}</span></div>`;
+                }
+            });
+            if (c.riders && c.riders.length > 0) {
+                html += '<div style="margin-top:10px;"><div style="font-weight:600;font-size:12px;color:var(--gray-500);margin-bottom:6px;">כיסויים:</div>';
+                html += '<table class="customers-table"><thead><tr><th>כיסוי</th><th>תאריך התחלה</th><th>תאריך סיום</th><th>פרמיה</th></tr></thead><tbody>';
+                c.riders.forEach(r => {
+                    html += `<tr><td>${esc(r.riderName)}</td><td>${formatDate(r.startDate)}</td><td>${formatDate(r.endDate)}</td><td>$${formatNumber(r.riderTotal)}</td></tr>`;
+                });
+                html += '</tbody></table></div>';
+            }
+            html += '</div>';
+        });
+        html += '</div>';
+    }
+
+    html += '</div>';
+    body.innerHTML = html;
+}
+
+function closeModal() {
+    const modal = document.getElementById('policyModal');
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+function closeModalOverlay(event) {
+    if (event.target === event.currentTarget) closeModal();
 }
