@@ -224,25 +224,39 @@ async function fetchAllPoliciesByAgent(agentIndex, year, month) {
     let all = [];
     let page = 1;
     const PS = 50; // API max is 50 per page
-    const TIMEOUT = 12000; // 12s per request — enough for slow API but won't kill Vercel
+    const TIMEOUT = 25000; // 25s per request — external API is very slow
+    const MAX_RETRIES = 2;
 
     while (true) {
-        const apiRes = await bituhOfirFetch(
-            `/api/Policy/GetPolicyDetailsByAgent?agentIndex=${agentIndex}&bYear=${year}&bMonth=${month}&page=${page}&pageSize=${PS}`,
-            TIMEOUT
-        );
-        const raw = await apiRes.json();
-        // API might return array directly, or {items:[], totalCount:N}
-        let items;
-        if (Array.isArray(raw)) {
-            items = raw;
-        } else if (raw && raw.items) {
-            items = raw.items;
-        } else {
-            // Log unexpected format on first page only
-            if (page === 1) console.log(`fetchAllPolicies: agent=${agentIndex} ${month}/${year} unexpected format:`, JSON.stringify(raw).slice(0, 300));
-            items = [];
+        let items = null;
+
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                const apiRes = await bituhOfirFetch(
+                    `/api/Policy/GetPolicyDetailsByAgent?agentIndex=${agentIndex}&bYear=${year}&bMonth=${month}&page=${page}&pageSize=${PS}`,
+                    TIMEOUT
+                );
+                const raw = await apiRes.json();
+                // API might return array directly, or {items:[], totalCount:N}
+                if (Array.isArray(raw)) {
+                    items = raw;
+                } else if (raw && raw.items) {
+                    items = raw.items;
+                } else {
+                    if (page === 1) console.log(`fetchAllPolicies: agent=${agentIndex} ${month}/${year} unexpected format:`, JSON.stringify(raw).slice(0, 300));
+                    items = [];
+                }
+                break; // success, exit retry loop
+            } catch (err) {
+                console.error(`fetchAllPolicies: agent=${agentIndex} ${month}/${year} page=${page} attempt=${attempt} ERROR: ${err.message}`);
+                if (attempt === MAX_RETRIES) {
+                    items = []; // give up after max retries
+                }
+                // wait 1s before retry
+                await new Promise(r => setTimeout(r, 1000));
+            }
         }
+
         all = all.concat(items);
         if (items.length === 0) break;
         if (items.length < PS) break;
@@ -385,7 +399,7 @@ module.exports = async function handler(req, res) {
                 }
             }
 
-            console.log(`DASH: fetching ${allTasks.length} tasks (${agentIndexes.length} agents × ${month} months × 2 years), concurrency=2`);
+            console.log(`DASH: fetching ${allTasks.length} tasks (${agentIndexes.length} agents × ${month} months × 2 years), concurrency=3`);
             const startTime = Date.now();
 
             const allResults = await runWithConcurrency(
@@ -398,7 +412,7 @@ module.exports = async function handler(req, res) {
                         return { ...t, policies: [] };
                     }
                 }),
-                2 // max 2 concurrent requests — prevents overwhelming external API
+                3 // max 3 concurrent requests
             );
 
             console.log(`DASH: all fetches done in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
@@ -491,7 +505,7 @@ module.exports = async function handler(req, res) {
                             return { m: t.m, y: t.y, total: 0 };
                         }
                     }),
-                    2
+                    3
                 );
 
                 // Aggregate by month+year
