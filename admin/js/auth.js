@@ -84,6 +84,7 @@ function logout() {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_refresh');
     localStorage.removeItem('admin_user');
+    localStorage.removeItem('admin_last_activity');
     window.location.href = '/admin/login';
 }
 
@@ -105,3 +106,49 @@ async function apiFetch(url, options = {}) {
 
     return res;
 }
+
+// ========== Inactivity Timeout ==========
+// Auto-logout after 30 minutes of no activity (mouse, keyboard, touch, scroll)
+(function initInactivityTimeout() {
+    const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes
+    const CHECK_INTERVAL = 60 * 1000; // check every 1 minute
+    const STORAGE_KEY = 'admin_last_activity';
+    const currentPage = window.location.pathname;
+    if (currentPage.includes('login')) return;
+
+    function updateActivity() {
+        localStorage.setItem(STORAGE_KEY, Date.now().toString());
+    }
+
+    function getLastActivity() {
+        const ts = localStorage.getItem(STORAGE_KEY);
+        return ts ? parseInt(ts, 10) : Date.now();
+    }
+
+    // Set initial activity timestamp
+    updateActivity();
+
+    // Track user activity events (throttled)
+    let _activityThrottle = 0;
+    function onActivity() {
+        const now = Date.now();
+        if (now - _activityThrottle < 10000) return; // throttle to once per 10 seconds
+        _activityThrottle = now;
+        updateActivity();
+    }
+
+    ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(evt => {
+        document.addEventListener(evt, onActivity, { passive: true });
+    });
+
+    // Periodically check if inactive too long
+    setInterval(() => {
+        const token = getToken();
+        if (!token) return;
+        const elapsed = Date.now() - getLastActivity();
+        if (elapsed >= INACTIVITY_LIMIT) {
+            console.log('Admin session expired due to inactivity');
+            logout();
+        }
+    }, CHECK_INTERVAL);
+})();

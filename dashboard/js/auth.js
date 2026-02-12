@@ -457,6 +457,7 @@ function logout() {
     localStorage.removeItem('dash_token');
     localStorage.removeItem('dash_refresh');
     localStorage.removeItem('dash_user');
+    localStorage.removeItem('dash_last_activity');
     window.location.href = '/dashboard/login';
 }
 
@@ -665,16 +666,72 @@ function updateSidebarVisibility() {
 // Run immediately (script is at bottom of body, DOM is ready)
 updateSidebarVisibility();
 
+// ========== Inactivity Timeout ==========
+// Auto-logout after 30 minutes of no activity (mouse, keyboard, touch, scroll)
+(function initInactivityTimeout() {
+    const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes
+    const CHECK_INTERVAL = 60 * 1000; // check every 1 minute
+    const STORAGE_KEY = 'dash_last_activity';
+    const currentPage = window.location.pathname;
+    if (currentPage.includes('login')) return;
+
+    function updateActivity() {
+        localStorage.setItem(STORAGE_KEY, Date.now().toString());
+    }
+
+    function getLastActivity() {
+        const ts = localStorage.getItem(STORAGE_KEY);
+        return ts ? parseInt(ts, 10) : Date.now();
+    }
+
+    // Set initial activity timestamp
+    updateActivity();
+
+    // Track user activity events (throttled)
+    let _activityThrottle = 0;
+    function onActivity() {
+        const now = Date.now();
+        if (now - _activityThrottle < 10000) return; // throttle to once per 10 seconds
+        _activityThrottle = now;
+        updateActivity();
+    }
+
+    ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(evt => {
+        document.addEventListener(evt, onActivity, { passive: true });
+    });
+
+    // Periodically check if inactive too long
+    setInterval(() => {
+        const token = getToken();
+        if (!token) return;
+        const elapsed = Date.now() - getLastActivity();
+        if (elapsed >= INACTIVITY_LIMIT) {
+            console.log('Session expired due to inactivity');
+            logout();
+        }
+    }, CHECK_INTERVAL);
+})();
+
 // Proactive token refresh: refresh 5 minutes before expiry
 // Access token lasts 1 hour, so refresh every 55 minutes
+// Only refreshes if user has been active recently
 (function scheduleProactiveRefresh() {
     const REFRESH_INTERVAL = 55 * 60 * 1000; // 55 minutes
+    const INACTIVITY_LIMIT = 30 * 60 * 1000; // same as timeout above
     const currentPage = window.location.pathname;
     if (currentPage.includes('login')) return; // Don't refresh on login page
 
     setInterval(async () => {
         const token = getToken();
         if (!token) return;
+
+        // Don't refresh if user has been inactive — let the session expire
+        const lastActivity = parseInt(localStorage.getItem('dash_last_activity') || '0', 10);
+        if (Date.now() - lastActivity >= INACTIVITY_LIMIT) {
+            console.log('Skipping token refresh — user inactive');
+            return;
+        }
+
         console.log('Proactive token refresh...');
         const ok = await tryRefreshToken();
         if (ok) {
