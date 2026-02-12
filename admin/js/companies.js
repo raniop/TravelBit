@@ -460,7 +460,6 @@ async function sendCredentials(userId, userName, username, phone, email, method)
 
     // Build message
     const loginUrl = 'https://travelins.co.il/dashboard';
-    const rlm = '\u200F'; // Right-to-Left Mark
 
     if (method === 'whatsapp') {
         const message = `שלום ${userName},\n\nפרטי הגישה שלך למערכת Travelins:\n\nקישור: ${loginUrl}\nשם משתמש: ${username}\nסיסמה: ${password}\n\nבהצלחה!`;
@@ -469,10 +468,41 @@ async function sendCredentials(userId, userName, username, phone, email, method)
         const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`;
         window.open(waUrl, '_blank');
     } else if (method === 'email') {
-        const subject = `${rlm}פרטי גישה למערכת Travelins`;
-        const body = `${rlm}שלום ${userName},\n\n${rlm}פרטי הגישה שלך למערכת Travelins:\n\n${rlm}קישור: ${loginUrl}\n${rlm}שם משתמש: ${username}\n${rlm}סיסמה: ${password}\n\n${rlm}בהצלחה!`;
-        const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.open(mailtoUrl, '_blank');
+        // Use HTML email via a hidden form to ensure RTL rendering
+        const subject = 'פרטי גישה למערכת Travelins';
+        const htmlBody = `<html><body dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;direction:rtl;text-align:right;">` +
+            `<p>שלום ${userName},</p>` +
+            `<p>פרטי הגישה שלך למערכת Travelins:</p>` +
+            `<table dir="rtl" style="border-collapse:collapse;text-align:right;">` +
+            `<tr><td style="padding:4px 0;font-weight:bold;">קישור:</td><td style="padding:4px 8px;direction:ltr;"><a href="${loginUrl}">${loginUrl}</a></td></tr>` +
+            `<tr><td style="padding:4px 0;font-weight:bold;">שם משתמש:</td><td style="padding:4px 8px;direction:ltr;">${username}</td></tr>` +
+            `<tr><td style="padding:4px 0;font-weight:bold;">סיסמה:</td><td style="padding:4px 8px;direction:ltr;">${password}</td></tr>` +
+            `</table>` +
+            `<p>בהצלחה!</p>` +
+            `</body></html>`;
+
+        // Open Outlook-compatible mailto with plain text fallback
+        const plainBody = `שלום ${userName},\r\n\r\nפרטי הגישה שלך למערכת Travelins:\r\n\r\nקישור: ${loginUrl}\r\nשם משתמש: ${username}\r\nסיסמה: ${password}\r\n\r\nבהצלחה!`;
+
+        // Try clipboard approach: copy HTML, open mailto for addressing
+        try {
+            const blob = new Blob([htmlBody], { type: 'text/html' });
+            const clipItem = new ClipboardItem({ 'text/html': blob, 'text/plain': new Blob([plainBody], { type: 'text/plain' }) });
+            navigator.clipboard.write([clipItem]).then(function() {
+                const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
+                window.open(mailtoUrl, '_blank');
+                alert('פרטי הגישה הועתקו ללוח!\nהדבק (Ctrl+V) בגוף המייל שנפתח.');
+            }).catch(function() {
+                // Fallback: plain text mailto
+                const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainBody)}`;
+                window.open(mailtoUrl, '_blank');
+            });
+        } catch(e) {
+            // Fallback: plain text mailto
+            const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainBody)}`;
+            window.open(mailtoUrl, '_blank');
+        }
+        return; // Don't continue to avoid duplicate opening
     }
 }
 
