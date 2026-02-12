@@ -716,11 +716,76 @@ module.exports = async function handler(req, res) {
                 return res.json({ items: enrichedAgents, totalCount: enrichedAgents.length });
             }
 
-            // Ophir (no agentCodes): pass through as-is
+            // Ophir (no agentCodes): pass through or enrich with policies
             const page = Number(req.query.page) || 1;
             const pageSize = Number(req.query.pageSize) || 100;
+            const selectedCodes = req.query.selectedAgents ? req.query.selectedAgents.split(',').map(s => s.trim()).filter(Boolean) : null;
+
             const apiRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${page}&pageSize=${pageSize}`);
             const data = await apiRes.json();
+
+            // If specific agents are selected AND date params exist, enrich with policies
+            if (selectedCodes && selectedCodes.length > 0 && req.query.fromMonth) {
+                const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
+                const selectedSet = new Set(selectedCodes);
+                const matchedAgents = items.filter(a => selectedSet.has(String(Math.round(Number(a.agentCode)))));
+
+                const now = new Date();
+                const fromMonth = Number(req.query.fromMonth) || (now.getMonth() + 1);
+                const fromYear = Number(req.query.fromYear) || now.getFullYear();
+                const toMonth = Number(req.query.toMonth) || fromMonth;
+                const toYear = Number(req.query.toYear) || fromYear;
+
+                const monthsToFetch = [];
+                let fy = fromYear, fm = fromMonth;
+                while (fy < toYear || (fy === toYear && fm <= toMonth)) {
+                    monthsToFetch.push({ y: fy, m: fm });
+                    fm++;
+                    if (fm > 12) { fm = 1; fy++; }
+                    if (monthsToFetch.length > 24) break;
+                }
+                console.log(`agents-report (Ophir): enriching ${matchedAgents.length} agents, months:`, monthsToFetch.map(x => `${x.m}/${x.y}`).join(', '));
+
+                const enrichedAgents = await runWithConcurrency(
+                    matchedAgents.map(agent => async () => {
+                        const idx = Math.round(Number(agent.agentIndex));
+                        let allPolicies = [];
+                        for (const { y, m } of monthsToFetch) {
+                            try {
+                                const policies = await fetchAllPoliciesByAgent(idx, y, m);
+                                allPolicies = allPolicies.concat(policies);
+                            } catch (err) {
+                                console.error(`agents-report (Ophir): error fetching agent ${idx} month ${m}/${y}:`, err.message);
+                            }
+                        }
+                        const uniquePolicies = new Set();
+                        allPolicies.forEach(p => {
+                            const key = p.policyIndex || p.fullPolicyID || '';
+                            if (key) uniquePolicies.add(key);
+                        });
+
+                        const totalPremium = allPolicies.reduce((s, p) => s + (Number(p.total) || 0), 0);
+                        const totalCommission = allPolicies.reduce((s, p) => s + (Number(p.hatamTotal) || 0), 0);
+                        const totalAgentRate = allPolicies.reduce((s, p) => s + (Number(p.agentRateTotal) || 0), 0);
+                        const policyCount = uniquePolicies.size || allPolicies.length;
+
+                        return {
+                            ...agent,
+                            totalPremium,
+                            totalCommission,
+                            totalAgentRate,
+                            policyCount,
+                            avgPremium: policyCount > 0 ? totalPremium / policyCount : 0,
+                            policies: allPolicies
+                        };
+                    }),
+                    2
+                );
+
+                console.log('agents-report (Ophir): returning', enrichedAgents.length, 'enriched agents');
+                return res.json({ items: enrichedAgents, totalCount: enrichedAgents.length });
+            }
+
             return res.json(data);
         }
 

@@ -225,7 +225,8 @@ async function loadReport() {
 
     try {
         const { fromMonth, fromYear, toMonth, toYear } = getSelectedDates();
-        const url = `/dashboard/external/agents-report?pageSize=500&fromMonth=${fromMonth}&fromYear=${fromYear}&toMonth=${toMonth}&toYear=${toYear}`;
+        const agentCodesParam = Array.from(selectedAgentCodes).join(',');
+        const url = `/dashboard/external/agents-report?pageSize=500&fromMonth=${fromMonth}&fromYear=${fromYear}&toMonth=${toMonth}&toYear=${toYear}&selectedAgents=${encodeURIComponent(agentCodesParam)}`;
         const res = await apiFetch(url);
         if (!res) return;
 
@@ -239,13 +240,7 @@ async function loadReport() {
         }
 
         const data = await res.json();
-        let agents = Array.isArray(data) ? data : (data.items || data.agents || []);
-
-        // Filter by selected agent codes
-        allAgentData = agents.filter(a => {
-            const code = String(a.agentCode ?? '');
-            return selectedAgentCodes.has(code);
-        });
+        allAgentData = Array.isArray(data) ? data : (data.items || data.agents || []);
 
         // Extract policies from selected agents
         allPolicies = [];
