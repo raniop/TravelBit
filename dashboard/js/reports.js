@@ -127,7 +127,14 @@ function renderAgentList(agents) {
         return;
     }
 
-    tbody.innerHTML = agents.map(a => {
+    // Sort by agent number
+    const sorted = [...agents].sort((a, b) => {
+        const numA = Number(a.agentCode) || 0;
+        const numB = Number(b.agentCode) || 0;
+        return numA - numB;
+    });
+
+    tbody.innerHTML = sorted.map(a => {
         const code = a.agentCode ?? '-';
         const name = a.agentName ?? '-';
         const main = a.snifNum ?? '';
