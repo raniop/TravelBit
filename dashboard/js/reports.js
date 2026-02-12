@@ -1,14 +1,19 @@
-// Reports Page JS - v5 — month/year selector
+// Reports Page JS - v7 — agent selector + month/year
 let allAgentData = [];
 let allPolicies = [];
 let isOphir = false;
+let agentsList = [];
+let selectedAgentCodes = new Set();
 
 const MONTH_NAMES = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
 document.addEventListener('DOMContentLoaded', () => {
     initUser();
     initDateSelectors();
-    loadReport();
+    loadAgentsList();
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeModal();
+    });
 });
 
 async function initUser() {
@@ -50,21 +55,16 @@ function initDateSelectors() {
     const fromYearEl = document.getElementById('fromYear');
     const toYearEl = document.getElementById('toYear');
 
-    // Populate months
     for (let m = 1; m <= 12; m++) {
-        const opt1 = new Option(MONTH_NAMES[m - 1], m);
-        const opt2 = new Option(MONTH_NAMES[m - 1], m);
-        fromMonthEl.appendChild(opt1);
-        toMonthEl.appendChild(opt2);
+        fromMonthEl.appendChild(new Option(MONTH_NAMES[m - 1], m));
+        toMonthEl.appendChild(new Option(MONTH_NAMES[m - 1], m));
     }
 
-    // Populate years (current year and 2 years back)
     for (let y = curYear; y >= curYear - 2; y--) {
         fromYearEl.appendChild(new Option(y, y));
         toYearEl.appendChild(new Option(y, y));
     }
 
-    // Default: current month/year for both from and to
     fromMonthEl.value = curMonth;
     toMonthEl.value = curMonth;
     fromYearEl.value = curYear;
@@ -84,14 +84,141 @@ function onDateChange() {
     loadReport();
 }
 
+// ==================== Agent Selector ====================
+async function loadAgentsList() {
+    try {
+        // Load all agents (all pages)
+        let items = [];
+        let page = 1;
+        let totalPages = 1;
+
+        const res = await apiFetch('/dashboard/external/agents-report?pageSize=500');
+        if (!res || !res.ok) return;
+
+        const data = await res.json();
+        items = Array.isArray(data) ? data : (data.items || data.agents || []);
+        totalPages = data.totalPages || 1;
+
+        for (let p = 2; p <= totalPages; p++) {
+            try {
+                const r = await apiFetch('/dashboard/external/agents-report?pageSize=500&page=' + p);
+                if (r && r.ok) {
+                    const d = await r.json();
+                    const more = Array.isArray(d) ? d : (d.items || d.agents || []);
+                    items = items.concat(more);
+                }
+            } catch (e) {
+                console.error('Error loading agents page ' + p, e);
+            }
+        }
+
+        agentsList = items;
+        renderAgentList(agentsList);
+        updateAgentSelCount();
+    } catch (err) {
+        console.error('Error loading agents list:', err);
+    }
+}
+
+function renderAgentList(agents) {
+    const tbody = document.getElementById('agentListBody');
+    if (!agents || agents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--gray-400);">לא נמצאו סוכנים</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = agents.map(a => {
+        const code = a.agentCode ?? '-';
+        const name = a.agentName ?? '-';
+        const main = a.snifNum ?? '';
+        const checked = selectedAgentCodes.has(String(code)) ? 'checked' : '';
+
+        return `<tr>
+            <td class="td-check"><input type="checkbox" value="${esc(String(code))}" ${checked} onchange="onAgentCheckChange(this)"></td>
+            <td class="td-center">${esc(String(code))}</td>
+            <td><strong>${esc(name)}</strong></td>
+            <td class="td-center">${main != null ? esc(String(main)) : ''}</td>
+        </tr>`;
+    }).join('');
+}
+
+function onAgentCheckChange(cb) {
+    const code = cb.value;
+    if (cb.checked) {
+        selectedAgentCodes.add(code);
+    } else {
+        selectedAgentCodes.delete(code);
+    }
+    updateSelectAllCheckbox();
+    updateAgentSelCount();
+}
+
+function toggleAllAgents(checked) {
+    if (checked) {
+        agentsList.forEach(a => {
+            selectedAgentCodes.add(String(a.agentCode ?? ''));
+        });
+    } else {
+        selectedAgentCodes.clear();
+    }
+    // Re-render with current filter
+    const query = (document.getElementById('agentSearchInput').value || '').trim().toLowerCase();
+    if (query) {
+        filterAgentList();
+    } else {
+        renderAgentList(agentsList);
+    }
+    updateAgentSelCount();
+}
+
+function updateSelectAllCheckbox() {
+    const selectAll = document.getElementById('selectAllAgents');
+    if (!selectAll) return;
+    selectAll.checked = agentsList.length > 0 && agentsList.every(a => selectedAgentCodes.has(String(a.agentCode ?? '')));
+}
+
+function updateAgentSelCount() {
+    const el = document.getElementById('agentSelCount');
+    if (el) {
+        const count = selectedAgentCodes.size;
+        el.textContent = count > 0 ? '(' + count + ' נבחרו)' : '';
+    }
+}
+
+function filterAgentList() {
+    const query = (document.getElementById('agentSearchInput').value || '').trim().toLowerCase();
+    if (!query) {
+        renderAgentList(agentsList);
+        return;
+    }
+    const filtered = agentsList.filter(a => {
+        const fields = [a.agentName, a.agentCode, a.snifNum].filter(Boolean).map(v => String(v).toLowerCase());
+        return fields.some(f => f.includes(query));
+    });
+    renderAgentList(filtered);
+}
+
+function toggleAgentSelector() {
+    const body = document.getElementById('agentSelectorBody');
+    const icon = document.getElementById('agentToggleIcon');
+    body.classList.toggle('open');
+    icon.classList.toggle('open');
+}
+
 // ==================== Load Report ====================
 async function loadReport() {
     showError(null);
+
+    // Check if agents are selected
+    if (selectedAgentCodes.size === 0) {
+        showError('יש לבחור לפחות סוכן אחד כדי לטעון דוח.');
+        return;
+    }
+
     const btn = document.getElementById('btnLoadReport');
     const tbody = document.getElementById('reportBody');
     const tfoot = document.getElementById('reportFoot');
 
-    // Show loading
     if (btn) { btn.disabled = true; btn.textContent = 'טוען...'; }
     tbody.innerHTML = '<tr><td colspan="10"><div class="loading-overlay"><div class="spinner"></div> טוען דוח...</div></td></tr>';
     if (tfoot) tfoot.innerHTML = '';
@@ -112,10 +239,15 @@ async function loadReport() {
         }
 
         const data = await res.json();
-        console.log('Report Data:', data);
-        allAgentData = Array.isArray(data) ? data : (data.items || data.agents || []);
+        let agents = Array.isArray(data) ? data : (data.items || data.agents || []);
 
-        // Extract all individual policies from agents
+        // Filter by selected agent codes
+        allAgentData = agents.filter(a => {
+            const code = String(a.agentCode ?? '');
+            return selectedAgentCodes.has(code);
+        });
+
+        // Extract policies from selected agents
         allPolicies = [];
         allAgentData.forEach(agent => {
             const agentName = agent.agentName || '-';
@@ -130,8 +262,6 @@ async function loadReport() {
                 });
             }
         });
-
-        console.log('Total policies extracted:', allPolicies.length);
 
         updateReportKPIs(allAgentData);
         document.getElementById('totalCount').textContent = allPolicies.length + ' פוליסות';
@@ -177,7 +307,6 @@ function filterAndRender() {
         });
     }
 
-    // Sort by policy number descending (highest first)
     filtered.sort((a, b) => {
         const aNum = Number(a.fullPolicyID || a.policyIndex || 0);
         const bNum = Number(b.fullPolicyID || b.policyIndex || 0);
@@ -269,9 +398,7 @@ function formatNumber(n) {
 function formatCurrency(n) {
     if (n === null || n === undefined) return '$0';
     const val = Number(n);
-    if (val < 0) {
-        return '-$' + formatNumber(Math.abs(val));
-    }
+    if (val < 0) return '-$' + formatNumber(Math.abs(val));
     return '$' + formatNumber(val);
 }
 
