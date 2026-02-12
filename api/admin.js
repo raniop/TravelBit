@@ -133,7 +133,7 @@ module.exports = async function handler(req, res) {
                 const company = await Company.create({
                     name, contactPerson, email, phone, policyNumber,
                     agentCodes: Array.isArray(agentCodes) ? agentCodes : [],
-                    dashboardModules: dashboardModules || { management: true, insurance: false, reminders: false },
+                    dashboardModules: dashboardModules || { management: true, insurance: false, reminders: false, yeadim: false },
                     insurancePages: insurancePages || { dashboard: true, policies: true, agents: true, reports: true },
                     reminderPages: reminderPages || { agentAppointment: true, policyCancellations: true, newProductions: true, claims: true, firstDeposit: true, completingDeficiencies: true },
                     subscriptionEnd: subscriptionEnd || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)

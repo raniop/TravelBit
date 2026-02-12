@@ -11,7 +11,7 @@
             else if (modules === 'both') modules = { management: true, insurance: true, reminders: false };
             else modules = { management: true, insurance: false, reminders: false };
         }
-        if (!modules) modules = { management: true, insurance: false, reminders: false };
+        if (!modules) modules = { management: true, insurance: false, reminders: false, yeadim: false };
 
         var ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
         var rules = [];
@@ -52,6 +52,12 @@
             if (rp.claims === false) rules.push('.sidebar-nav a[href*="type=claims"] { display: none !important; }');
             if (rp.firstDeposit === false) rules.push('.sidebar-nav a[href*="type=firstDeposit"] { display: none !important; }');
             if (rp.completingDeficiencies === false) rules.push('.sidebar-nav a[href*="type=completingDeficiencies"] { display: none !important; }');
+        }
+
+        // Hide yeadim section if not enabled
+        if (!modules.yeadim) {
+            rules.push('#yeadimSection { display: none !important; }');
+            rules.push('.sidebar-nav a[href*="yeadim"] { display: none !important; }');
         }
 
         // Granular insurance page hiding

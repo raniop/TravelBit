@@ -26,6 +26,7 @@
     { "source": "/api/dashboard/external/agents", "destination": "/api/dashboard/external" },
     { "source": "/api/dashboard/reminders/:id", "destination": "/api/dashboard/reminders" },
     { "source": "/api/dashboard/reminders", "destination": "/api/dashboard/reminders" },
+    { "source": "/api/dashboard/yeadim", "destination": "/api/dashboard/yeadim" },
     { "source": "/api/(.*)", "destination": "/api/$1" }
   ],
   "headers": [

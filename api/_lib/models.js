@@ -36,7 +36,7 @@ const companySchema = new mongoose.Schema({
     employeeCount: { type: Number, default: 0 },
     policyNumber: { type: String, trim: true },
     agentCodes: [{ type: String, trim: true }],
-    dashboardModules: { type: mongoose.Schema.Types.Mixed, default: { management: true, insurance: false, reminders: false } },
+    dashboardModules: { type: mongoose.Schema.Types.Mixed, default: { management: true, insurance: false, reminders: false, yeadim: false } },
     insurancePages: {
         dashboard: { type: Boolean, default: true },
         policies: { type: Boolean, default: true },
@@ -150,12 +150,13 @@ function normalizeDashboardModules(raw) {
         return {
             management: raw.management !== false,
             insurance: raw.insurance === true,
-            reminders: raw.reminders === true
+            reminders: raw.reminders === true,
+            yeadim: raw.yeadim === true
         };
     }
-    if (raw === 'insurance') return { management: false, insurance: true, reminders: false };
-    if (raw === 'both') return { management: true, insurance: true, reminders: false };
-    return { management: true, insurance: false, reminders: false };
+    if (raw === 'insurance') return { management: false, insurance: true, reminders: false, yeadim: false };
+    if (raw === 'both') return { management: true, insurance: true, reminders: false, yeadim: false };
+    return { management: true, insurance: false, reminders: false, yeadim: false };
 }
 
 // Use existing models if already compiled (serverless caching)

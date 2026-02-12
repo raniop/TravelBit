@@ -52,7 +52,8 @@ async function getCompanyMeta(companyId) {
     }
     const hasBituhOfir = dashboardModules.insurance === true;
     const hasReminders = dashboardModules.reminders === true;
-    return { companyName, dashboardModules, insurancePages, reminderPages, hasBituhOfir, hasReminders };
+    const hasYeadim = dashboardModules.yeadim === true;
+    return { companyName, dashboardModules, insurancePages, reminderPages, hasBituhOfir, hasReminders, hasYeadim };
 }
 
 // Build user response object
@@ -66,6 +67,7 @@ function buildUserResponse(user, meta) {
         companyName: meta.companyName,
         hasBituhOfir: meta.hasBituhOfir,
         hasReminders: meta.hasReminders,
+        hasYeadim: meta.hasYeadim,
         dashboardModules: meta.dashboardModules,
         insurancePages: meta.insurancePages,
         reminderPages: meta.reminderPages

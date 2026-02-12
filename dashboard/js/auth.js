@@ -4,11 +4,11 @@ const API_BASE = '/api';
 // Normalize dashboardModules: supports both old string format and new object format
 function normModules(raw) {
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-        return { management: raw.management !== false, insurance: raw.insurance === true, reminders: raw.reminders === true };
+        return { management: raw.management !== false, insurance: raw.insurance === true, reminders: raw.reminders === true, yeadim: raw.yeadim === true };
     }
-    if (raw === 'insurance') return { management: false, insurance: true, reminders: false };
-    if (raw === 'both') return { management: true, insurance: true, reminders: false };
-    return { management: true, insurance: false, reminders: false };
+    if (raw === 'insurance') return { management: false, insurance: true, reminders: false, yeadim: false };
+    if (raw === 'both') return { management: true, insurance: true, reminders: false, yeadim: false };
+    return { management: true, insurance: false, reminders: false, yeadim: false };
 }
 
 // Determine default landing page based on company's dashboardModules + insurancePages
@@ -28,6 +28,8 @@ function getDefaultDashboard(user) {
 
     if (modules.reminders) return '/dashboard/reminders.html';
 
+    if (modules.yeadim) return '/dashboard/yeadim.html';
+
     return '/dashboard/';
 }
 
@@ -46,12 +48,14 @@ function isPageAllowed(user, currentPage) {
     else if (currentPage.includes('reports')) insurancePageType = 'reports';
 
     const isRemindersPage = currentPage.includes('reminders') || currentPage.includes('reminder-detail');
-    const isManagementPage = !insurancePageType && !isRemindersPage && !currentPage.includes('login');
+    const isYeadimPage = currentPage.includes('yeadim');
+    const isManagementPage = !insurancePageType && !isRemindersPage && !isYeadimPage && !currentPage.includes('login');
 
     // Check module-level access
     if (isManagementPage && !modules.management) return false;
     if (insurancePageType && !modules.insurance) return false;
     if (isRemindersPage && !modules.reminders) return false;
+    if (isYeadimPage && !modules.yeadim) return false;
 
     // Granular insurance page check
     if (insurancePageType && modules.insurance) {
@@ -582,6 +586,17 @@ function updateSidebarVisibility() {
                     el.style.display = '';
                 }
             }
+            el = el.nextElementSibling;
+        }
+    }
+
+    // Yeadim section: show/hide
+    const yeadimSection = document.getElementById('yeadimSection');
+    if (yeadimSection) {
+        yeadimSection.style.display = modules.yeadim ? '' : 'none';
+        let el = yeadimSection.nextElementSibling;
+        while (el && el.tagName === 'A') {
+            el.style.display = modules.yeadim ? '' : 'none';
             el = el.nextElementSibling;
         }
     }

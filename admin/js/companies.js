@@ -147,7 +147,8 @@ async function submitAddCompany() {
     data.dashboardModules = {
         management: form2.querySelector('[name="addModManagement"]').checked,
         insurance: form2.querySelector('[name="addModInsurance"]').checked,
-        reminders: form2.querySelector('[name="addModReminders"]').checked
+        reminders: form2.querySelector('[name="addModReminders"]').checked,
+        yeadim: form2.querySelector('[name="addModYeadim"]').checked
     };
     // Insurance pages checkboxes
     data.insurancePages = {
@@ -167,7 +168,7 @@ async function submitAddCompany() {
     };
     // Remove checkbox fields from data (they came as 'on' strings)
     delete data.ipDashboard; delete data.ipPolicies; delete data.ipAgents; delete data.ipReports;
-    delete data.addModManagement; delete data.addModInsurance; delete data.addModReminders;
+    delete data.addModManagement; delete data.addModInsurance; delete data.addModReminders; delete data.addModYeadim;
     delete data.rpAgentAppointment; delete data.rpPolicyCancellations; delete data.rpNewProductions;
     delete data.rpClaims; delete data.rpFirstDeposit; delete data.rpCompletingDeficiencies;
 
@@ -249,6 +250,7 @@ async function openCompanyDetail(companyId) {
     document.getElementById('cdModManagement').checked = dm.management;
     document.getElementById('cdModInsurance').checked = dm.insurance;
     document.getElementById('cdModReminders').checked = dm.reminders;
+    document.getElementById('cdModYeadim').checked = dm.yeadim;
     // Insurance pages checkboxes
     const ip = company.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
     document.getElementById('cdIpDashboard').checked = ip.dashboard !== false;
@@ -295,7 +297,8 @@ async function saveCompanyDetails() {
     const dashboardModules = {
         management: document.getElementById('cdModManagement').checked,
         insurance: document.getElementById('cdModInsurance').checked,
-        reminders: document.getElementById('cdModReminders').checked
+        reminders: document.getElementById('cdModReminders').checked,
+        yeadim: document.getElementById('cdModYeadim').checked
     };
     const insurancePages = {
         dashboard: document.getElementById('cdIpDashboard').checked,
@@ -595,11 +598,11 @@ async function submitImport() {
 // Normalize dashboardModules (backward compat: string → object)
 function normalizeDM(raw) {
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-        return { management: raw.management !== false, insurance: raw.insurance === true, reminders: raw.reminders === true };
+        return { management: raw.management !== false, insurance: raw.insurance === true, reminders: raw.reminders === true, yeadim: raw.yeadim === true };
     }
-    if (raw === 'insurance') return { management: false, insurance: true, reminders: false };
-    if (raw === 'both') return { management: true, insurance: true, reminders: false };
-    return { management: true, insurance: false, reminders: false };
+    if (raw === 'insurance') return { management: false, insurance: true, reminders: false, yeadim: false };
+    if (raw === 'both') return { management: true, insurance: true, reminders: false, yeadim: false };
+    return { management: true, insurance: false, reminders: false, yeadim: false };
 }
 
 // Toggle sub-page checkboxes visibility in Add Company form
