@@ -5,6 +5,9 @@
       "maxDuration": 60
     }
   },
+  "redirects": [
+    { "source": "/dashboard", "destination": "/dashboard/", "statusCode": 301 }
+  ],
   "rewrites": [
     { "source": "/api/auth/login", "destination": "/api/auth" },
     { "source": "/api/auth/verify-otp", "destination": "/api/auth" },
