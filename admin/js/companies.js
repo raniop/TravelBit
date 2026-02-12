@@ -2,6 +2,7 @@
 let allCompanies = [];
 let importCompanyId = null;
 let currentDetailCompanyId = null;
+const cachedPasswords = {}; // userId → password (kept in memory for sending credentials)
 
 document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
@@ -186,6 +187,7 @@ async function submitAddCompany() {
 
         closeAddModal();
         loadCompanies();
+        if (result.user && result.user.id) cachedPasswords[result.user.id] = data.password;
         alert(`החברה "${data.name}" נוצרה בהצלחה!\n\nשם משתמש: ${data.username}\nסיסמה: ${data.password}`);
     } catch (err) {
         errorEl.textContent = err.message;
@@ -374,7 +376,7 @@ function renderCompanyUsers(users) {
                         <td>${u.lastLogin ? new Date(u.lastLogin).toLocaleString('he-IL') : 'אף פעם'}</td>
                         <td><span class="badge ${u.isActive ? 'badge-active' : 'badge-cancelled'}">${u.isActive ? 'פעיל' : 'מושבת'}</span></td>
                         <td>
-                            <div style="display:flex;gap:6px;flex-wrap:wrap;" onclick="event.stopPropagation();">
+                            <div style="display:flex;gap:4px;flex-wrap:nowrap;" onclick="event.stopPropagation();">
                                 <button class="btn btn-sm" onclick="sendCredentials('${u._id}','${escapeHtml(u.name)}','${escapeHtml(u.username)}','${escapeHtml(u.phone || '')}','${escapeHtml(u.email || '')}','whatsapp')" title="שלח פרטי גישה בוואטסאפ" style="font-size:12px;padding:5px 10px;background:#25D366;color:#fff;border:none;">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                                 </button>
@@ -414,6 +416,7 @@ async function resetUserPassword(userId, userName) {
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.message);
+        cachedPasswords[userId] = newPassword;
         alert(`הסיסמה שונתה בהצלחה!\n\nסיסמה חדשה: ${newPassword}`);
     } catch (err) {
         alert('שגיאה: ' + err.message);
@@ -432,29 +435,34 @@ async function sendCredentials(userId, userName, username, phone, email, method)
         return;
     }
 
-    const newPassword = prompt(`הזן סיסמה לשליחה עבור ${userName}:\n(לפחות 6 תווים)\n\nהסיסמה תעודכן במערכת ותישלח למשתמש.`);
-    if (!newPassword) return;
-    if (newPassword.length < 6) { alert('הסיסמה חייבת להכיל לפחות 6 תווים.'); return; }
+    let password = cachedPasswords[userId];
 
-    // Update password in system
-    try {
-        const res = await apiFetch('/admin/users', {
-            method: 'PUT',
-            body: JSON.stringify({ userId, password: newPassword })
-        });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.message);
-    } catch (err) {
-        alert('שגיאה בעדכון הסיסמה: ' + err.message);
-        return;
+    if (!password) {
+        // No cached password — ask admin to set one
+        password = prompt(`אין סיסמה שמורה עבור ${userName}.\nהזן סיסמה חדשה לשליחה:\n(לפחות 6 תווים)\n\nהסיסמה תעודכן במערכת ותישלח למשתמש.`);
+        if (!password) return;
+        if (password.length < 6) { alert('הסיסמה חייבת להכיל לפחות 6 תווים.'); return; }
+
+        // Update password in system
+        try {
+            const res = await apiFetch('/admin/users', {
+                method: 'PUT',
+                body: JSON.stringify({ userId, password })
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.message);
+            cachedPasswords[userId] = password;
+        } catch (err) {
+            alert('שגיאה בעדכון הסיסמה: ' + err.message);
+            return;
+        }
     }
 
     // Build message
     const loginUrl = 'https://travelins.co.il/dashboard';
-    const message = `שלום ${userName},\n\nפרטי הגישה שלך למערכת Travelins:\n\nקישור: ${loginUrl}\nשם משתמש: ${username}\nסיסמה: ${newPassword}\n\nבהצלחה!`;
+    const message = `שלום ${userName},\n\nפרטי הגישה שלך למערכת Travelins:\n\nקישור: ${loginUrl}\nשם משתמש: ${username}\nסיסמה: ${password}\n\nבהצלחה!`;
 
     if (method === 'whatsapp') {
-        // Format phone for wa.me (remove leading 0 and add 972)
         let waPhone = phone.replace(/[-\s]/g, '');
         if (waPhone.startsWith('0')) waPhone = '972' + waPhone.slice(1);
         const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`;
@@ -464,8 +472,6 @@ async function sendCredentials(userId, userName, username, phone, email, method)
         const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
         window.open(mailtoUrl, '_blank');
     }
-
-    alert('הסיסמה עודכנה בהצלחה!\nחלון השליחה נפתח.');
 }
 
 async function toggleUser(userId, isActive) {
@@ -530,6 +536,7 @@ async function submitAddUser() {
         }
 
         closeAddUserModal();
+        if (result.user && result.user.id) cachedPasswords[result.user.id] = data.password;
         // Reload users in detail modal if open
         if (currentDetailCompanyId) openCompanyDetail(currentDetailCompanyId);
         alert(`המשתמש נוצר בהצלחה!\n\nשם: ${data.name}\nשם משתמש: ${data.username}\nסיסמה: ${data.password}`);

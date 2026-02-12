@@ -7,7 +7,7 @@ const API_BASE = '/api';
     const currentPage = window.location.pathname;
 
     if (token && currentPage.includes('login')) {
-        window.location.href = '/admin/';
+        window.location.href = '/admin';
         return;
     }
 
@@ -58,7 +58,7 @@ if (loginForm) {
             localStorage.setItem('admin_token', data.accessToken);
             localStorage.setItem('admin_refresh', data.refreshToken);
             localStorage.setItem('admin_user', JSON.stringify(data.user));
-            window.location.href = '/admin/';
+            window.location.href = '/admin';
         } catch (err) {
             errorEl.textContent = err.message;
             errorEl.classList.add('show');

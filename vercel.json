@@ -6,10 +6,10 @@
     }
   },
   "redirects": [
-    { "source": "/admin", "destination": "/admin/", "statusCode": 301 },
     { "source": "/dashboard", "destination": "/dashboard/", "statusCode": 301 }
   ],
   "rewrites": [
+    { "source": "/admin", "destination": "/admin/index.html" },
     { "source": "/admin/companies", "destination": "/admin/companies.html" },
     { "source": "/admin/login", "destination": "/admin/login.html" },
     { "source": "/dashboard/login", "destination": "/dashboard/login.html" },
