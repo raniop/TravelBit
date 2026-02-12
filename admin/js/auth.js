@@ -12,7 +12,7 @@ const API_BASE = '/api';
     }
 
     if (!token && !currentPage.includes('login')) {
-        window.location.href = '/admin/login.html';
+        window.location.href = '/admin/login';
         return;
     }
 })();
@@ -84,7 +84,7 @@ function logout() {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_refresh');
     localStorage.removeItem('admin_user');
-    window.location.href = '/admin/login.html';
+    window.location.href = '/admin/login';
 }
 
 async function apiFetch(url, options = {}) {

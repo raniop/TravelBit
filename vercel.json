@@ -6,10 +6,10 @@
       "maxDuration": 60
     }
   },
-  "redirects": [
-    { "source": "/dashboard", "destination": "/dashboard/", "statusCode": 301 }
-  ],
   "rewrites": [
+    { "source": "/admin/companies", "destination": "/admin/companies.html" },
+    { "source": "/admin/login", "destination": "/admin/login.html" },
+    { "source": "/dashboard", "destination": "/dashboard/index.html" },
     { "source": "/dashboard/login", "destination": "/dashboard/login.html" },
     { "source": "/dashboard/:slug/css/:file*", "destination": "/dashboard/css/:file*" },
     { "source": "/dashboard/:slug/js/:file*", "destination": "/dashboard/js/:file*" },
