@@ -1,5 +1,4 @@
 {
-  "cleanUrls": true,
   "regions": ["fra1"],
   "functions": {
     "api/**/*.js": {
@@ -12,7 +11,7 @@
   "rewrites": [
     { "source": "/dashboard/:slug/css/:file*", "destination": "/dashboard/css/:file*" },
     { "source": "/dashboard/:slug/js/:file*", "destination": "/dashboard/js/:file*" },
-    { "source": "/dashboard/:slug/:page", "destination": "/dashboard/:page" },
+    { "source": "/dashboard/:slug/:page", "destination": "/dashboard/:page.html" },
     { "source": "/dashboard/:slug/", "destination": "/dashboard/index.html" },
     { "source": "/dashboard/:slug", "destination": "/dashboard/index.html" },
     { "source": "/api/auth/login", "destination": "/api/auth" },
