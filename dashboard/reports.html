@@ -189,19 +189,19 @@
         }
         .agent-selector-controls input[type="text"]:focus { outline: none; border-color: var(--primary); }
         .agent-list {
-            max-height: calc(100vh - 300px); min-height: 200px; overflow-y: auto;
+            max-height: 300px; min-height: 150px; overflow-y: auto;
             border: 1px solid var(--gray-100); border-radius: 8px; background: var(--gray-50);
         }
         .agent-list-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .agent-list-table thead th {
-            background: #f1f5f9; padding: 5px 8px; font-size: 10px;
+            background: #f1f5f9; padding: 3px 6px; font-size: 10px;
             font-weight: 700; color: var(--gray-600); text-align: right;
             border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; z-index: 1;
         }
         .agent-list-table tbody tr { transition: background 0.1s; }
         .agent-list-table tbody tr:hover { background: #FFF7ED; }
         .agent-list-table tbody td {
-            padding: 4px 8px; font-size: 11px; color: var(--gray-700);
+            padding: 2px 6px; font-size: 11px; color: var(--gray-700);
             border-bottom: 1px solid var(--gray-100);
         }
         .agent-list-table .td-check { text-align: center; width: 28px; }
@@ -404,7 +404,7 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/reports.js?v=9"></script>
+    <script src="js/reports.js?v=10"></script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
     function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}

@@ -721,14 +721,35 @@ module.exports = async function handler(req, res) {
             const pageSize = Number(req.query.pageSize) || 100;
             const selectedCodes = req.query.selectedAgents ? req.query.selectedAgents.split(',').map(s => s.trim()).filter(Boolean) : null;
 
-            const apiRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${page}&pageSize=${pageSize}`);
-            const data = await apiRes.json();
-
-            // If specific agents are selected AND date params exist, enrich with policies
+            // If specific agents are selected, load ALL pages to find them
             if (selectedCodes && selectedCodes.length > 0 && req.query.fromMonth) {
-                const items = Array.isArray(data) ? data : (data && data.items ? data.items : []);
+                let allItems = [];
+                let currentPage = 1;
+                let totalPages = 1;
+                const fetchPageSize = 500;
+
+                // Load first page
+                const firstRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=1&pageSize=${fetchPageSize}`);
+                const firstData = await firstRes.json();
+                const firstItems = Array.isArray(firstData) ? firstData : (firstData && firstData.items ? firstData.items : []);
+                allItems = firstItems;
+                totalPages = firstData.totalPages || 1;
+
+                // Load remaining pages
+                for (let pg = 2; pg <= totalPages; pg++) {
+                    try {
+                        const pgRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${pg}&pageSize=${fetchPageSize}`);
+                        const pgData = await pgRes.json();
+                        const pgItems = Array.isArray(pgData) ? pgData : (pgData && pgData.items ? pgData.items : []);
+                        allItems = allItems.concat(pgItems);
+                    } catch (e) {
+                        console.error('agents-report (Ophir): error loading page ' + pg + ':', e.message);
+                    }
+                }
+                console.log(`agents-report (Ophir): loaded ${allItems.length} total agents from ${totalPages} pages`);
+
                 const selectedSet = new Set(selectedCodes);
-                const matchedAgents = items.filter(a => selectedSet.has(String(Math.round(Number(a.agentCode)))));
+                const matchedAgents = allItems.filter(a => selectedSet.has(String(Math.round(Number(a.agentCode)))));
 
                 const now = new Date();
                 const fromMonth = Number(req.query.fromMonth) || (now.getMonth() + 1);
@@ -786,6 +807,9 @@ module.exports = async function handler(req, res) {
                 return res.json({ items: enrichedAgents, totalCount: enrichedAgents.length });
             }
 
+            // No selectedAgents — passthrough paginated data
+            const apiRes = await bituhOfirFetch(`/api/Policy/GetAgentsReport?page=${page}&pageSize=${pageSize}`);
+            const data = await apiRes.json();
             return res.json(data);
         }
 
