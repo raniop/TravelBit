@@ -53,12 +53,26 @@ function parseSheet(ws) {
 
     // Find targets in the right side columns
     const targets = {};
+    let targetValueCol = -1; // The column where target values live (next to label)
     for (const row of rows.slice(1, 5)) {
         for (let c = 0; c < row.length; c++) {
             const val = (row[c] || '').toString().trim();
-            if (val === 'יעד סיכונים') targets.sikunim = toNum(row[c + 1]);
-            if (val === 'יעד פנסיה') targets.pensia = toNum(row[c + 1]);
+            if (val === 'יעד סיכונים') { targets.sikunim = toNum(row[c + 1]); targetValueCol = c + 1; }
+            if (/יעד פנסיה/.test(val)) targets.pensia = toNum(row[c + 1]);
             if (/יעד פיננסים/.test(val)) targets.finansim = toNum(row[c + 1]);
+        }
+    }
+
+    // Row 7 (Excel row 8) col Q = yearly pension target
+    // Row 8 (Excel row 9) col Q = yearly finance target
+    if (targetValueCol > 0) {
+        if (rows[7]) {
+            const yearlyPensionVal = toNum(rows[7][targetValueCol]);
+            if (yearlyPensionVal > 0) targets.pensiaYearly = yearlyPensionVal;
+        }
+        if (rows[8]) {
+            const yearlyFinanceVal = toNum(rows[8][targetValueCol]);
+            if (yearlyFinanceVal > 0) targets.finansimYearly = yearlyFinanceVal;
         }
     }
 
