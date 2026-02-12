@@ -9,6 +9,7 @@
     { "source": "/dashboard", "destination": "/dashboard/", "statusCode": 301 }
   ],
   "rewrites": [
+    { "source": "/dashboard/login", "destination": "/dashboard/login.html" },
     { "source": "/dashboard/:slug/css/:file*", "destination": "/dashboard/css/:file*" },
     { "source": "/dashboard/:slug/js/:file*", "destination": "/dashboard/js/:file*" },
     { "source": "/dashboard/:slug/:page", "destination": "/dashboard/:page.html" },
