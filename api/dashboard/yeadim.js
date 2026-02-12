@@ -108,7 +108,7 @@ function parseSheet(ws) {
             if (secondFinance > 0) financeAmount = secondFinance;
         }
 
-        totalSikunim += yearlyPremium;
+        totalSikunim += monthlyPremium;
         totalPension += pensionAmount + (pensionTransfer || 0);
         totalFinance += financeAmount;
 
