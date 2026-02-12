@@ -61,6 +61,8 @@
         }
         .policies-table .td-premium { font-weight: 700; color: #059669; }
         .policies-table .td-center { text-align: center; }
+        .policies-table .td-check { text-align: center; width: 30px; }
+        .policies-table .td-check input[type="checkbox"] { pointer-events: none; }
 
         /* ===== Page Layout ===== */
         .page-body { display: flex; flex-direction: column; min-height: calc(100vh - 80px); }
@@ -227,23 +229,27 @@
                 <!-- Agents Table -->
                 <div class="agents-table-wrap">
                     <div class="agents-table-header">
-                        <h2>רשימת סוכנים</h2>
+                        <h2>סוכנים</h2>
                         <span class="count-badge" id="totalCount">טוען...</span>
                     </div>
                     <div class="table-scroll">
                         <table class="policies-table">
                             <thead>
                                 <tr>
+                                    <th>מספר סוכן</th>
                                     <th>שם סוכן</th>
-                                    <th>קוד סוכן</th>
-                                    <th>מספר פוליסות</th>
-                                    <th>סה"כ פרמיות</th>
-                                    <th>סה"כ עמלות</th>
-                                    <th>פרמיה ממוצעת</th>
+                                    <th>ראשי</th>
+                                    <th>קוד הראל</th>
+                                    <th>מס' בתה"ח</th>
+                                    <th>עיר</th>
+                                    <th>טלפון</th>
+                                    <th>פקס</th>
+                                    <th>אימייל</th>
+                                    <th>סוכן נסיעות?</th>
                                 </tr>
                             </thead>
                             <tbody id="agentsBody">
-                                <tr><td colspan="6"><div class="loading-overlay"><div class="spinner"></div> טוען סוכנים...</div></td></tr>
+                                <tr><td colspan="10"><div class="loading-overlay"><div class="spinner"></div> טוען סוכנים...</div></td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -277,7 +283,7 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/agents.js?v=1"></script>
+    <script src="js/agents.js?v=3"></script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
     function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}

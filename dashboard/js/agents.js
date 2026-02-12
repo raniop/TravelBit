@@ -1,4 +1,4 @@
-// Agents Page JS - v1
+// Agents Page JS - v2
 let allAgents = [];
 let selectedAgent = null;
 
@@ -30,10 +30,11 @@ async function initUser() {
     }
 }
 
-// ==================== Load Agents ====================
+// ==================== Load Agents (all pages) ====================
 async function loadAgents() {
     showError(null);
     try {
+        // Load first page
         const res = await apiFetch('/dashboard/external/agents-report?pageSize=500');
         if (!res) return;
 
@@ -47,9 +48,27 @@ async function loadAgents() {
         }
 
         const data = await res.json();
-        console.log('Agents Report Data:', data);
-        allAgents = Array.isArray(data) ? data : (data.items || data.agents || []);
-        document.getElementById('totalCount').textContent = allAgents.length + ' סוכנים';
+        let items = Array.isArray(data) ? data : (data.items || data.agents || []);
+        const totalPages = data.totalPages || 1;
+        const totalCount = data.totalCount || items.length;
+
+        // Load remaining pages if needed
+        for (let page = 2; page <= totalPages; page++) {
+            try {
+                const r = await apiFetch('/dashboard/external/agents-report?pageSize=500&page=' + page);
+                if (r && r.ok) {
+                    const d = await r.json();
+                    const moreItems = Array.isArray(d) ? d : (d.items || d.agents || []);
+                    items = items.concat(moreItems);
+                }
+            } catch (e) {
+                console.error('Error loading page ' + page + ':', e);
+            }
+        }
+
+        allAgents = items;
+
+        document.getElementById('totalCount').textContent = 'סה"כ: ' + totalCount;
         renderAgentsTable(allAgents);
     } catch (err) {
         console.error('Error loading agents:', err);
@@ -68,7 +87,8 @@ function searchAgents() {
 
     const filtered = allAgents.filter(a => {
         const fields = [
-            a.agentName, a.agentCode, a.agentIndex, a.snifAgentName
+            a.agentName, a.agentCode, a.agentIndex,
+            a.cityName, a.phone, a.agentEmail, a.fax
         ].filter(Boolean).map(v => String(v).toLowerCase());
         return fields.some(f => f.includes(query));
     });
@@ -81,25 +101,33 @@ function searchAgents() {
 function renderAgentsTable(agents) {
     const tbody = document.getElementById('agentsBody');
     if (!agents || agents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg><p>לא נמצאו סוכנים</p></div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10"><div class="empty-msg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg><p>לא נמצאו סוכנים</p></div></td></tr>';
         return;
     }
 
     tbody.innerHTML = agents.map(a => {
-        const code = a.agentCode || a.agentIndex || '-';
-        const name = a.agentName || '-';
-        const count = a.policyCount || a.totalPolicies || a.count || 0;
-        const premium = a.totalPremium || a.total || a.premium || 0;
-        const commission = a.totalCommission || a.hatamTotal || a.commission || 0;
-        const avg = count > 0 ? premium / count : 0;
+        const agentNum = a.agentCode ?? '-';
+        const name = a.agentName ?? '-';
+        const snifNum = a.snifNum ?? '';
+        const harelCode = a.harelAgentCode ?? '';
+        const idInSystem = a.agentIndex ?? '';
+        const city = a.cityName ?? '';
+        const phone = a.phone ?? '';
+        const fax = a.fax ?? '';
+        const email = a.agentEmail ?? '';
+        const isTravelAgent = a.isTravelAgent ?? false;
 
-        return `<tr onclick="selectAgent('${esc(String(code))}', '${esc(name)}')">
+        return `<tr onclick="selectAgent('${esc(String(a.agentIndex || agentNum))}', '${esc(name)}')">
+            <td class="td-center">${esc(String(agentNum))}</td>
             <td><strong>${esc(name)}</strong></td>
-            <td class="td-center">${esc(String(code))}</td>
-            <td class="td-center">${formatNumber(count)}</td>
-            <td class="td-premium">$${formatNumber(premium)}</td>
-            <td class="td-premium">$${formatNumber(commission)}</td>
-            <td>$${formatNumber(avg)}</td>
+            <td class="td-center">${snifNum != null ? esc(String(snifNum)) : ''}</td>
+            <td class="td-center">${esc(String(harelCode))}</td>
+            <td class="td-center">${esc(String(idInSystem))}</td>
+            <td>${esc(String(city))}</td>
+            <td>${esc(String(phone))}</td>
+            <td>${esc(String(fax))}</td>
+            <td>${email ? '<a href="mailto:' + esc(String(email)) + '">' + esc(String(email)) + '</a>' : ''}</td>
+            <td class="td-check"><input type="checkbox" ${isTravelAgent ? 'checked' : ''} disabled></td>
         </tr>`;
     }).join('');
 }
@@ -161,7 +189,6 @@ async function loadAgentPolicies() {
             return;
         }
         const data = await res.json();
-        console.log('Agent Policies Data:', data);
         const policies = Array.isArray(data) ? data : (data.items || data.policies || []);
         renderAgentPolicies(policies);
     } catch (err) {
