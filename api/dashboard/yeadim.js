@@ -57,9 +57,9 @@ function parseSheet(ws) {
     for (const row of rows.slice(1, 5)) {
         for (let c = 0; c < row.length; c++) {
             const val = (row[c] || '').toString().trim();
-            if (val === 'יעד סיכונים') { targets.sikunim = toNum(row[c + 1]); targetValueCol = c + 1; }
-            if (/יעד פנסיה/.test(val)) targets.pensia = toNum(row[c + 1]);
-            if (/יעד פיננסים/.test(val)) targets.finansim = toNum(row[c + 1]);
+            if (/^יעד סיכונים/.test(val)) { targets.sikunim = toNum(row[c + 1]); targetValueCol = c + 1; }
+            if (/^יעד פנסיה/.test(val)) targets.pensia = toNum(row[c + 1]);
+            if (/^יעד פיננסים/.test(val)) targets.finansim = toNum(row[c + 1]);
         }
     }
 
@@ -177,7 +177,7 @@ async function fetchAndParse() {
     const wb = XLSX.read(Buffer.from(buffer), { type: 'buffer' });
 
     const months = {};
-    let globalTargets = { sikunim: 4000, pensia: 480000, finansim: 1000000 };
+    let globalTargets = { sikunim: 4000, pensia: 480000, pensiaYearly: 0, finansim: 1000000, finansimYearly: 0 };
 
     for (const sheetName of wb.SheetNames) {
         // Skip non-month sheets
@@ -196,6 +196,8 @@ async function fetchAndParse() {
         if (parsed.targets.sikunim) globalTargets.sikunim = parsed.targets.sikunim;
         if (parsed.targets.pensia) globalTargets.pensia = parsed.targets.pensia;
         if (parsed.targets.finansim) globalTargets.finansim = parsed.targets.finansim;
+        if (parsed.targets.pensiaYearly) globalTargets.pensiaYearly = parsed.targets.pensiaYearly;
+        if (parsed.targets.finansimYearly) globalTargets.finansimYearly = parsed.targets.finansimYearly;
     }
 
     const result = {

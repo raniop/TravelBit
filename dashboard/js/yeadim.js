@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    let TARGETS = { sikunim: 4000, pensia: 480000, finansim: 1000000 };
+    let TARGETS = { sikunim: 4000, pensia: 480000, pensiaYearly: 0, finansim: 1000000, finansimYearly: 0 };
     let MONTHS_DATA = {};
     let MONTH_ORDER = [];
     let currentMonth = '';
@@ -102,15 +102,19 @@
     // ===== Target Cards =====
     function renderTargetCards(monthTotals, cumulative) {
         const container = document.getElementById('targetsSummary');
+        // Use yearly targets for pension/finance if available, otherwise fallback to monthly
+        const pensiaTarget = TARGETS.pensiaYearly || TARGETS.pensia;
+        const finansimTarget = TARGETS.finansimYearly || TARGETS.finansim;
+
         const remaining = {
             sikunim: Math.max(0, TARGETS.sikunim - monthTotals.sikunim),
-            pensia: Math.max(0, TARGETS.pensia - cumulative.pension),
-            finansim: Math.max(0, TARGETS.finansim - cumulative.finance)
+            pensia: Math.max(0, pensiaTarget - cumulative.pension),
+            finansim: Math.max(0, finansimTarget - cumulative.finance)
         };
         const pct = {
             sikunim: TARGETS.sikunim ? Math.min(100, Math.round((monthTotals.sikunim / TARGETS.sikunim) * 100)) : 0,
-            pensia: TARGETS.pensia ? Math.min(100, Math.round((cumulative.pension / TARGETS.pensia) * 100)) : 0,
-            finansim: TARGETS.finansim ? Math.min(100, Math.round((cumulative.finance / TARGETS.finansim) * 100)) : 0
+            pensia: pensiaTarget ? Math.min(100, Math.round((cumulative.pension / pensiaTarget) * 100)) : 0,
+            finansim: finansimTarget ? Math.min(100, Math.round((cumulative.finance / finansimTarget) * 100)) : 0
         };
 
         container.innerHTML = `
@@ -137,7 +141,7 @@
                 </div>
                 <div class="target-card-values">
                     <div class="target-achieved">${formatCurrency(cumulative.pension)}</div>
-                    <div class="target-goal">יעד: <span>${formatCurrency(TARGETS.pensia)}</span></div>
+                    <div class="target-goal">יעד: <span>${formatCurrency(pensiaTarget)}</span></div>
                 </div>
                 <div class="target-progress-bar"><div class="target-progress-fill" style="width:${pct.pensia}%"></div></div>
                 <div class="target-progress-pct">${pct.pensia}% — נותר ${formatCurrency(remaining.pensia)}</div>
@@ -151,7 +155,7 @@
                 </div>
                 <div class="target-card-values">
                     <div class="target-achieved">${formatCurrency(cumulative.finance)}</div>
-                    <div class="target-goal">יעד: <span>${formatCurrency(TARGETS.finansim)}</span></div>
+                    <div class="target-goal">יעד: <span>${formatCurrency(finansimTarget)}</span></div>
                 </div>
                 <div class="target-progress-bar"><div class="target-progress-fill" style="width:${pct.finansim}%"></div></div>
                 <div class="target-progress-pct">${pct.finansim}% — נותר ${formatCurrency(remaining.finansim)}</div>
@@ -217,6 +221,9 @@
         const chartsRow = document.getElementById('chartsRow');
         chartsRow.style.display = '';
 
+        const pensiaTarget = TARGETS.pensiaYearly || TARGETS.pensia;
+        const finansimTarget = TARGETS.finansimYearly || TARGETS.finansim;
+
         // Bar chart: target vs achieved
         if (barChart) barChart.destroy();
         const barCtx = document.getElementById('targetsBarChart').getContext('2d');
@@ -234,7 +241,7 @@
                     },
                     {
                         label: 'יעד',
-                        data: [TARGETS.sikunim, TARGETS.pensia, TARGETS.finansim],
+                        data: [TARGETS.sikunim, pensiaTarget, finansimTarget],
                         backgroundColor: ['#FECACA', '#BFDBFE', '#A7F3D0'],
                         borderRadius: 6,
                         barPercentage: 0.5
