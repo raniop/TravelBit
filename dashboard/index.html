@@ -249,23 +249,34 @@
                 document.head.appendChild(clone);
             });
 
-            // Load page-specific JS files (skip auth.js, sidebar-init)
+            // Collect page-specific JS files (skip auth.js, sidebar-init)
+            var pageScripts = [];
             var scripts = doc.querySelectorAll('script[src]');
             scripts.forEach(function(sc) {
                 var src = sc.getAttribute('src');
                 if (src && !src.includes('auth.js') && !src.includes('sidebar-init') && !src.includes('cdn.jsdelivr')) {
-                    var ns = document.createElement('script');
-                    ns.src = src;
-                    document.body.appendChild(ns);
+                    // Convert relative paths to absolute /dashboard/ paths
+                    if (src.startsWith('js/')) src = '/dashboard/' + src;
+                    pageScripts.push(src);
                 }
             });
 
-            // Load Chart.js if needed and not already loaded
-            if (html.includes('chart.js') && !window.Chart) {
-                var cs = document.createElement('script');
-                cs.src = 'https://cdn.jsdelivr.net/npm/chart.js@4';
-                document.head.appendChild(cs);
+            // Load Chart.js first if needed, then page scripts
+            function loadScriptsSequentially(srcs, idx, done) {
+                if (idx >= srcs.length) { if (done) done(); return; }
+                var ns = document.createElement('script');
+                ns.src = srcs[idx];
+                ns.onload = function() { loadScriptsSequentially(srcs, idx + 1, done); };
+                document.body.appendChild(ns);
             }
+
+            var needChart = html.includes('chart.js') && !window.Chart;
+            var allScripts = needChart ? ['https://cdn.jsdelivr.net/npm/chart.js@4'].concat(pageScripts) : pageScripts;
+
+            loadScriptsSequentially(allScripts, 0, function() {
+                // Re-fire DOMContentLoaded so page scripts that listen for it can initialize
+                document.dispatchEvent(new Event('DOMContentLoaded'));
+            });
 
             // Update sidebar active state
             var nav = document.querySelector('.sidebar-nav');
