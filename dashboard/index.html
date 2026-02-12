@@ -213,7 +213,82 @@
     </div>
 
     <script src="/dashboard/js/auth.js"></script>
-    <script src="/dashboard/js/dashboard.js"></script>
+    <script>
+    // Dynamic landing page: if user's default module isn't management,
+    // load the correct page's JS and swap the main content
+    (function() {
+        var user = null;
+        try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
+        if (!user) return;
+
+        var defaultPage = (typeof getDefaultPageFile === 'function') ? getDefaultPageFile(user) : 'index';
+        if (defaultPage === 'index') {
+            // Management user — load dashboard.js normally
+            var s = document.createElement('script');
+            s.src = '/dashboard/js/dashboard.js';
+            document.body.appendChild(s);
+            return;
+        }
+
+        // Non-management user — fetch the correct page and replace content
+        var pageUrl = '/dashboard/' + defaultPage + '.html';
+        fetch(pageUrl).then(function(r) { return r.text(); }).then(function(html) {
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+
+            // Replace main content area
+            var newMain = doc.querySelector('.main-content');
+            var currentMain = document.querySelector('.main-content');
+            if (newMain && currentMain) currentMain.innerHTML = newMain.innerHTML;
+
+            // Replace head styles (page-specific)
+            var newStyles = doc.querySelectorAll('head style');
+            newStyles.forEach(function(st) {
+                var clone = document.createElement('style');
+                clone.textContent = st.textContent;
+                document.head.appendChild(clone);
+            });
+
+            // Load page-specific JS files (skip auth.js, sidebar-init)
+            var scripts = doc.querySelectorAll('script[src]');
+            scripts.forEach(function(sc) {
+                var src = sc.getAttribute('src');
+                if (src && !src.includes('auth.js') && !src.includes('sidebar-init') && !src.includes('cdn.jsdelivr')) {
+                    var ns = document.createElement('script');
+                    ns.src = src;
+                    document.body.appendChild(ns);
+                }
+            });
+
+            // Load Chart.js if needed and not already loaded
+            if (html.includes('chart.js') && !window.Chart) {
+                var cs = document.createElement('script');
+                cs.src = 'https://cdn.jsdelivr.net/npm/chart.js@4';
+                document.head.appendChild(cs);
+            }
+
+            // Update sidebar active state
+            var nav = document.querySelector('.sidebar-nav');
+            if (nav) {
+                nav.querySelectorAll('a.active').forEach(function(a) { a.classList.remove('active'); });
+                var targetLink = nav.querySelector('a[href*="' + defaultPage + '"]');
+                if (targetLink) targetLink.classList.add('active');
+            }
+
+            // Update page title
+            var newTitle = doc.querySelector('title');
+            if (newTitle) document.title = newTitle.textContent;
+
+            // Re-run sidebar visibility
+            if (typeof updateSidebarVisibility === 'function') updateSidebarVisibility();
+        }).catch(function() {
+            // Fallback: load management dashboard
+            var s = document.createElement('script');
+            s.src = '/dashboard/js/dashboard.js';
+            document.body.appendChild(s);
+        });
+    })();
+    </script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
     function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}

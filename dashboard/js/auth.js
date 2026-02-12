@@ -17,32 +17,42 @@ function getDashboardBase(user) {
     return '/dashboard/';
 }
 
-// Determine default landing page based on company's dashboardModules + insurancePages
+// Determine default landing page — always returns base slug URL
 function getDefaultDashboard(user) {
     if (!user) return '/dashboard/login';
-    const base = getDashboardBase(user);
+    return getDashboardBase(user);
+}
+
+// Determine which internal page to show for user's first available module
+function getDefaultPageFile(user) {
+    if (!user) return null;
     const modules = normModules(user.dashboardModules);
     const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
 
-    if (modules.management) return base;
+    if (modules.management) return 'index'; // management overview
 
     if (modules.insurance) {
-        if (ip.dashboard !== false) return base + 'bituhofir';
-        if (ip.policies !== false) return base + 'policies';
-        if (ip.agents !== false) return base + 'agents';
-        if (ip.reports !== false) return base + 'reports';
+        if (ip.dashboard !== false) return 'bituhofir';
+        if (ip.policies !== false) return 'policies';
+        if (ip.agents !== false) return 'agents';
+        if (ip.reports !== false) return 'reports';
     }
 
-    if (modules.reminders) return base + 'reminders';
+    if (modules.reminders) return 'reminders';
 
-    if (modules.yeadim) return base + 'yeadim';
+    if (modules.yeadim) return 'yeadim';
 
-    return base;
+    return 'index';
 }
 
 // Check which pages this user is allowed to visit
 function isPageAllowed(user, currentPage) {
     if (!user) return true; // let auth check handle it
+
+    // Slug root path (/dashboard/SLUG/ or /dashboard/SLUG) — always allowed, acts as landing page
+    const isSlugRoot = /^\/dashboard\/[^/]+\/?$/.test(currentPage) && !currentPage.includes('login');
+    if (isSlugRoot) return true;
+
     const modules = normModules(user.dashboardModules);
     const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
     const rp = user.reminderPages || { agentAppointment: true, policyCancellations: true, newProductions: true, claims: true, firstDeposit: true, completingDeficiencies: true };
