@@ -2,7 +2,13 @@
 let allCompanies = [];
 let importCompanyId = null;
 let currentDetailCompanyId = null;
-const cachedPasswords = {}; // userId → password (kept in memory for sending credentials)
+// userId → password cache (survives page refresh via sessionStorage)
+function getCachedPassword(userId) {
+    try { const p = JSON.parse(sessionStorage.getItem('_credPwds') || '{}'); return p[userId] || ''; } catch(_) { return ''; }
+}
+function setCachedPassword(userId, pwd) {
+    try { const p = JSON.parse(sessionStorage.getItem('_credPwds') || '{}'); p[userId] = pwd; sessionStorage.setItem('_credPwds', JSON.stringify(p)); } catch(_) {}
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const user = getUser();
@@ -187,7 +193,7 @@ async function submitAddCompany() {
 
         closeAddModal();
         loadCompanies();
-        if (result.user && result.user.id) cachedPasswords[result.user.id] = data.password;
+        if (result.user && result.user.id) setCachedPassword(result.user.id, data.password);
         alert(`החברה "${data.name}" נוצרה בהצלחה!\n\nשם משתמש: ${data.username}\nסיסמה: ${data.password}`);
     } catch (err) {
         errorEl.textContent = err.message;
@@ -416,7 +422,7 @@ async function resetUserPassword(userId, userName) {
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.message);
-        cachedPasswords[userId] = newPassword;
+        setCachedPassword(userId, newPassword);
         alert(`הסיסמה שונתה בהצלחה!\n\nסיסמה חדשה: ${newPassword}`);
     } catch (err) {
         alert('שגיאה: ' + err.message);
@@ -435,7 +441,7 @@ async function sendCredentials(userId, userName, username, phone, email, method)
         return;
     }
 
-    let password = cachedPasswords[userId];
+    let password = getCachedPassword(userId);
 
     if (!password) {
         // No cached password — ask admin to set one
@@ -451,7 +457,7 @@ async function sendCredentials(userId, userName, username, phone, email, method)
             });
             const result = await res.json();
             if (!res.ok) throw new Error(result.message);
-            cachedPasswords[userId] = password;
+            setCachedPassword(userId, password);
         } catch (err) {
             alert('שגיאה בעדכון הסיסמה: ' + err.message);
             return;
@@ -468,41 +474,12 @@ async function sendCredentials(userId, userName, username, phone, email, method)
         const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`;
         window.open(waUrl, '_blank');
     } else if (method === 'email') {
-        // Use HTML email via a hidden form to ensure RTL rendering
         const subject = 'פרטי גישה למערכת Travelins';
-        const htmlBody = `<html><body dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;direction:rtl;text-align:right;">` +
-            `<p>שלום ${userName},</p>` +
-            `<p>פרטי הגישה שלך למערכת Travelins:</p>` +
-            `<table dir="rtl" style="border-collapse:collapse;text-align:right;">` +
-            `<tr><td style="padding:4px 0;font-weight:bold;">קישור:</td><td style="padding:4px 8px;direction:ltr;"><a href="${loginUrl}">${loginUrl}</a></td></tr>` +
-            `<tr><td style="padding:4px 0;font-weight:bold;">שם משתמש:</td><td style="padding:4px 8px;direction:ltr;">${username}</td></tr>` +
-            `<tr><td style="padding:4px 0;font-weight:bold;">סיסמה:</td><td style="padding:4px 8px;direction:ltr;">${password}</td></tr>` +
-            `</table>` +
-            `<p>בהצלחה!</p>` +
-            `</body></html>`;
-
-        // Open Outlook-compatible mailto with plain text fallback
-        const plainBody = `שלום ${userName},\r\n\r\nפרטי הגישה שלך למערכת Travelins:\r\n\r\nקישור: ${loginUrl}\r\nשם משתמש: ${username}\r\nסיסמה: ${password}\r\n\r\nבהצלחה!`;
-
-        // Try clipboard approach: copy HTML, open mailto for addressing
-        try {
-            const blob = new Blob([htmlBody], { type: 'text/html' });
-            const clipItem = new ClipboardItem({ 'text/html': blob, 'text/plain': new Blob([plainBody], { type: 'text/plain' }) });
-            navigator.clipboard.write([clipItem]).then(function() {
-                const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
-                window.open(mailtoUrl, '_blank');
-                alert('פרטי הגישה הועתקו ללוח!\nהדבק (Ctrl+V) בגוף המייל שנפתח.');
-            }).catch(function() {
-                // Fallback: plain text mailto
-                const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainBody)}`;
-                window.open(mailtoUrl, '_blank');
-            });
-        } catch(e) {
-            // Fallback: plain text mailto
-            const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plainBody)}`;
-            window.open(mailtoUrl, '_blank');
-        }
-        return; // Don't continue to avoid duplicate opening
+        const rle = '\u202B'; // Right-to-Left Embedding
+        const pdf = '\u202C'; // Pop Directional Formatting
+        const body = `${rle}שלום ${userName},${pdf}\r\n\r\n${rle}פרטי הגישה שלך למערכת Travelins:${pdf}\r\n\r\n${rle}קישור:${pdf} ${loginUrl}\r\n${rle}שם משתמש:${pdf} ${username}\r\n${rle}סיסמה:${pdf} ${password}\r\n\r\n${rle}בהצלחה!${pdf}`;
+        const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoUrl;
     }
 }
 
@@ -568,7 +545,7 @@ async function submitAddUser() {
         }
 
         closeAddUserModal();
-        if (result.user && result.user.id) cachedPasswords[result.user.id] = data.password;
+        if (result.user && result.user.id) setCachedPassword(result.user.id, data.password);
         // Reload users in detail modal if open
         if (currentDetailCompanyId) openCompanyDetail(currentDetailCompanyId);
         alert(`המשתמש נוצר בהצלחה!\n\nשם: ${data.name}\nשם משתמש: ${data.username}\nסיסמה: ${data.password}`);
