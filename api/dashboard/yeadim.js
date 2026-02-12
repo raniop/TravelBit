@@ -1,8 +1,8 @@
 const XLSX = require('xlsx');
 const { verifyAuth, cors } = require('../_lib/auth');
 
-// SharePoint direct download URL
-const SHAREPOINT_URL = 'https://ophirins-my.sharepoint.com/:x:/g/personal/liorophir_ophirins_co_il/IQBb0qL_lIilRqnzUgAkIzO6AfkyPK-ZXp6GyfwmZP5CZNE?download=1';
+// SharePoint direct download URL (uses download.aspx for reliable server-side fetch)
+const SHAREPOINT_URL = 'https://ophirins-my.sharepoint.com/personal/liorophir_ophirins_co_il/_layouts/15/download.aspx?share=IQBb0qL_lIilRqnzUgAkIzO6AfkyPK-ZXp6GyfwmZP5CZNE';
 
 // Cache: store parsed data for 5 minutes to avoid hammering SharePoint
 let cache = { data: null, timestamp: 0 };
