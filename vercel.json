@@ -6,6 +6,7 @@
     }
   },
   "redirects": [
+    { "source": "/admin", "destination": "/admin/", "statusCode": 301 },
     { "source": "/dashboard", "destination": "/dashboard/", "statusCode": 301 }
   ],
   "rewrites": [
