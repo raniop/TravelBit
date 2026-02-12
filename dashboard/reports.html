@@ -314,14 +314,14 @@
                                 <!-- Date Filter inside sidebar -->
                                 <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
                                     <div style="display:flex; align-items:center; gap:6px; font-size:12px;">
-                                        <label style="font-weight:600; color:var(--gray-600); white-space:nowrap;">מתאריך:</label>
+                                        <label style="font-weight:600; color:var(--gray-600); white-space:nowrap; width:55px; text-align:start;">מתאריך:</label>
                                         <select id="fromMonth" style="flex:1; padding:4px 6px; border-radius:6px; border:1px solid var(--gray-200); font-family:'Heebo',sans-serif; font-size:11px;"></select>
-                                        <select id="fromYear" style="padding:4px 6px; border-radius:6px; border:1px solid var(--gray-200); font-family:'Heebo',sans-serif; font-size:11px;"></select>
+                                        <select id="fromYear" style="width:70px; padding:4px 6px; border-radius:6px; border:1px solid var(--gray-200); font-family:'Heebo',sans-serif; font-size:11px;"></select>
                                     </div>
                                     <div style="display:flex; align-items:center; gap:6px; font-size:12px;">
-                                        <label style="font-weight:600; color:var(--gray-600); white-space:nowrap;">עד תאריך:</label>
+                                        <label style="font-weight:600; color:var(--gray-600); white-space:nowrap; width:55px; text-align:start;">עד תאריך:</label>
                                         <select id="toMonth" style="flex:1; padding:4px 6px; border-radius:6px; border:1px solid var(--gray-200); font-family:'Heebo',sans-serif; font-size:11px;"></select>
-                                        <select id="toYear" style="padding:4px 6px; border-radius:6px; border:1px solid var(--gray-200); font-family:'Heebo',sans-serif; font-size:11px;"></select>
+                                        <select id="toYear" style="width:70px; padding:4px 6px; border-radius:6px; border:1px solid var(--gray-200); font-family:'Heebo',sans-serif; font-size:11px;"></select>
                                     </div>
                                 </div>
                                 <button class="btn-load-report" id="btnLoadReport" onclick="onDateChange()">הצג נתונים</button>
@@ -406,7 +406,7 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/reports.js?v=12"></script>
+    <script src="js/reports.js?v=13"></script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
     function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}
