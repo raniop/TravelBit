@@ -11,26 +11,33 @@ function normModules(raw) {
     return { management: true, insurance: false, reminders: false, yeadim: false };
 }
 
+// Get the dashboard base path, using company slug if available
+function getDashboardBase(user) {
+    if (user && user.companySlug) return '/dashboard/' + user.companySlug + '/';
+    return '/dashboard/';
+}
+
 // Determine default landing page based on company's dashboardModules + insurancePages
 function getDefaultDashboard(user) {
     if (!user) return '/dashboard/';
+    const base = getDashboardBase(user);
     const modules = normModules(user.dashboardModules);
     const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
 
-    if (modules.management) return '/dashboard/';
+    if (modules.management) return base;
 
     if (modules.insurance) {
-        if (ip.dashboard !== false) return '/dashboard/bituhofir.html';
-        if (ip.policies !== false) return '/dashboard/policies.html';
-        if (ip.agents !== false) return '/dashboard/agents.html';
-        if (ip.reports !== false) return '/dashboard/reports.html';
+        if (ip.dashboard !== false) return base + 'bituhofir.html';
+        if (ip.policies !== false) return base + 'policies.html';
+        if (ip.agents !== false) return base + 'agents.html';
+        if (ip.reports !== false) return base + 'reports.html';
     }
 
-    if (modules.reminders) return '/dashboard/reminders.html';
+    if (modules.reminders) return base + 'reminders.html';
 
-    if (modules.yeadim) return '/dashboard/yeadim.html';
+    if (modules.yeadim) return base + 'yeadim.html';
 
-    return '/dashboard/';
+    return base;
 }
 
 // Check which pages this user is allowed to visit
@@ -93,6 +100,7 @@ function isPageAllowed(user, currentPage) {
                     const data = await res.json();
                     if (data.user) {
                         if (data.user.companyName) user.companyName = data.user.companyName;
+                        if (data.user.companySlug !== undefined) user.companySlug = data.user.companySlug;
                         if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
                         if (data.user.hasReminders !== undefined) user.hasReminders = data.user.hasReminders;
                         if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
@@ -134,6 +142,7 @@ function isPageAllowed(user, currentPage) {
                     const data = await res.json();
                     if (data.user) {
                         if (data.user.companyName) user.companyName = data.user.companyName;
+                        if (data.user.companySlug !== undefined) user.companySlug = data.user.companySlug;
                         if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
                         if (data.user.hasReminders !== undefined) user.hasReminders = data.user.hasReminders;
                         if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
@@ -497,6 +506,7 @@ async function syncCompanyName() {
             const data = await res.json();
             if (data.user) {
                 if (data.user.companyName) user.companyName = data.user.companyName;
+                if (data.user.companySlug !== undefined) user.companySlug = data.user.companySlug;
                 if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
                 if (data.user.hasReminders !== undefined) user.hasReminders = data.user.hasReminders;
                 if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;

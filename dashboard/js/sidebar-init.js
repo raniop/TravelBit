@@ -19,7 +19,7 @@
         // Hide management section if not enabled
         if (!modules.management) {
             rules.push('#managementSection { display: none !important; }');
-            rules.push('.sidebar-nav a[href="/dashboard/"] { display: none !important; }');
+            rules.push('.sidebar-nav a[href="./"] { display: none !important; }');
             rules.push('.sidebar-nav a[href*="trips"] { display: none !important; }');
             rules.push('.sidebar-nav a[href*="employees"] { display: none !important; }');
             rules.push('.sidebar-nav a[href*="expenses"] { display: none !important; }');

@@ -29,6 +29,7 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 // ===== COMPANY =====
 const companySchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true },
+    slug: { type: String, trim: true, lowercase: true, unique: true, sparse: true },
     contactPerson: { type: String, required: true },
     email: { type: String, required: true, trim: true, lowercase: true },
     phone: { type: String, trim: true },
@@ -144,6 +145,18 @@ const dashboardCacheSchema = new mongoose.Schema({
 dashboardCacheSchema.index({ companyId: 1, cacheKey: 1 }, { unique: true });
 dashboardCacheSchema.index({ cachedAt: 1 }, { expireAfterSeconds: 86400 }); // auto-delete after 24h
 
+// Generate URL-safe slug from company name (supports Hebrew)
+function generateSlug(name) {
+    if (!name) return '';
+    return name
+        .trim()
+        .toLowerCase()
+        .replace(/['"״׳]/g, '')           // remove quotes
+        .replace(/[\s\-_]+/g, '-')         // spaces/dashes/underscores → single dash
+        .replace(/[^a-z0-9\u0590-\u05FF\-]/g, '') // keep only alphanumeric, Hebrew, dashes
+        .replace(/^-+|-+$/g, '');          // trim leading/trailing dashes
+}
+
 // Normalize dashboardModules: supports both old string format and new object format
 function normalizeDashboardModules(raw) {
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
@@ -168,4 +181,4 @@ const Policy = mongoose.models.Policy || mongoose.model('Policy', policySchema);
 const Reminder = mongoose.models.Reminder || mongoose.model('Reminder', reminderSchema);
 const DashboardCache = mongoose.models.DashboardCache || mongoose.model('DashboardCache', dashboardCacheSchema);
 
-module.exports = { User, Company, Employee, Trip, Policy, Reminder, DashboardCache, normalizeDashboardModules };
+module.exports = { User, Company, Employee, Trip, Policy, Reminder, DashboardCache, normalizeDashboardModules, generateSlug };

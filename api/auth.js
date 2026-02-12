@@ -36,15 +36,17 @@ function maskPhone(phone) {
 // Fetch company metadata for user response
 async function getCompanyMeta(companyId) {
     let companyName = null;
+    let companySlug = null;
     let dashboardModules = { management: true, insurance: false, reminders: false };
     let insurancePages = { dashboard: true, policies: true, agents: true, reports: true };
     let reminderPages = { agentAppointment: true, policyCancellations: true, newProductions: true,
                           claims: true, firstDeposit: true, completingDeficiencies: true };
 
     if (companyId) {
-        const company = await Company.findById(companyId).select('name agentCodes dashboardModules insurancePages reminderPages').lean();
+        const company = await Company.findById(companyId).select('name slug agentCodes dashboardModules insurancePages reminderPages').lean();
         if (company) {
             companyName = company.name;
+            companySlug = company.slug || null;
             dashboardModules = normalizeDashboardModules(company.dashboardModules);
             if (company.insurancePages) insurancePages = company.insurancePages;
             if (company.reminderPages) reminderPages = company.reminderPages;
@@ -53,7 +55,7 @@ async function getCompanyMeta(companyId) {
     const hasBituhOfir = dashboardModules.insurance === true;
     const hasReminders = dashboardModules.reminders === true;
     const hasYeadim = dashboardModules.yeadim === true;
-    return { companyName, dashboardModules, insurancePages, reminderPages, hasBituhOfir, hasReminders, hasYeadim };
+    return { companyName, companySlug, dashboardModules, insurancePages, reminderPages, hasBituhOfir, hasReminders, hasYeadim };
 }
 
 // Build user response object
@@ -65,6 +67,7 @@ function buildUserResponse(user, meta) {
         role: user.role,
         companyId: user.companyId,
         companyName: meta.companyName,
+        companySlug: meta.companySlug,
         hasBituhOfir: meta.hasBituhOfir,
         hasReminders: meta.hasReminders,
         hasYeadim: meta.hasYeadim,

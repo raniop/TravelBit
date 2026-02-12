@@ -1,5 +1,5 @@
 const connectDB = require('./_lib/db');
-const { Company, User, Employee, Trip, Policy, Reminder } = require('./_lib/models');
+const { Company, User, Employee, Trip, Policy, Reminder, generateSlug } = require('./_lib/models');
 const { verifyAuth, cors } = require('./_lib/auth');
 
 module.exports = async function handler(req, res) {
@@ -130,8 +130,20 @@ module.exports = async function handler(req, res) {
                 const existingUser = await User.findOne({ username: username.toLowerCase() });
                 if (existingUser) return res.status(400).json({ message: 'שם המשתמש כבר קיים במערכת.' });
 
+                // Auto-generate slug from company name
+                let slug = req.body.slug ? req.body.slug.trim().toLowerCase() : generateSlug(name);
+                // Ensure slug is unique
+                if (slug) {
+                    let slugBase = slug;
+                    let counter = 1;
+                    while (await Company.findOne({ slug })) {
+                        slug = slugBase + '-' + counter;
+                        counter++;
+                    }
+                }
+
                 const company = await Company.create({
-                    name, contactPerson, email, phone, policyNumber,
+                    name, slug: slug || undefined, contactPerson, email, phone, policyNumber,
                     agentCodes: Array.isArray(agentCodes) ? agentCodes : [],
                     dashboardModules: dashboardModules || { management: true, insurance: false, reminders: false, yeadim: false },
                     insurancePages: insurancePages || { dashboard: true, policies: true, agents: true, reports: true },
@@ -159,12 +171,19 @@ module.exports = async function handler(req, res) {
         if (req.method === 'PUT') {
             try {
                 const companyId = url.split('/').pop();
-                const { name, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, reminderPages, isActive } = req.body;
+                const { name, slug: newSlug, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, reminderPages, isActive } = req.body;
 
                 const company = await Company.findById(companyId);
                 if (!company) return res.status(404).json({ message: 'החברה לא נמצאה.' });
 
                 if (name !== undefined) company.name = name;
+                if (newSlug !== undefined) {
+                    const cleanSlug = newSlug.trim().toLowerCase();
+                    // Check uniqueness (excluding current company)
+                    const existing = await Company.findOne({ slug: cleanSlug, _id: { $ne: company._id } });
+                    if (existing) return res.status(400).json({ message: 'הסלאג כבר בשימוש על ידי חברה אחרת.' });
+                    company.slug = cleanSlug || undefined;
+                }
                 if (contactPerson !== undefined) company.contactPerson = contactPerson;
                 if (email !== undefined) company.email = email;
                 if (phone !== undefined) company.phone = phone;

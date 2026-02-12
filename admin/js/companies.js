@@ -245,6 +245,8 @@ async function openCompanyDetail(companyId) {
     document.getElementById('cdPhone').value = company.phone || '';
     document.getElementById('cdPolicy').value = company.policyNumber || '';
     document.getElementById('cdAgentCodes').value = Array.isArray(company.agentCodes) ? company.agentCodes.join(', ') : '';
+    document.getElementById('cdSlug').value = company.slug || '';
+    document.getElementById('cdSlugPreview').textContent = company.slug || '...';
     // dashboardModules checkboxes — normalize old string format
     const dm = normalizeDM(company.dashboardModules);
     document.getElementById('cdModManagement').checked = dm.management;
@@ -292,6 +294,7 @@ async function saveCompanyDetails() {
     const email = document.getElementById('cdEmail').value.trim();
     const phone = document.getElementById('cdPhone').value.trim();
     const policyNumber = document.getElementById('cdPolicy').value.trim();
+    const slug = document.getElementById('cdSlug').value.trim();
     const agentCodesStr = document.getElementById('cdAgentCodes').value.trim();
     const agentCodes = agentCodesStr ? agentCodesStr.split(',').map(s => s.trim()).filter(Boolean) : [];
     const dashboardModules = {
@@ -318,7 +321,7 @@ async function saveCompanyDetails() {
     try {
         const res = await apiFetch(`/admin/companies/${currentDetailCompanyId}`, {
             method: 'PUT',
-            body: JSON.stringify({ contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, reminderPages })
+            body: JSON.stringify({ contactPerson, email, phone, policyNumber, agentCodes, slug, dashboardModules, insurancePages, reminderPages })
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.message);
@@ -331,6 +334,7 @@ async function saveCompanyDetails() {
             allCompanies[idx].phone = phone;
             allCompanies[idx].policyNumber = policyNumber;
             allCompanies[idx].agentCodes = agentCodes;
+            allCompanies[idx].slug = slug;
             allCompanies[idx].dashboardModules = dashboardModules;
             allCompanies[idx].insurancePages = insurancePages;
             allCompanies[idx].reminderPages = reminderPages;
