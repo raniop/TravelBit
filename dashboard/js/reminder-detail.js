@@ -37,7 +37,7 @@ let agentCodes = [];
     currentType = params.get('type');
 
     if (!currentType || !REMINDER_TYPES[currentType]) {
-        window.location.href = '/dashboard/reminders.html';
+        window.location.href = '/dashboard/reminders';
         return;
     }
 
@@ -537,7 +537,7 @@ function showOverdueBanner(count) {
     banner.className = 'overdue-banner';
     banner.innerHTML = `
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <span class="overdue-banner-text">יש לך <strong>${count}</strong> תזכורות שעבר תאריך היעד שלהן — <a href="./reminders.html">לצפייה</a></span>
+        <span class="overdue-banner-text">יש לך <strong>${count}</strong> תזכורות שעבר תאריך היעד שלהן — <a href="./reminders">לצפייה</a></span>
         <button class="overdue-banner-close" onclick="this.parentElement.remove(); sessionStorage.setItem('overdue_banner_dismissed','1')">&times;</button>
     `;
     pageBody.insertBefore(banner, pageBody.firstChild);

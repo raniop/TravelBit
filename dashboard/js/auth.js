@@ -19,7 +19,7 @@ function getDashboardBase(user) {
 
 // Determine default landing page based on company's dashboardModules + insurancePages
 function getDefaultDashboard(user) {
-    if (!user) return '/dashboard/';
+    if (!user) return '/dashboard/login';
     const base = getDashboardBase(user);
     const modules = normModules(user.dashboardModules);
     const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
@@ -27,15 +27,15 @@ function getDefaultDashboard(user) {
     if (modules.management) return base;
 
     if (modules.insurance) {
-        if (ip.dashboard !== false) return base + 'bituhofir.html';
-        if (ip.policies !== false) return base + 'policies.html';
-        if (ip.agents !== false) return base + 'agents.html';
-        if (ip.reports !== false) return base + 'reports.html';
+        if (ip.dashboard !== false) return base + 'bituhofir';
+        if (ip.policies !== false) return base + 'policies';
+        if (ip.agents !== false) return base + 'agents';
+        if (ip.reports !== false) return base + 'reports';
     }
 
-    if (modules.reminders) return base + 'reminders.html';
+    if (modules.reminders) return base + 'reminders';
 
-    if (modules.yeadim) return base + 'yeadim.html';
+    if (modules.yeadim) return base + 'yeadim';
 
     return base;
 }
@@ -86,6 +86,26 @@ function isPageAllowed(user, currentPage) {
     const token = localStorage.getItem('dash_token');
     const currentPage = window.location.pathname;
 
+    // /dashboard/ without company slug should always redirect
+    // Either to login (if no token) or to the slug-based URL (if logged in)
+    const isDashboardRoot = /^\/dashboard\/?$/.test(currentPage);
+    if (isDashboardRoot && !currentPage.includes('login')) {
+        if (!token) {
+            window.location.href = '/dashboard/login';
+            return;
+        }
+        // Has token — redirect to company slug URL
+        let user = null;
+        try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
+        if (user && user.companySlug) {
+            window.location.href = getDefaultDashboard(user);
+            return;
+        }
+        // No slug — redirect to login
+        window.location.href = '/dashboard/login';
+        return;
+    }
+
     if (token && currentPage.includes('login')) {
         let user = null;
         try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
@@ -117,7 +137,7 @@ function isPageAllowed(user, currentPage) {
     }
 
     if (!token && !currentPage.includes('login')) {
-        window.location.href = '/dashboard/login.html';
+        window.location.href = '/dashboard/login';
         return;
     }
 
@@ -406,7 +426,7 @@ function logout() {
     localStorage.removeItem('dash_token');
     localStorage.removeItem('dash_refresh');
     localStorage.removeItem('dash_user');
-    window.location.href = '/dashboard/login.html';
+    window.location.href = '/dashboard/login';
 }
 
 // Prevent multiple simultaneous refresh attempts

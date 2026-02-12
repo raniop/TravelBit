@@ -112,7 +112,7 @@ function renderDashboard() {
             </div>` : '';
 
         html += `
-        <a class="reminder-card ${urgentItems.length ? 'has-urgent' : ''}" href="reminder-detail.html?type=${key}">
+        <a class="reminder-card ${urgentItems.length ? 'has-urgent' : ''}" href="reminder-detail?type=${key}">
             <div class="card-main-info">
                 <div class="card-icon">${icon}</div>
                 <div class="reminder-card-title">${label}</div>
@@ -239,7 +239,7 @@ function navigateToDetailWithEmail(emailData) {
 
     if (!targetType) targetType = 'agentAppointment';
 
-    window.location.href = `reminder-detail.html?type=${targetType}&fromEmail=1`;
+    window.location.href = `reminder-detail?type=${targetType}&fromEmail=1`;
 }
 
 // ===== Urgent Items Helper =====
