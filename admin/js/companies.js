@@ -460,16 +460,18 @@ async function sendCredentials(userId, userName, username, phone, email, method)
 
     // Build message
     const loginUrl = 'https://travelins.co.il/dashboard';
-    const message = `שלום ${userName},\n\nפרטי הגישה שלך למערכת Travelins:\n\nקישור: ${loginUrl}\nשם משתמש: ${username}\nסיסמה: ${password}\n\nבהצלחה!`;
+    const rlm = '\u200F'; // Right-to-Left Mark
 
     if (method === 'whatsapp') {
+        const message = `שלום ${userName},\n\nפרטי הגישה שלך למערכת Travelins:\n\nקישור: ${loginUrl}\nשם משתמש: ${username}\nסיסמה: ${password}\n\nבהצלחה!`;
         let waPhone = phone.replace(/[-\s]/g, '');
         if (waPhone.startsWith('0')) waPhone = '972' + waPhone.slice(1);
         const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(message)}`;
         window.open(waUrl, '_blank');
     } else if (method === 'email') {
-        const subject = 'פרטי גישה למערכת Travelins';
-        const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+        const subject = `${rlm}פרטי גישה למערכת Travelins`;
+        const body = `${rlm}שלום ${userName},\n\n${rlm}פרטי הגישה שלך למערכת Travelins:\n\n${rlm}קישור: ${loginUrl}\n${rlm}שם משתמש: ${username}\n${rlm}סיסמה: ${password}\n\n${rlm}בהצלחה!`;
+        const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         window.open(mailtoUrl, '_blank');
     }
 }
