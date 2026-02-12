@@ -35,30 +35,7 @@
         .kpi-value { font-size: 24px; font-weight: 800; color: var(--dark); }
         @media (max-width: 480px) { .kpi-value { font-size: 18px; } .kpi-header { font-size: 11px; } }
 
-        /* ===== Date Filter ===== */
-        .date-filter-bar {
-            display: flex; gap: 16px; margin-bottom: 16px; align-items: center; flex-wrap: wrap;
-            background: white; padding: 14px 20px; border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid var(--gray-100);
-        }
-        .date-filter-bar h3 {
-            font-size: 14px; font-weight: 700; color: var(--dark); margin: 0;
-            display: flex; align-items: center; gap: 6px;
-        }
-        .date-group { display: flex; align-items: center; gap: 8px; }
-        .date-group label { font-weight: 600; font-size: 13px; color: var(--gray-600); white-space: nowrap; }
-        .date-group select {
-            padding: 7px 12px; border-radius: 8px; border: 1px solid var(--gray-200);
-            font-family: 'Heebo', sans-serif; font-size: 13px; background: white; cursor: pointer;
-        }
-        .date-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,107,44,0.1); }
-        .date-filter-bar .btn-load {
-            padding: 8px 20px; border-radius: 8px; border: none;
-            background: var(--primary, #FF6B2C); color: white; font-family: 'Heebo', sans-serif;
-            font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.2s;
-        }
-        .date-filter-bar .btn-load:hover { opacity: 0.9; }
-        .date-filter-bar .btn-load:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* Date filter is now inside sidebar */
 
         /* ===== Filter / Sort Bar ===== */
         .filter-bar {
@@ -177,51 +154,66 @@
         }
         .error-banner.show { display: flex; }
 
-        /* ===== Agent Selector Panel ===== */
+        /* ===== Two-Column Layout ===== */
+        .report-layout {
+            display: flex; gap: 16px; align-items: flex-start;
+        }
+        .report-main { flex: 1; min-width: 0; }
+        .report-sidebar {
+            width: 280px; flex-shrink: 0; position: sticky; top: 16px;
+        }
+        @media (max-width: 1024px) {
+            .report-layout { flex-direction: column; }
+            .report-sidebar { width: 100%; position: static; }
+        }
+
+        /* ===== Agent Selector Panel (sidebar) ===== */
         .agent-selector {
             background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-            border: 1px solid var(--gray-100); margin-bottom: 16px; overflow: hidden;
+            border: 1px solid var(--gray-100); overflow: hidden;
         }
         .agent-selector-header {
-            padding: 12px 20px; border-bottom: 1px solid var(--gray-100);
-            display: flex; align-items: center; justify-content: space-between; cursor: pointer;
-            user-select: none;
+            padding: 12px 16px; border-bottom: 1px solid var(--gray-100);
+            display: flex; align-items: center; justify-content: space-between;
         }
-        .agent-selector-header:hover { background: var(--gray-50); }
-        .agent-selector-header h3 { font-size: 14px; font-weight: 700; color: var(--dark); margin: 0; display: flex; align-items: center; gap: 8px; }
-        .agent-selector-header .toggle-icon { transition: transform 0.2s; font-size: 12px; color: var(--gray-400); }
-        .agent-selector-header .toggle-icon.open { transform: rotate(180deg); }
-        .agent-selector-body { padding: 12px 20px; display: none; }
-        .agent-selector-body.open { display: block; }
+        .agent-selector-header h3 { font-size: 13px; font-weight: 700; color: var(--dark); margin: 0; display: flex; align-items: center; gap: 6px; }
+        .agent-selector-count { font-size: 11px; color: var(--gray-400); font-weight: 500; }
+        .agent-selector-body { padding: 10px 12px; }
         .agent-selector-controls {
-            display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;
+            display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;
         }
-        .agent-selector-controls label { font-size: 13px; font-weight: 600; color: var(--gray-600); cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .agent-selector-controls label { font-size: 12px; font-weight: 600; color: var(--gray-600); cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
         .agent-selector-controls input[type="text"] {
-            flex: 1; min-width: 150px; padding: 6px 12px; border-radius: 6px;
-            border: 1px solid var(--gray-200); font-family: 'Heebo', sans-serif; font-size: 12px;
+            flex: 1; min-width: 100px; padding: 5px 10px; border-radius: 6px;
+            border: 1px solid var(--gray-200); font-family: 'Heebo', sans-serif; font-size: 11px;
         }
         .agent-selector-controls input[type="text"]:focus { outline: none; border-color: var(--primary); }
-        .agent-selector-count { font-size: 12px; color: var(--gray-400); font-weight: 500; }
         .agent-list {
-            max-height: 250px; overflow-y: auto; border: 1px solid var(--gray-100);
-            border-radius: 8px; background: var(--gray-50);
+            max-height: calc(100vh - 300px); min-height: 200px; overflow-y: auto;
+            border: 1px solid var(--gray-100); border-radius: 8px; background: var(--gray-50);
         }
-        .agent-list-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .agent-list-table { width: 100%; border-collapse: collapse; font-size: 11px; }
         .agent-list-table thead th {
-            background: #f1f5f9; padding: 6px 10px; font-size: 11px;
+            background: #f1f5f9; padding: 5px 8px; font-size: 10px;
             font-weight: 700; color: var(--gray-600); text-align: right;
             border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; z-index: 1;
         }
         .agent-list-table tbody tr { transition: background 0.1s; }
         .agent-list-table tbody tr:hover { background: #FFF7ED; }
         .agent-list-table tbody td {
-            padding: 5px 10px; font-size: 12px; color: var(--gray-700);
+            padding: 4px 8px; font-size: 11px; color: var(--gray-700);
             border-bottom: 1px solid var(--gray-100);
         }
-        .agent-list-table .td-check { text-align: center; width: 30px; }
+        .agent-list-table .td-check { text-align: center; width: 28px; }
         .agent-list-table .td-check input[type="checkbox"] { cursor: pointer; }
         .agent-list-table .td-center { text-align: center; }
+        .btn-load-report {
+            width: 100%; margin-top: 10px; padding: 10px; border-radius: 8px; border: none;
+            background: var(--primary, #FF6B2C); color: white; font-family: 'Heebo', sans-serif;
+            font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s;
+        }
+        .btn-load-report:hover { opacity: 0.9; }
+        .btn-load-report:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -290,101 +282,105 @@
                 <!-- Error Banner -->
                 <div class="error-banner" id="errorBanner"></div>
 
-                <!-- Summary KPIs -->
-                <div class="kpi-grid">
-                    <div class="kpi-card">
-                        <div class="kpi-header">סה"כ פוליסות</div>
-                        <div class="kpi-value" id="kpiTotalPolicies">-</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-header">סה"כ פרמיות</div>
-                        <div class="kpi-value" id="kpiTotalPremiums">-</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-header" id="kpiCommissionLabel">סה"כ עמלות</div>
-                        <div class="kpi-value" id="kpiTotalCommissions">-</div>
-                    </div>
-                </div>
-
-                <!-- Date Filter -->
-                <div class="date-filter-bar">
-                    <h3>📅 סינון תאריך</h3>
-                    <div class="date-group">
-                        <label>מתאריך:</label>
-                        <select id="fromMonth"></select>
-                        <select id="fromYear"></select>
-                    </div>
-                    <div class="date-group">
-                        <label>עד תאריך:</label>
-                        <select id="toMonth"></select>
-                        <select id="toYear"></select>
-                    </div>
-                    <button class="btn-load" id="btnLoadReport" onclick="onDateChange()">טען דוח</button>
-                </div>
-
-                <!-- Agent Selector -->
-                <div class="agent-selector">
-                    <div class="agent-selector-header" onclick="toggleAgentSelector()">
-                        <h3>👥 בחירת סוכנים <span class="agent-selector-count" id="agentSelCount"></span></h3>
-                        <span class="toggle-icon" id="agentToggleIcon">▼</span>
-                    </div>
-                    <div class="agent-selector-body" id="agentSelectorBody">
-                        <div class="agent-selector-controls">
-                            <label><input type="checkbox" id="selectAllAgents" onchange="toggleAllAgents(this.checked)"> הצג הכל</label>
-                            <input type="text" id="agentSearchInput" placeholder="חיפוש סוכן..." oninput="filterAgentList()">
-                        </div>
-                        <div class="agent-list">
-                            <table class="agent-list-table">
-                                <thead>
-                                    <tr>
-                                        <th class="td-check">בחר</th>
-                                        <th class="td-center">מספר</th>
-                                        <th>סוכן</th>
-                                        <th>ראשי</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="agentListBody">
-                                    <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--gray-400);">טוען סוכנים...</td></tr>
-                                </tbody>
-                            </table>
+                <div class="report-layout">
+                    <!-- Right Sidebar: Agent Selector -->
+                    <div class="report-sidebar">
+                        <div class="agent-selector">
+                            <div class="agent-selector-header">
+                                <h3>👥 בחירת סוכנים <span class="agent-selector-count" id="agentSelCount"></span></h3>
+                            </div>
+                            <div class="agent-selector-body">
+                                <div class="agent-selector-controls">
+                                    <label><input type="checkbox" id="selectAllAgents" onchange="toggleAllAgents(this.checked)"> הצג הכל</label>
+                                    <input type="text" id="agentSearchInput" placeholder="חיפוש סוכן..." oninput="filterAgentList()">
+                                </div>
+                                <div class="agent-list">
+                                    <table class="agent-list-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="td-check">בחר</th>
+                                                <th class="td-center">מספר</th>
+                                                <th>סוכן</th>
+                                                <th>ראשי</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="agentListBody">
+                                            <tr><td colspan="4" style="text-align:center;padding:16px;color:var(--gray-400);font-size:12px;">טוען סוכנים...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <!-- Date Filter inside sidebar -->
+                                <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+                                    <div style="display:flex; align-items:center; gap:6px; font-size:12px;">
+                                        <label style="font-weight:600; color:var(--gray-600); white-space:nowrap;">מתאריך:</label>
+                                        <select id="fromMonth" style="flex:1; padding:4px 6px; border-radius:6px; border:1px solid var(--gray-200); font-family:'Heebo',sans-serif; font-size:11px;"></select>
+                                        <select id="fromYear" style="padding:4px 6px; border-radius:6px; border:1px solid var(--gray-200); font-family:'Heebo',sans-serif; font-size:11px;"></select>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:6px; font-size:12px;">
+                                        <label style="font-weight:600; color:var(--gray-600); white-space:nowrap;">עד תאריך:</label>
+                                        <select id="toMonth" style="flex:1; padding:4px 6px; border-radius:6px; border:1px solid var(--gray-200); font-family:'Heebo',sans-serif; font-size:11px;"></select>
+                                        <select id="toYear" style="padding:4px 6px; border-radius:6px; border:1px solid var(--gray-200); font-family:'Heebo',sans-serif; font-size:11px;"></select>
+                                    </div>
+                                </div>
+                                <button class="btn-load-report" id="btnLoadReport" onclick="onDateChange()">הצג נתונים</button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Search Bar -->
-                <div class="filter-bar">
-                    <label>חיפוש:</label>
-                    <input type="text" class="search-input" id="searchInput" placeholder="חיפוש לפי שם לקוח, מספר פוליסה..." oninput="filterReport()">
-                    <span class="search-count" id="searchCount"></span>
-                </div>
+                    <!-- Left Main: Report Content -->
+                    <div class="report-main">
+                        <!-- Summary KPIs -->
+                        <div class="kpi-grid">
+                            <div class="kpi-card">
+                                <div class="kpi-header">סה"כ פוליסות</div>
+                                <div class="kpi-value" id="kpiTotalPolicies">-</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-header">סה"כ פרמיות</div>
+                                <div class="kpi-value" id="kpiTotalPremiums">-</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-header" id="kpiCommissionLabel">סה"כ עמלות</div>
+                                <div class="kpi-value" id="kpiTotalCommissions">-</div>
+                            </div>
+                        </div>
 
-                <!-- All Policies Table -->
-                <div class="report-table-wrap">
-                    <div class="report-table-header">
-                        <h2>כל הפוליסות</h2>
-                        <span class="count-badge" id="totalCount">טוען...</span>
-                    </div>
-                    <div class="table-scroll">
-                        <table class="report-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>שם סוכן</th>
-                                    <th>מס' פוליסה</th>
-                                    <th>תוספת</th>
-                                    <th>שם לקוח</th>
-                                    <th>סוג ביטוח</th>
-                                    <th>תאריך התחלה</th>
-                                    <th>תאריך סיום</th>
-                                    <th>פרמיה</th>
-                                    <th id="thCommission">עמלה</th>
-                                </tr>
-                            </thead>
-                            <tbody id="reportBody">
-                                <tr><td colspan="10"><div class="loading-overlay"><div class="spinner"></div> טוען דוח...</div></td></tr>
-                            </tbody>
-                            <tfoot id="reportFoot"></tfoot>
-                        </table>
+                        <!-- Search Bar -->
+                        <div class="filter-bar">
+                            <label>חיפוש:</label>
+                            <input type="text" class="search-input" id="searchInput" placeholder="חיפוש לפי שם לקוח, מספר פוליסה..." oninput="filterReport()">
+                            <span class="search-count" id="searchCount"></span>
+                        </div>
+
+                        <!-- All Policies Table -->
+                        <div class="report-table-wrap">
+                            <div class="report-table-header">
+                                <h2>כל הפוליסות</h2>
+                                <span class="count-badge" id="totalCount">בחר סוכנים ולחץ הצג נתונים</span>
+                            </div>
+                            <div class="table-scroll">
+                                <table class="report-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>שם סוכן</th>
+                                            <th>מס' פוליסה</th>
+                                            <th>תוספת</th>
+                                            <th>שם לקוח</th>
+                                            <th>סוג ביטוח</th>
+                                            <th>תאריך התחלה</th>
+                                            <th>תאריך סיום</th>
+                                            <th>פרמיה</th>
+                                            <th id="thCommission">עמלה</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reportBody">
+                                        <tr><td colspan="10"><div class="empty-msg"><p>בחר סוכנים מהרשימה בצד ימין ולחץ "הצג נתונים"</p></div></td></tr>
+                                    </tbody>
+                                    <tfoot id="reportFoot"></tfoot>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -408,7 +404,7 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/reports.js?v=8"></script>
+    <script src="js/reports.js?v=9"></script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
     function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}

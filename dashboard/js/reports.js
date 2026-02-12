@@ -198,12 +198,7 @@ function filterAgentList() {
     renderAgentList(filtered);
 }
 
-function toggleAgentSelector() {
-    const body = document.getElementById('agentSelectorBody');
-    const icon = document.getElementById('agentToggleIcon');
-    body.classList.toggle('open');
-    icon.classList.toggle('open');
-}
+// Agent selector is always visible - no toggle needed
 
 // ==================== Load Report ====================
 async function loadReport() {
