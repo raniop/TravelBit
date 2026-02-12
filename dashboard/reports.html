@@ -62,7 +62,7 @@
         .report-table-wrap {
             background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
             border: 1px solid var(--gray-100); margin-bottom: 24px; overflow: hidden;
-            flex: 1; display: flex; flex-direction: column;
+            display: flex; flex-direction: column; min-height: 420px;
         }
         .report-table-header {
             padding: 14px 20px; border-bottom: 1px solid var(--gray-100);
@@ -74,7 +74,7 @@
             font-weight: 600; padding: 4px 10px; border-radius: 20px;
         }
 
-        .table-scroll { overflow-x: auto; overflow-y: auto; flex: 1; max-height: 500px; }
+        .table-scroll { overflow-x: auto; overflow-y: auto; flex: 1; }
 
         .report-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .report-table thead th {
@@ -157,11 +157,11 @@
 
         /* ===== Two-Column Layout ===== */
         .report-layout {
-            display: flex; gap: 16px; align-items: stretch;
+            display: flex; gap: 16px; align-items: flex-start;
         }
         .report-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
         .report-sidebar {
-            width: 280px; flex-shrink: 0; position: sticky; top: 16px; align-self: flex-start;
+            width: 280px; flex-shrink: 0; position: sticky; top: 16px;
         }
         @media (max-width: 1024px) {
             .report-layout { flex-direction: column; }
@@ -406,7 +406,7 @@
     </div>
 
     <script src="js/auth.js"></script>
-    <script src="js/reports.js?v=13"></script>
+    <script src="js/reports.js?v=14"></script>
     <script>
     function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
     function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}
