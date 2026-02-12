@@ -120,29 +120,50 @@ function isPageAllowed(user, currentPage) {
         let user = null;
         try { user = JSON.parse(localStorage.getItem('dash_user')); } catch(_) {}
 
-        // Always refresh user data from server to get latest dashboardModules + insurancePages + reminderPages
-        if (user) {
-            try {
-                const res = await fetch(`${API_BASE}/auth/me`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.user) {
-                        if (data.user.companyName) user.companyName = data.user.companyName;
-                        if (data.user.companySlug !== undefined) user.companySlug = data.user.companySlug;
-                        if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
-                        if (data.user.hasReminders !== undefined) user.hasReminders = data.user.hasReminders;
-                        if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
-                        if (data.user.insurancePages) user.insurancePages = data.user.insurancePages;
-                        if (data.user.reminderPages) user.reminderPages = data.user.reminderPages;
-                        localStorage.setItem('dash_user', JSON.stringify(user));
-                    }
+        // Verify token is still valid before redirecting
+        let tokenValid = false;
+        try {
+            const res = await fetch(`${API_BASE}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                tokenValid = true;
+                const data = await res.json();
+                if (data.user && user) {
+                    if (data.user.companyName) user.companyName = data.user.companyName;
+                    if (data.user.companySlug !== undefined) user.companySlug = data.user.companySlug;
+                    if (data.user.hasBituhOfir !== undefined) user.hasBituhOfir = data.user.hasBituhOfir;
+                    if (data.user.hasReminders !== undefined) user.hasReminders = data.user.hasReminders;
+                    if (data.user.dashboardModules) user.dashboardModules = data.user.dashboardModules;
+                    if (data.user.insurancePages) user.insurancePages = data.user.insurancePages;
+                    if (data.user.reminderPages) user.reminderPages = data.user.reminderPages;
+                    localStorage.setItem('dash_user', JSON.stringify(user));
                 }
-            } catch(_) {}
+            } else if (res.status === 401) {
+                // Token expired — try refresh
+                const refreshed = await tryRefreshToken();
+                if (refreshed) {
+                    tokenValid = true;
+                } else {
+                    // Both tokens expired — clear and stay on login
+                    localStorage.removeItem('dash_token');
+                    localStorage.removeItem('dash_refresh');
+                    localStorage.removeItem('dash_user');
+                    return; // Stay on login page
+                }
+            }
+        } catch(_) {
+            tokenValid = true; // Network error — assume valid, let user try
         }
 
-        window.location.href = getDefaultDashboard(user);
+        if (tokenValid && user) {
+            window.location.href = getDefaultDashboard(user);
+            return;
+        }
+        // No valid user — clear stale data and stay on login
+        localStorage.removeItem('dash_token');
+        localStorage.removeItem('dash_refresh');
+        localStorage.removeItem('dash_user');
         return;
     }
 
