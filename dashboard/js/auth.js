@@ -29,6 +29,9 @@ function getDefaultPageFile(user) {
     const modules = normModules(user.dashboardModules);
     const ip = user.insurancePages || { dashboard: true, policies: true, agents: true, reports: true };
 
+    // Advanced yeadim mode: yeadim is the primary landing page
+    if (modules.yeadim && user.yeadimAdvanced === true) return 'yeadim';
+
     if (modules.management) return 'index'; // management overview
 
     if (modules.insurance) {
