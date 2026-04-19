@@ -275,6 +275,7 @@ async function openCompanyDetail(companyId) {
     document.getElementById('cdRpClaims').checked = rp.claims !== false;
     document.getElementById('cdRpFirstDeposit').checked = rp.firstDeposit !== false;
     document.getElementById('cdRpCompletingDeficiencies').checked = rp.completingDeficiencies !== false;
+    document.getElementById('cdYeadimAdvanced').checked = company.yeadimAdvanced === true;
     toggleDetailSubPages();
     document.getElementById('companyUsersArea').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     document.getElementById('companyDetailModal').classList.add('show');
@@ -325,11 +326,12 @@ async function saveCompanyDetails() {
         firstDeposit: document.getElementById('cdRpFirstDeposit').checked,
         completingDeficiencies: document.getElementById('cdRpCompletingDeficiencies').checked
     };
+    const yeadimAdvanced = document.getElementById('cdYeadimAdvanced').checked;
 
     try {
         const res = await apiFetch(`/admin/companies/${currentDetailCompanyId}`, {
             method: 'PUT',
-            body: JSON.stringify({ contactPerson, email, phone, policyNumber, agentCodes, slug, dashboardModules, insurancePages, reminderPages })
+            body: JSON.stringify({ contactPerson, email, phone, policyNumber, agentCodes, slug, dashboardModules, insurancePages, reminderPages, yeadimAdvanced })
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.message);
@@ -346,6 +348,7 @@ async function saveCompanyDetails() {
             allCompanies[idx].dashboardModules = dashboardModules;
             allCompanies[idx].insurancePages = insurancePages;
             allCompanies[idx].reminderPages = reminderPages;
+            allCompanies[idx].yeadimAdvanced = yeadimAdvanced;
             renderCompanies(allCompanies);
         }
         alert('פרטי החברה עודכנו בהצלחה!');
@@ -692,14 +695,18 @@ function toggleAddSubPages() {
 function toggleDetailSubPages() {
     const insWrap = document.getElementById('cdInsurancePagesWrap');
     const remWrap = document.getElementById('cdReminderPagesWrap');
+    const yeadimWrap = document.getElementById('cdYeadimAdvancedWrap');
     if (insWrap) insWrap.style.display = document.getElementById('cdModInsurance').checked ? '' : 'none';
     if (remWrap) remWrap.style.display = document.getElementById('cdModReminders').checked ? '' : 'none';
+    if (yeadimWrap) yeadimWrap.style.display = document.getElementById('cdModYeadim').checked ? '' : 'none';
 }
 
 // Attach onchange to detail modal checkboxes
 document.addEventListener('DOMContentLoaded', () => {
     const modIns = document.getElementById('cdModInsurance');
     const modRem = document.getElementById('cdModReminders');
+    const modYeadim = document.getElementById('cdModYeadim');
     if (modIns) modIns.addEventListener('change', toggleDetailSubPages);
     if (modRem) modRem.addEventListener('change', toggleDetailSubPages);
+    if (modYeadim) modYeadim.addEventListener('change', toggleDetailSubPages);
 });

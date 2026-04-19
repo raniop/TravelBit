@@ -662,6 +662,44 @@ function updateSidebarVisibility() {
             el = el.nextElementSibling;
         }
     }
+
+    // Advanced yeadim mode: rename link, add elementary link, move section to top
+    if (modules.yeadim && user.yeadimAdvanced === true && yeadimSection) {
+        const yeadimLink = yeadimSection.nextElementSibling;
+        if (yeadimLink && yeadimLink.tagName === 'A' && !yeadimLink.dataset.yeadimAdvancedApplied) {
+            yeadimLink.dataset.yeadimAdvancedApplied = '1';
+
+            // Rename existing link to "יעדים חיים ובריאות"
+            const lifeIcon = yeadimLink.querySelector('svg');
+            yeadimLink.textContent = '';
+            if (lifeIcon) yeadimLink.appendChild(lifeIcon);
+            yeadimLink.appendChild(document.createTextNode('יעדים חיים ובריאות'));
+
+            // Add new link "יעדים אלמנטרי" after it (if not already present)
+            if (!document.getElementById('yeadimElementaryLink')) {
+                const elementaryLink = document.createElement('a');
+                elementaryLink.id = 'yeadimElementaryLink';
+                elementaryLink.href = './yeadim-elementary';
+                elementaryLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>יעדים אלמנטרי';
+                yeadimLink.parentNode.insertBefore(elementaryLink, yeadimLink.nextSibling);
+
+                // Apply active class based on current page
+                const path = window.location.pathname;
+                if (path.includes('yeadim-elementary')) {
+                    yeadimLink.classList.remove('active');
+                    elementaryLink.classList.add('active');
+                }
+            }
+
+            // Move yeadim section + both links to the top of nav
+            const nav = yeadimSection.parentNode;
+            const elementaryLink = document.getElementById('yeadimElementaryLink');
+            const firstChild = nav.firstChild;
+            nav.insertBefore(yeadimSection, firstChild);
+            nav.insertBefore(yeadimLink, yeadimSection.nextSibling);
+            if (elementaryLink) nav.insertBefore(elementaryLink, yeadimLink.nextSibling);
+        }
+    }
 }
 // Run immediately (script is at bottom of body, DOM is ready)
 updateSidebarVisibility();

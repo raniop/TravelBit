@@ -52,6 +52,7 @@ const companySchema = new mongoose.Schema({
         firstDeposit: { type: Boolean, default: true },
         completingDeficiencies: { type: Boolean, default: true }
     },
+    yeadimAdvanced: { type: Boolean, default: false },
     subscriptionStart: { type: Date, default: Date.now },
     subscriptionEnd: { type: Date },
     isActive: { type: Boolean, default: true }

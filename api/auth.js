@@ -42,20 +42,22 @@ async function getCompanyMeta(companyId) {
     let reminderPages = { agentAppointment: true, policyCancellations: true, newProductions: true,
                           claims: true, firstDeposit: true, completingDeficiencies: true };
 
+    let yeadimAdvanced = false;
     if (companyId) {
-        const company = await Company.findById(companyId).select('name slug agentCodes dashboardModules insurancePages reminderPages').lean();
+        const company = await Company.findById(companyId).select('name slug agentCodes dashboardModules insurancePages reminderPages yeadimAdvanced').lean();
         if (company) {
             companyName = company.name;
             companySlug = company.slug || null;
             dashboardModules = normalizeDashboardModules(company.dashboardModules);
             if (company.insurancePages) insurancePages = company.insurancePages;
             if (company.reminderPages) reminderPages = company.reminderPages;
+            yeadimAdvanced = company.yeadimAdvanced === true;
         }
     }
     const hasBituhOfir = dashboardModules.insurance === true;
     const hasReminders = dashboardModules.reminders === true;
     const hasYeadim = dashboardModules.yeadim === true;
-    return { companyName, companySlug, dashboardModules, insurancePages, reminderPages, hasBituhOfir, hasReminders, hasYeadim };
+    return { companyName, companySlug, dashboardModules, insurancePages, reminderPages, hasBituhOfir, hasReminders, hasYeadim, yeadimAdvanced };
 }
 
 // Build user response object
@@ -73,7 +75,8 @@ function buildUserResponse(user, meta) {
         hasYeadim: meta.hasYeadim,
         dashboardModules: meta.dashboardModules,
         insurancePages: meta.insurancePages,
-        reminderPages: meta.reminderPages
+        reminderPages: meta.reminderPages,
+        yeadimAdvanced: meta.yeadimAdvanced === true
     };
 }
 
