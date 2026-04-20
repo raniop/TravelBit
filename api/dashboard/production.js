@@ -1,6 +1,7 @@
 const { verifyAuth, cors } = require('../_lib/auth');
 const connectDB = require('../_lib/db');
 const { ProductionRecord, ProductionUpload, CommissionAgreement } = require('../_lib/models');
+const XLSX = require('xlsx');
 
 let _iconvCached = null;
 function getIconv() {
@@ -59,7 +60,6 @@ function parseCSVLine(line) {
 }
 
 // Parse Menora elementary production CSV
-// Returns array of normalized records
 function parseMenoraCSV(text) {
     const lines = text.split(/\r?\n/).filter(Boolean);
     if (lines.length < 2) return [];
@@ -95,6 +95,198 @@ function parseMenoraCSV(text) {
         });
     }
     return records;
+}
+
+// Parse Shlomo XLS production
+// Format: row 0 = date, row 1 = meta (agent), row 2 = header, rows 3+ = data
+// Header: מספר פוליסה | תוספת | ענף בטוח | שם מבוטח | מספר רכב | פרמיה נטו | דמים | פרמיה ברוטו | אשראי | פרמיה כולל אשראי | הנחה | עמלה | עמלה % | סוג מסמך | תאריך תחילה
+function parseShlomoXLS(buffer) {
+    const wb = XLSX.read(buffer, { type: 'buffer', cellDates: false });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    if (rows.length < 4) return [];
+
+    // Extract production month from row 0 (year, month, day)
+    let productionMonth = null;
+    let productionYearMonth = null;
+    if (rows[0] && rows[0].length >= 3) {
+        const y = parseInt(rows[0][0]);
+        const m = parseInt(rows[0][1]);
+        if (y && m) {
+            const monthAbbrs = ['ינו','פבר','מרץ','אפר','מאי','יונ','יול','אוג','ספט','אוק','נוב','דצמ'];
+            productionMonth = monthAbbrs[m-1] + '-' + String(y).slice(-2);
+            productionYearMonth = y + '-' + String(m).padStart(2,'0');
+        }
+    }
+
+    // Find header row (look for "מספר פוליסה")
+    let headerRowIdx = -1;
+    for (let i = 0; i < Math.min(10, rows.length); i++) {
+        if (rows[i] && rows[i][0] && /מספר פוליסה/.test(String(rows[i][0]))) {
+            headerRowIdx = i;
+            break;
+        }
+    }
+    if (headerRowIdx < 0) return [];
+
+    const records = [];
+    let lastPolicy = null;
+    for (let i = headerRowIdx + 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r || r.length < 13) continue;
+        const rawCell = String(r[0] || '').trim();
+        // Continuation row marker: '"' (with optional RTL marks) means same policy as above
+        const isContinuation = /^[\u200E\u200F]*"[\u200E\u200F]*$/.test(rawCell);
+        let policyNumber = rawCell.replace(/[\u200E\u200F]/g, '').trim();
+        if (isContinuation) {
+            policyNumber = lastPolicy;
+        } else {
+            // Strip leading/trailing quotes only (not internal)
+            policyNumber = policyNumber.replace(/^"+|"+$/g, '');
+            if (policyNumber === '' || policyNumber === '-') continue;
+            lastPolicy = policyNumber;
+        }
+        if (!policyNumber) continue;
+
+        const branchCode = String(r[2] || '').trim();
+        if (!branchCode) continue;
+        const insuredName = String(r[3] || '').trim();
+        const licenseNumber = String(r[4] || '').trim();
+        const netPremium = parseNumber(r[5]);
+        const fees = parseNumber(r[6]);
+        const grossPremium = parseNumber(r[7]);
+        const creditFees = parseNumber(r[8]);
+        const grossWithCreditFees = parseNumber(r[9]);
+        const commissionPaid = parseNumber(r[11]);
+        // Skip total/empty rows
+        if (!insuredName && !branchCode) continue;
+
+        records.push({
+            productionMonth, productionYearMonth,
+            policyNumber,
+            licenseNumber,
+            branchCode,
+            branchName: '', // not in this format
+            insuredName,
+            insuredId: '',
+            customerNumber: '',
+            transactionType: String(r[13] || '').trim(),
+            startDate: null, endDate: null,
+            netPremium, fees, grossPremium, creditFees, grossWithCreditFees,
+            commissionPaid,
+            commissionManual: 0,
+            commissionDifferential: 0
+        });
+    }
+    return records;
+}
+
+// Parse FL ("מבנה אחיד / איגוד לקלע") - DISABLED (requires official spec)
+// Stub: returns empty array. UI will show clear error.
+function parseFLBuffer_DISABLED(buffer, iconv) { return []; }
+function parseFLBuffer(buffer, iconv) {
+    const text = iconv.decode(buffer, 'win1255');
+    const lines = text.split(/\r?\n/).filter(l => l.length > 50);
+
+    // Detect agent code from common header (position 5-14, 11 digits with leading zeros)
+    let agentCode = null;
+    if (lines.length > 0) {
+        const m = lines[0].match(/^.{5}(\d{6,12})/);
+        if (m) agentCode = m[1].replace(/^0+/, '');
+    }
+
+    // Group records by "block" — each policy block typically has multiple record types.
+    // The grouping key seems to be in the header (chars ~15-30 = policy ref).
+    // For each block, extract: policy num, customer name, branch, premium, commission
+
+    // Strategy: scan for records with type 6101 (policy summary) and 6020 (customer)
+    // and aggregate them per block.
+
+    const records = [];
+    let currentBlock = null;
+    const flushBlock = () => {
+        if (currentBlock && currentBlock.policyNumber) {
+            records.push(currentBlock);
+        }
+        currentBlock = null;
+    };
+
+    for (const line of lines) {
+        if (line.length < 40) continue;
+        const typeCode = line.substring(30, 38);
+        const blockKey = line.substring(15, 30);
+
+        // New block
+        if (!currentBlock || currentBlock._key !== blockKey) {
+            flushBlock();
+            currentBlock = {
+                _key: blockKey,
+                productionMonth: null,
+                productionYearMonth: null,
+                policyNumber: null,
+                licenseNumber: '',
+                branchCode: '',
+                branchName: '',
+                insuredName: '',
+                insuredId: '',
+                customerNumber: '',
+                transactionType: '',
+                startDate: null, endDate: null,
+                netPremium: 0, fees: 0, grossPremium: 0, creditFees: 0, grossWithCreditFees: 0,
+                commissionPaid: 0, commissionManual: 0, commissionDifferential: 0
+            };
+        }
+
+        // Type 6101 — policy summary line. Contains policy number around pos 38-50
+        if (/6101/.test(typeCode)) {
+            const seg = line.substring(38, 100);
+            const polMatch = seg.match(/(\d{6,})/);
+            if (polMatch) currentBlock.policyNumber = polMatch[1];
+        }
+
+        // Type 6020 — customer name (Hebrew text in middle of record)
+        if (/6020/.test(typeCode)) {
+            const heb = line.substring(45, 90).trim();
+            if (heb && /[\u0590-\u05FF]/.test(heb)) {
+                currentBlock.insuredName = heb;
+            }
+        }
+
+        // Type ending in 200 — premium/commission lines
+        if (/200$/.test(typeCode)) {
+            // Look for amounts in expected positions
+            const amts = line.substring(60, 198).match(/\d{6,}/g) || [];
+            // Take largest reasonable amount as premium candidate
+            for (const a of amts) {
+                const n = parseInt(a, 10);
+                if (n > 100 && n < 100000000) {
+                    if (currentBlock.netPremium === 0) currentBlock.netPremium = n;
+                    break;
+                }
+            }
+        }
+    }
+    flushBlock();
+
+    // Filter out blocks without a real policy number
+    return records.filter(r => r.policyNumber).map(r => {
+        const { _key, ...rest } = r;
+        return rest;
+    });
+}
+
+// Auto-detect format by file extension or content sniff
+function detectFormat(fileName, buffer) {
+    const lower = (fileName || '').toLowerCase();
+    if (lower.endsWith('.csv') || lower.endsWith('.txt')) return 'csv';
+    if (lower.endsWith('.xls') || lower.endsWith('.xlsx')) return 'xls';
+    if (lower.endsWith('.fl')) return 'fl';
+    // sniff by content: XLSX starts with PK, FL is fixed-width text
+    if (buffer && buffer.length >= 2) {
+        if (buffer[0] === 0x50 && buffer[1] === 0x4B) return 'xls'; // ZIP signature
+        if (buffer[0] === 0xD0 && buffer[1] === 0xCF) return 'xls'; // OLE2 (XLS)
+    }
+    return 'csv';
 }
 
 // Build a lookup map of branchCode → expectedRate from a commission agreement
@@ -142,9 +334,21 @@ module.exports = async function handler(req, res) {
             if (!iconv) return res.status(500).json({ message: 'iconv-lite לא זמין בשרת.' });
 
             const buf = Buffer.from(csvBase64, 'base64');
-            const text = iconv.decode(buf, 'win1255');
-            const parsed = parseMenoraCSV(text);
-            if (parsed.length === 0) return res.status(400).json({ message: 'לא נמצאו שורות תקפות בקובץ.' });
+            const fmt = detectFormat(fileName, buf);
+            let parsed = [];
+
+            if (fmt === 'xls') {
+                parsed = parseShlomoXLS(buf);
+            } else if (fmt === 'fl') {
+                return res.status(400).json({
+                    message: 'פורמט FL ("מבנה איגוד לקלע") עדיין לא נתמך. נדרש מימוש לפי המפרט הרשמי. שלח קובץ בפורמט CSV/XLS אם זמין, או חכה לפרסר ייעודי.'
+                });
+            } else {
+                const text = iconv.decode(buf, 'win1255');
+                parsed = parseMenoraCSV(text);
+            }
+
+            if (parsed.length === 0) return res.status(400).json({ message: 'לא נמצאו שורות תקפות בקובץ. (פורמט מזוהה: ' + fmt + ')' });
 
             const agreement = await CommissionAgreement.findOne({ companyId, insurer, isActive: true }).lean();
             const rateMap = buildRateMap(agreement);

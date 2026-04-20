@@ -138,11 +138,16 @@
             <h2>העלאת קובץ תפוקה</h2>
             <label>חברת ביטוח</label>
             <select id="uploadInsurer">
-                <option value="מנורה">מנורה</option>
+                <option value="מנורה">מנורה (CSV)</option>
+                <option value="שלמה">שלמה (XLS)</option>
+                <option value="פניקס">פניקס (CSV/XLS — שלח דוגמה)</option>
+                <option value="איילון">איילון (CSV/XLS — שלח דוגמה)</option>
+                <option value="הכשרה">הכשרה (CSV/XLS — שלח דוגמה)</option>
+                <option value="כלל">כלל (CSV/XLS — שלח דוגמה)</option>
             </select>
-            <p style="font-size:11px;color:var(--gray-500);margin:0 0 12px 0;">פורמט נתמך כרגע: CSV של מנורה (קידוד win-1255). פרסרים נוספים בפיתוח.</p>
-            <label>קובץ CSV</label>
-            <input type="file" id="uploadFile" accept=".csv">
+            <p style="font-size:11px;color:var(--gray-500);margin:0 0 12px 0;">פורמט FL (מבנה איגוד לקלע) של מגדל/הראל/שירביט עוד לא נתמך — דורש מימוש לפי מפרט רשמי. עבור מבטחים שעוד אין דוגמה — שלח קובץ ואוסיף פרסר.</p>
+            <label>קובץ</label>
+            <input type="file" id="uploadFile" accept=".csv,.xls,.xlsx">
             <label style="font-weight:400;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
                 <input type="checkbox" id="uploadReplace" checked>
                 החלף נתונים קיימים לחודשים שבקובץ (מומלץ — מונע כפילויות)
