@@ -92,19 +92,22 @@ function render() {
         '</div>';
 
     container.innerHTML =
-        renderUploadsList() +
         cardsHtml +
         '<div class="section-title">פילוח לפי ענף</div>' +
         renderBranchTable() +
         '<div class="section-title">פילוח לפי חודש</div>' +
         renderMonthTable() +
         '<div class="section-title">פוליסות (' + allRecords.length + ')</div>' +
-        renderRecordsTable();
+        renderRecordsTable() +
+        renderUploadsList();
 }
 
 function renderUploadsList() {
     if (!allUploads || allUploads.length === 0) return '';
-    const html = allUploads.map(u => {
+    const sorted = [...allUploads].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const RECENT = 3;
+
+    const rowHtml = u => {
         const date = new Date(u.createdAt);
         return '<div class="upload-row">' +
             '<div>' +
@@ -113,8 +116,18 @@ function renderUploadsList() {
             '</div>' +
             '<button class="delete-btn" onclick="deleteUpload(\'' + u._id + '\')">מחק</button>' +
         '</div>';
-    }).join('');
-    return '<div class="section-title">העלאות (' + allUploads.length + ')</div><div class="uploads-list">' + html + '</div>';
+    };
+
+    const recent = sorted.slice(0, RECENT).map(rowHtml).join('');
+    const rest = sorted.slice(RECENT).map(rowHtml).join('');
+    const restBlock = rest
+        ? '<details style="margin-top:6px;"><summary style="cursor:pointer;font-size:12px;color:var(--gray-500);padding:6px 12px;">הצג עוד ' + (sorted.length - RECENT) + ' העלאות ▾</summary>' + rest + '</details>'
+        : '';
+
+    return '<details style="margin-top:24px;background:white;border-radius:12px;padding:14px 18px;border:1px solid var(--gray-100);">' +
+            '<summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--gray-700);">היסטוריית העלאות (' + sorted.length + ') ▸</summary>' +
+            '<div class="uploads-list" style="margin-top:10px;">' + recent + restBlock + '</div>' +
+        '</details>';
 }
 
 function renderBranchTable() {
