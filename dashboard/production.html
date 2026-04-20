@@ -48,7 +48,7 @@
         /* Upload modal */
         .upload-modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .upload-modal.show { display: flex; }
-        .upload-modal-inner { background: white; border-radius: 12px; padding: 24px; max-width: 480px; width: 90%; }
+        .upload-modal-inner { background: white; border-radius: 12px; padding: 24px; max-width: 560px; width: 90%; max-height: 90vh; overflow-y: auto; }
         .upload-modal h2 { margin: 0 0 16px; font-size: 18px; }
         .upload-modal label { display: block; font-size: 12px; color: var(--gray-500); margin-bottom: 4px; font-weight: 600; }
         .upload-modal select, .upload-modal input[type=file] { width: 100%; padding: 8px; border: 1px solid var(--gray-200); border-radius: 6px; margin-bottom: 12px; font-size: 14px; }
@@ -135,27 +135,40 @@
     <!-- Upload Modal -->
     <div class="upload-modal" id="uploadModal">
         <div class="upload-modal-inner">
-            <h2>העלאת קובץ תפוקה</h2>
-            <label>חברת ביטוח</label>
-            <select id="uploadInsurer">
-                <option value="מנורה">מנורה (CSV)</option>
-                <option value="שלמה">שלמה (XLS)</option>
-                <option value="הכשרה">הכשרה (HTML דוח קליטת פרודוקציה)</option>
-                <option value="מגדל">מגדל (HTML דוח קליטת פרודוקציה)</option>
-                <option value="הראל">הראל (HTML דוח קליטת פרודוקציה)</option>
-                <option value="שירביט">שירביט (HTML דוח קליטת פרודוקציה)</option>
-                <option value="פניקס">פניקס (שלח דוגמה)</option>
-                <option value="איילון">איילון (שלח דוגמה)</option>
-                <option value="כלל">כלל (שלח דוגמה)</option>
-            </select>
-            <p style="font-size:11px;color:var(--gray-500);margin:0 0 12px 0;">פורמט HTML של "דוח קליטת פרודוקציה" הוא הדרך המומלצת — נקי ומדויק לכל חברה. למבטחים ללא דוגמה: שלח קובץ ואוסיף פרסר.</p>
-            <label>קובץ</label>
-            <input type="file" id="uploadFile" accept=".csv,.xls,.xlsx,.html,.htm,.fl,.FL">
+            <h2>העלאת קובצי תפוקה</h2>
+            <p style="font-size:12px;color:var(--gray-500);margin:0 0 14px 0;">בחר קובץ אחד או כמה קבצים — חברת הביטוח תזוהה אוטומטית מתוך כל קובץ.</p>
+
+            <label>קבצים</label>
+            <input type="file" id="uploadFile" multiple accept=".csv,.xls,.xlsx,.html,.htm,.fl,.FL,.zip" onchange="onFilesSelected()">
+
+            <div id="filePreview" style="margin:10px 0;display:none;"></div>
+
+            <details style="margin:8px 0 12px 0;">
+                <summary style="font-size:12px;color:var(--gray-600);cursor:pointer;">⚙ ברירת מחדל לחברה (אם הזיהוי לא הצליח)</summary>
+                <select id="uploadInsurer" style="margin-top:6px;">
+                    <optgroup label="HTML — דוח קליטת פרודוקציה (מומלץ)">
+                        <option value="הכשרה">הכשרה</option>
+                        <option value="מגדל">מגדל</option>
+                        <option value="הראל">הראל</option>
+                        <option value="שירביט">שירביט</option>
+                    </optgroup>
+                    <optgroup label="פורמטים ייעודיים">
+                        <option value="מנורה">מנורה (CSV)</option>
+                        <option value="שלמה">שלמה (XLS)</option>
+                    </optgroup>
+                    <optgroup label="ממתין לדוגמה — שלח קובץ ונוסיף פרסר">
+                        <option value="פניקס">פניקס</option>
+                        <option value="איילון">איילון</option>
+                        <option value="כלל">כלל</option>
+                    </optgroup>
+                </select>
+            </details>
+
             <label style="font-weight:400;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
                 <input type="checkbox" id="uploadReplace" checked>
                 החלף נתונים קיימים לחודשים שבקובץ (מומלץ — מונע כפילויות)
             </label>
-            <div id="uploadStatus"></div>
+            <div id="uploadStatus" style="margin-top:10px;"></div>
             <div class="upload-modal-actions">
                 <button class="btn-secondary" onclick="closeUploadModal()">ביטול</button>
                 <button class="btn-primary" id="uploadSubmit" onclick="submitUpload()">העלה</button>

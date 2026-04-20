@@ -224,49 +224,132 @@ function renderRecordsTable() {
 function reload() { loadAll(); }
 
 // ===== Upload =====
+let _previewedFiles = []; // [{file, detectedInsurer}]
+
 function openUploadModal() {
     document.getElementById('uploadModal').classList.add('show');
     document.getElementById('uploadStatus').innerHTML = '';
     document.getElementById('uploadFile').value = '';
+    document.getElementById('filePreview').style.display = 'none';
+    document.getElementById('filePreview').innerHTML = '';
+    _previewedFiles = [];
 }
 function closeUploadModal() {
     document.getElementById('uploadModal').classList.remove('show');
 }
 
+// Read first ~4KB of an HTML file and try to extract the company name from
+// the title line "קליטת פרודוקציה מחברת ביטוח X". Returns null for non-HTML.
+async function detectInsurerFromFile(file) {
+    const lower = file.name.toLowerCase();
+    if (!lower.endsWith('.html') && !lower.endsWith('.htm')) return null;
+    try {
+        const slice = file.slice(0, 4096);
+        const buf = await slice.arrayBuffer();
+        // Try cp1255 decoding (manual map for Hebrew range)
+        const bytes = new Uint8Array(buf);
+        let txt = '';
+        for (let i = 0; i < bytes.length; i++) {
+            const b = bytes[i];
+            if (b >= 0xE0 && b <= 0xFA) txt += String.fromCharCode(0x05D0 + (b - 0xE0)); // Hebrew alef..tav
+            else if (b < 0x80) txt += String.fromCharCode(b);
+            else txt += ' ';
+        }
+        const m = txt.match(/קליטת פרודוקציה מחברת ביטוח\s+(\S+)/);
+        return m ? m[1] : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+const KNOWN_INSURERS = ['מנורה','שלמה','הכשרה','מגדל','הראל','שירביט','פניקס','איילון','כלל'];
+function normalizeInsurer(name) {
+    if (!name) return null;
+    for (const k of KNOWN_INSURERS) {
+        if (name.includes(k)) return k;
+    }
+    return null;
+}
+
+async function onFilesSelected() {
+    const files = Array.from(document.getElementById('uploadFile').files);
+    const preview = document.getElementById('filePreview');
+    if (files.length === 0) { preview.style.display = 'none'; preview.innerHTML = ''; _previewedFiles = []; return; }
+
+    _previewedFiles = [];
+    const rows = [];
+    for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const detected = normalizeInsurer(await detectInsurerFromFile(f));
+        _previewedFiles.push({ file: f, detectedInsurer: detected });
+        const sizeKb = (f.size / 1024).toFixed(1);
+        const tag = detected
+            ? '<span style="background:#D1FAE5;color:#065F46;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">✓ ' + detected + '</span>'
+            : '<span style="background:#FEF3CD;color:#856404;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">לא זוהה — ישתמש בברירת מחדל</span>';
+        rows.push(
+            '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:6px;margin-bottom:6px;font-size:12px;">' +
+                '<div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:8px;">' + (i+1) + '. ' + escapeHTML(f.name) + ' <span style="color:#9CA3AF;">(' + sizeKb + ' KB)</span></div>' +
+                tag +
+            '</div>'
+        );
+    }
+    preview.innerHTML = rows.join('');
+    preview.style.display = 'block';
+}
+
+function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 async function submitUpload() {
-    const insurer = document.getElementById('uploadInsurer').value;
-    const file = document.getElementById('uploadFile').files[0];
+    const fallbackInsurer = document.getElementById('uploadInsurer').value;
     const replaceExisting = document.getElementById('uploadReplace').checked;
     const status = document.getElementById('uploadStatus');
     const btn = document.getElementById('uploadSubmit');
 
-    if (!file) { status.innerHTML = '<div class="upload-status err">בחר קובץ</div>'; return; }
+    if (_previewedFiles.length === 0) {
+        status.innerHTML = '<div class="upload-status err">בחר קובץ אחד או יותר</div>';
+        return;
+    }
 
     btn.disabled = true; btn.textContent = 'מעלה...';
-    status.innerHTML = '<div class="upload-status">מעבד קובץ...</div>';
+    let okCount = 0, failCount = 0, totalRows = 0;
+    const log = [];
 
-    try {
-        const buf = await file.arrayBuffer();
-        const bytes = new Uint8Array(buf);
-        let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-        const base64 = btoa(binary);
+    for (let i = 0; i < _previewedFiles.length; i++) {
+        const { file, detectedInsurer } = _previewedFiles[i];
+        const insurer = detectedInsurer || fallbackInsurer;
+        log.push('<div style="font-size:12px;padding:4px 0;">⏳ (' + (i+1) + '/' + _previewedFiles.length + ') ' + escapeHTML(file.name) + ' → ' + insurer + '...</div>');
+        status.innerHTML = log.join('');
+        try {
+            const buf = await file.arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            let binary = '';
+            for (let j = 0; j < bytes.byteLength; j++) binary += String.fromCharCode(bytes[j]);
+            const base64 = btoa(binary);
 
-        const res = await fetch(API + '/dashboard/production', {
-            method: 'POST',
-            headers: Object.assign({ 'Content-Type': 'application/json' }, authHdr()),
-            body: JSON.stringify({ insurer, fileName: file.name, csvBase64: base64, replaceExisting })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'שגיאה בהעלאה');
-
-        status.innerHTML = '<div class="upload-status ok">✅ הועלו ' + data.rowsImported + ' שורות</div>';
-        setTimeout(() => { closeUploadModal(); loadAll(); }, 1200);
-    } catch (err) {
-        status.innerHTML = '<div class="upload-status err">⚠️ ' + (err.message || 'שגיאה') + '</div>';
-    } finally {
-        btn.disabled = false; btn.textContent = 'העלה';
+            const res = await fetch(API + '/dashboard/production', {
+                method: 'POST',
+                headers: Object.assign({ 'Content-Type': 'application/json' }, authHdr()),
+                body: JSON.stringify({ insurer, fileName: file.name, csvBase64: base64, replaceExisting })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'שגיאה');
+            okCount++;
+            totalRows += (data.rowsImported || 0);
+            log[log.length - 1] = '<div style="font-size:12px;padding:4px 0;color:#065F46;">✅ (' + (i+1) + '/' + _previewedFiles.length + ') ' + escapeHTML(file.name) + ' → ' + insurer + ' — ' + data.rowsImported + ' שורות</div>';
+        } catch (err) {
+            failCount++;
+            log[log.length - 1] = '<div style="font-size:12px;padding:4px 0;color:#991B1B;">⚠️ (' + (i+1) + '/' + _previewedFiles.length + ') ' + escapeHTML(file.name) + ' — ' + (err.message || 'שגיאה') + '</div>';
+        }
+        status.innerHTML = log.join('');
     }
+
+    const summary = '<div style="margin-top:8px;padding:8px;border-radius:6px;background:' + (failCount ? '#FEF3CD' : '#D1FAE5') + ';font-weight:700;font-size:13px;">' +
+        'סיכום: ' + okCount + ' הצליחו, ' + failCount + ' נכשלו, סה״כ ' + totalRows + ' שורות.</div>';
+    status.innerHTML = log.join('') + summary;
+    btn.disabled = false; btn.textContent = 'העלה';
+    if (okCount > 0) setTimeout(() => loadAll(), 800);
 }
 
 async function deleteUpload(id) {
