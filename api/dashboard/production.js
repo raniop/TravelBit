@@ -253,7 +253,9 @@ function parseProductionHTML(text) {
         // Extract all policy entries.
         // Pattern: "POLICY-SUFFIX[/SUBID] תאריך תחילה: DATE תאריך סיום: DATE\n    פרמיה: AMOUNT   סוג ביטוח: TYPE"
         // Some Migdal/Harel exports append "/NNNN" after the 2-digit suffix (e.g. 103802450725-00/0006).
-        const policyRegex = /(\d{8,})-(\d{2})(?:\/\d+)?\s+תאריך תחילה:\s*(\d{1,2}\/\d{1,2}\/\d{4})\s+תאריך סיום:\s*(\d{1,2}\/\d{1,2}\/\d{4})[^\n]*\n[^\n]*פרמיה:\s*(-?[\d.]+)[^\n]*סוג ביטוח:\s*([^\n]*?)(?:\n|$)/g;
+        // Use ` +` (space-only) inside-line — \s would consume newlines and capture content from
+        // the next block (saw `</body></html>` getting captured when סוג ביטוח was empty).
+        const policyRegex = /(\d{8,})-(\d{2})(?:\/\d+)? +תאריך תחילה: *(\d{1,2}\/\d{1,2}\/\d{4}) +תאריך סיום: *(\d{1,2}\/\d{1,2}\/\d{4})[^\n]*\n[^\n]*פרמיה: *(-?[\d.]+)[^\n]*סוג ביטוח: *([^\n<]*?) *(?:\n|$)/g;
 
         let mm;
         while ((mm = policyRegex.exec(block)) !== null) {
