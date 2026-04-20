@@ -548,19 +548,33 @@ async function extractFLFromZip(buffer) {
     return await target.async('nodebuffer');
 }
 
-// Build a lookup map of branchCode → expectedRate from a commission agreement
+// Build a lookup map of code/name → expectedRate from a commission agreement.
+// Index by BOTH productCode (numeric, used by Menora/Shlomo) and productName (Hebrew,
+// used by HTML reports where the branch is just "רכב" / "דירה" / "עסק").
 function buildRateMap(agreement) {
     const map = new Map();
     if (!agreement || !Array.isArray(agreement.rates)) return map;
     for (const r of agreement.rates) {
-        if (!r.productCode) continue;
-        // Codes might be comma-separated like "32,232" or single like "21"
-        const parts = String(r.productCode).split(/[,/]/).map(s => s.trim()).filter(Boolean);
-        for (const p of parts) {
-            if (!map.has(p)) map.set(p, Number(r.rate) || 0);
+        const rate = Number(r.rate) || 0;
+        if (r.productCode) {
+            const parts = String(r.productCode).split(/[,/]/).map(s => s.trim()).filter(Boolean);
+            for (const p of parts) if (!map.has(p)) map.set(p, rate);
+        }
+        if (r.productName) {
+            const name = String(r.productName).trim();
+            if (name && !map.has(name)) map.set(name, rate);
         }
     }
     return map;
+}
+
+// Try matching a record's branch (by code OR by name) against the rate map.
+function lookupRate(rateMap, branchCode, branchName) {
+    const code = (branchCode || '').toString().trim();
+    const name = (branchName || '').toString().trim();
+    if (code && rateMap.has(code)) return rateMap.get(code);
+    if (name && rateMap.has(name)) return rateMap.get(name);
+    return null;
 }
 
 module.exports = async function handler(req, res) {
@@ -635,7 +649,7 @@ module.exports = async function handler(req, res) {
 
             let totalNet = 0, totalCommission = 0, totalExpected = 0, totalGap = 0, totalEstimated = 0;
             const docs = parsed.map(p => {
-                const expectedRate = rateMap.has(p.branchCode) ? rateMap.get(p.branchCode) : null;
+                const expectedRate = lookupRate(rateMap, p.branchCode, p.branchName);
                 const expectedCommission = expectedRate !== null ? (p.netPremium * expectedRate / 100) : null;
 
                 // Track commission source per record:
