@@ -53,6 +53,7 @@ const companySchema = new mongoose.Schema({
         completingDeficiencies: { type: Boolean, default: true }
     },
     yeadimAdvanced: { type: Boolean, default: false },
+    commissionsEnabled: { type: Boolean, default: false },
     subscriptionStart: { type: Date, default: Date.now },
     subscriptionEnd: { type: Date },
     isActive: { type: Boolean, default: true }
@@ -173,6 +174,30 @@ function normalizeDashboardModules(raw) {
     return { management: true, insurance: false, reminders: false, yeadim: false };
 }
 
+// ===== COMMISSION AGREEMENT (אלמנטרי) =====
+const commissionRateSchema = new mongoose.Schema({
+    category: { type: String, trim: true },        // top-level category, e.g. "רכב רכוש"
+    productCode: { type: String, trim: true },     // ענף ביטוחי code, e.g. "127", "211"
+    productName: { type: String, trim: true },     // human description, e.g. "פרטי ומסחרי עד 3.5"
+    rate: { type: Number, default: 0 },            // commission percentage as number, e.g. 28
+    notes: { type: String, trim: true, default: '' }
+}, { _id: false });
+
+const commissionAgreementSchema = new mongoose.Schema({
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
+    insurer: { type: String, required: true, trim: true },        // שם חברת ביטוח
+    branch: { type: String, trim: true, default: 'אלמנטרי' },     // תחום: אלמנטרי / חיים / בריאות
+    effectiveDate: { type: Date },                                 // תאריך תוקף
+    agentCode: { type: String, trim: true },                       // סוכן ראשי במבטח
+    agentCodeSecondary: { type: String, trim: true },              // סוכן משני
+    documentRef: { type: String, trim: true },                     // הפניה למסמך
+    rates: [commissionRateSchema],
+    notes: [{ type: String, trim: true }],                         // הערות כלליות
+    isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+commissionAgreementSchema.index({ companyId: 1, insurer: 1, isActive: 1 });
+
 // Use existing models if already compiled (serverless caching)
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Company = mongoose.models.Company || mongoose.model('Company', companySchema);
@@ -181,5 +206,6 @@ const Trip = mongoose.models.Trip || mongoose.model('Trip', tripSchema);
 const Policy = mongoose.models.Policy || mongoose.model('Policy', policySchema);
 const Reminder = mongoose.models.Reminder || mongoose.model('Reminder', reminderSchema);
 const DashboardCache = mongoose.models.DashboardCache || mongoose.model('DashboardCache', dashboardCacheSchema);
+const CommissionAgreement = mongoose.models.CommissionAgreement || mongoose.model('CommissionAgreement', commissionAgreementSchema);
 
-module.exports = { User, Company, Employee, Trip, Policy, Reminder, DashboardCache, normalizeDashboardModules, generateSlug };
+module.exports = { User, Company, Employee, Trip, Policy, Reminder, DashboardCache, CommissionAgreement, normalizeDashboardModules, generateSlug };

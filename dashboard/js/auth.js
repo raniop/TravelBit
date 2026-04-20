@@ -69,13 +69,15 @@ function isPageAllowed(user, currentPage) {
 
     const isRemindersPage = currentPage.includes('reminders') || currentPage.includes('reminder-detail');
     const isYeadimPage = currentPage.includes('yeadim');
-    const isManagementPage = !insurancePageType && !isRemindersPage && !isYeadimPage && !currentPage.includes('login');
+    const isCommissionsPage = currentPage.includes('commissions');
+    const isManagementPage = !insurancePageType && !isRemindersPage && !isYeadimPage && !isCommissionsPage && !currentPage.includes('login');
 
     // Check module-level access
     if (isManagementPage && !modules.management) return false;
     if (insurancePageType && !modules.insurance) return false;
     if (isRemindersPage && !modules.reminders) return false;
     if (isYeadimPage && !modules.yeadim) return false;
+    if (isCommissionsPage && user.commissionsEnabled !== true) return false;
 
     // Granular insurance page check
     if (insurancePageType && modules.insurance) {
@@ -663,6 +665,31 @@ function updateSidebarVisibility() {
         while (el && el.tagName === 'A') {
             el.style.display = modules.yeadim ? '' : 'none';
             el = el.nextElementSibling;
+        }
+    }
+
+    // Commissions module: inject "הסכמי עמלות" link if enabled
+    if (user.commissionsEnabled === true) {
+        const nav = document.querySelector('.sidebar-nav');
+        if (nav && !document.getElementById('commissionsSection')) {
+            const sec = document.createElement('div');
+            sec.className = 'sidebar-section';
+            sec.id = 'commissionsSection';
+            sec.textContent = 'הסכמים ועמלות';
+
+            const link = document.createElement('a');
+            link.id = 'commissionsLink';
+            link.href = './commissions';
+            link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>הסכמי עמלות';
+
+            // Mark active if currently on commissions page
+            if (window.location.pathname.includes('commissions')) {
+                link.classList.add('active');
+            }
+
+            // Append at end of nav (will get moved up if yeadimAdvanced runs after)
+            nav.appendChild(sec);
+            nav.appendChild(link);
         }
     }
 

@@ -171,7 +171,7 @@ module.exports = async function handler(req, res) {
         if (req.method === 'PUT') {
             try {
                 const companyId = url.split('/').pop();
-                const { name, slug: newSlug, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, reminderPages, yeadimAdvanced, isActive } = req.body;
+                const { name, slug: newSlug, contactPerson, email, phone, policyNumber, agentCodes, dashboardModules, insurancePages, reminderPages, yeadimAdvanced, commissionsEnabled, isActive } = req.body;
 
                 const company = await Company.findById(companyId);
                 if (!company) return res.status(404).json({ message: 'החברה לא נמצאה.' });
@@ -202,6 +202,7 @@ module.exports = async function handler(req, res) {
                     company.markModified('reminderPages');
                 }
                 if (yeadimAdvanced !== undefined) company.yeadimAdvanced = yeadimAdvanced === true;
+                if (commissionsEnabled !== undefined) company.commissionsEnabled = commissionsEnabled === true;
                 if (isActive !== undefined) company.isActive = isActive;
 
                 await company.save();

@@ -276,6 +276,7 @@ async function openCompanyDetail(companyId) {
     document.getElementById('cdRpFirstDeposit').checked = rp.firstDeposit !== false;
     document.getElementById('cdRpCompletingDeficiencies').checked = rp.completingDeficiencies !== false;
     document.getElementById('cdYeadimAdvanced').checked = company.yeadimAdvanced === true;
+    document.getElementById('cdCommissionsEnabled').checked = company.commissionsEnabled === true;
     toggleDetailSubPages();
     document.getElementById('companyUsersArea').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
     document.getElementById('companyDetailModal').classList.add('show');
@@ -327,11 +328,12 @@ async function saveCompanyDetails() {
         completingDeficiencies: document.getElementById('cdRpCompletingDeficiencies').checked
     };
     const yeadimAdvanced = document.getElementById('cdYeadimAdvanced').checked;
+    const commissionsEnabled = document.getElementById('cdCommissionsEnabled').checked;
 
     try {
         const res = await apiFetch(`/admin/companies/${currentDetailCompanyId}`, {
             method: 'PUT',
-            body: JSON.stringify({ contactPerson, email, phone, policyNumber, agentCodes, slug, dashboardModules, insurancePages, reminderPages, yeadimAdvanced })
+            body: JSON.stringify({ contactPerson, email, phone, policyNumber, agentCodes, slug, dashboardModules, insurancePages, reminderPages, yeadimAdvanced, commissionsEnabled })
         });
         const result = await res.json();
         if (!res.ok) throw new Error(result.message);
@@ -349,6 +351,7 @@ async function saveCompanyDetails() {
             allCompanies[idx].insurancePages = insurancePages;
             allCompanies[idx].reminderPages = reminderPages;
             allCompanies[idx].yeadimAdvanced = yeadimAdvanced;
+            allCompanies[idx].commissionsEnabled = commissionsEnabled;
             renderCompanies(allCompanies);
         }
         alert('פרטי החברה עודכנו בהצלחה!');

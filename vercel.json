@@ -39,6 +39,8 @@
     { "source": "/api/dashboard/reminders/:id", "destination": "/api/dashboard/reminders" },
     { "source": "/api/dashboard/reminders", "destination": "/api/dashboard/reminders" },
     { "source": "/api/dashboard/yeadim", "destination": "/api/dashboard/yeadim" },
+    { "source": "/api/dashboard/commissions/:id", "destination": "/api/dashboard/commissions" },
+    { "source": "/api/dashboard/commissions", "destination": "/api/dashboard/commissions" },
     { "source": "/api/(.*)", "destination": "/api/$1" }
   ],
   "headers": [
