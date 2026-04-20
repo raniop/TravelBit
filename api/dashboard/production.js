@@ -97,6 +97,21 @@ function parseMenoraCSV(text) {
     return records;
 }
 
+// Shlomo XLS uses numeric branch codes only (no Hebrew name in the sheet).
+// Standard elementary insurance product codes mapped to display names.
+const SHLOMO_BRANCH_NAMES = {
+    '31':  'אופנוע',
+    '100': 'רכב פרטי',
+    '113': 'חובה רכב פרטי',
+    '114': 'מקיף רכב פרטי',
+    '120': "צד ג' רכב פרטי",
+    '210': 'דירה',
+    '820': 'חבות מעבידים',
+    '850': 'עסק',
+    '910': 'תאונות אישיות',
+    '920': 'בריאות / תאונות'
+};
+
 // Parse Shlomo XLS production
 // Format: row 0 = date, row 1 = meta (agent), row 2 = header, rows 3+ = data
 // Header: מספר פוליסה | תוספת | ענף בטוח | שם מבוטח | מספר רכב | פרמיה נטו | דמים | פרמיה ברוטו | אשראי | פרמיה כולל אשראי | הנחה | עמלה | עמלה % | סוג מסמך | תאריך תחילה
@@ -166,7 +181,7 @@ function parseShlomoXLS(buffer) {
             policyNumber,
             licenseNumber,
             branchCode,
-            branchName: '', // not in this format
+            branchName: SHLOMO_BRANCH_NAMES[branchCode] || '',
             insuredName,
             insuredId: '',
             customerNumber: '',
@@ -709,7 +724,13 @@ module.exports = async function handler(req, res) {
                     summary.totalGap += r.commissionGap || 0;
                 }
 
-                const bkey = r.branchCode + ' - ' + (r.branchName || '');
+                // Build a friendly branch key: prefer "code - name" when both differ;
+                // collapse to single side when one is missing or duplicated.
+                const code = (r.branchCode || '').trim();
+                const name = (r.branchName || '').trim();
+                let bkey;
+                if (code && name && code !== name) bkey = code + ' - ' + name;
+                else bkey = name || code || 'לא ידוע';
                 summary.byBranch[bkey] = summary.byBranch[bkey] || { count: 0, premium: 0, commission: 0, expected: 0, gap: 0 };
                 summary.byBranch[bkey].count++;
                 summary.byBranch[bkey].premium += r.netPremium || 0;
