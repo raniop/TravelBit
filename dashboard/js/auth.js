@@ -670,15 +670,18 @@ function updateSidebarVisibility() {
         }
     }
 
-    // Commissions module: inject "הסכמי עמלות" + "תפוקה אלמנטרי" links if enabled
+    // Commissions / Production: inject links UNDER the existing יעדים section
     if (user.commissionsEnabled === true || user.productionEnabled === true) {
         const nav = document.querySelector('.sidebar-nav');
-        if (nav && !document.getElementById('commissionsSection')) {
-            const sec = document.createElement('div');
-            sec.className = 'sidebar-section';
-            sec.id = 'commissionsSection';
-            sec.textContent = 'הסכמים ועמלות';
-            nav.appendChild(sec);
+        const ySection = document.getElementById('yeadimSection');
+        if (nav && ySection && !document.getElementById('commissionsLink') && !document.getElementById('productionLink')) {
+            // Find the last <a> sibling after yeadimSection (existing yeadim links)
+            let anchor = ySection;
+            let next = ySection.nextElementSibling;
+            while (next && next.tagName === 'A') {
+                anchor = next;
+                next = next.nextElementSibling;
+            }
 
             if (user.commissionsEnabled === true) {
                 const link = document.createElement('a');
@@ -686,7 +689,8 @@ function updateSidebarVisibility() {
                 link.href = './commissions';
                 link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>הסכמי עמלות';
                 if (window.location.pathname.includes('commissions')) link.classList.add('active');
-                nav.appendChild(link);
+                anchor.parentNode.insertBefore(link, anchor.nextSibling);
+                anchor = link;
             }
 
             if (user.productionEnabled === true) {
@@ -695,7 +699,7 @@ function updateSidebarVisibility() {
                 prodLink.href = './production';
                 prodLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>תפוקה אלמנטרי';
                 if (window.location.pathname.includes('production')) prodLink.classList.add('active');
-                nav.appendChild(prodLink);
+                anchor.parentNode.insertBefore(prodLink, anchor.nextSibling);
             }
         }
     }
