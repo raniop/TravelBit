@@ -349,7 +349,11 @@ async function submitUpload() {
         'סיכום: ' + okCount + ' הצליחו, ' + failCount + ' נכשלו, סה״כ ' + totalRows + ' שורות.</div>';
     status.innerHTML = log.join('') + summary;
     btn.disabled = false; btn.textContent = 'העלה';
-    if (okCount > 0) setTimeout(() => loadAll(), 800);
+    if (okCount > 0) {
+        loadAll();
+        // Auto-close on full success; on partial/full failure leave open so the user can read errors.
+        if (failCount === 0) setTimeout(() => closeUploadModal(), 1500);
+    }
 }
 
 async function deleteUpload(id) {
