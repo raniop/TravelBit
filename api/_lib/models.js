@@ -221,7 +221,8 @@ const productionRecordSchema = new mongoose.Schema({
     grossPremium: { type: Number, default: 0 },
     creditFees: { type: Number, default: 0 },
     grossWithCreditFees: { type: Number, default: 0 },
-    commissionPaid: { type: Number, default: 0 },          // עמלה רגילה
+    commissionPaid: { type: Number, default: 0 },          // עמלה ששולמה בפועל מהקובץ (0 אם הקובץ לא מכיל עמלה)
+    commissionEstimated: { type: Number, default: null },  // עמלה משוערת לפי הסכם — מוצג רק כשאין עמלה בקובץ
     commissionSource: { type: String, default: 'file' },   // 'file' | 'agreement' | 'none'
     commissionManual: { type: Number, default: 0 },        // עמלה ידנית
     commissionDifferential: { type: Number, default: 0 },  // עמלה הפרשית

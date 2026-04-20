@@ -82,11 +82,15 @@ function render() {
     const gapClass = (s.totalGap < 0) ? 'gap-negative' : (s.totalGap > 0 ? 'gap-positive' : '');
     const gapSign = s.totalGap > 0 ? '+' : '';
 
+    const estimatedHtml = (s.totalEstimatedCommission > 0)
+        ? '<div class="sum-card" style="border-top:3px solid #3B82F6;"><div class="sum-card-label">עמלה משוערת <span title="חושב לפי הסכם — לא מהקובץ" style="color:#3B82F6;">●</span></div><div class="sum-card-value">' + fmtNum(s.totalEstimatedCommission) + ' ₪</div></div>'
+        : '';
     const cardsHtml =
         '<div class="summary-cards">' +
             '<div class="sum-card"><div class="sum-card-label">סה"כ פוליסות</div><div class="sum-card-value">' + s.totalRecords + '</div></div>' +
             '<div class="sum-card"><div class="sum-card-label">פרמיה נטו</div><div class="sum-card-value">' + fmtNum(s.totalNetPremium) + ' ₪</div></div>' +
-            '<div class="sum-card"><div class="sum-card-label">עמלה ששולמה</div><div class="sum-card-value">' + fmtNum(s.totalCommission) + ' ₪</div></div>' +
+            '<div class="sum-card"><div class="sum-card-label">עמלה ששולמה (מהקובץ)</div><div class="sum-card-value">' + fmtNum(s.totalCommission) + ' ₪</div></div>' +
+            estimatedHtml +
             '<div class="sum-card"><div class="sum-card-label">עמלה צפויה (לפי הסכם)</div><div class="sum-card-value">' + fmtNum(s.totalExpectedCommission) + ' ₪</div></div>' +
             '<div class="sum-card ' + gapClass + '"><div class="sum-card-label">פער עמלה</div><div class="sum-card-value">' + gapSign + fmtNum(s.totalGap) + ' ₪</div></div>' +
         '</div>';
@@ -154,23 +158,30 @@ function renderBranchTable() {
         }
         const effRate = s.premium > 0 ? (s.commission / s.premium * 100) : 0;
         const escBranch = escapeHtml(branch).replace(/'/g, "\\'");
+        // Show actual paid + estimated (in different cells, marked) so the user always knows what's solid vs derived.
+        const actualHtml = s.commission !== 0 ? fmtNum(s.commission) : '-';
+        const estimatedHtml = s.hasEstimated
+            ? '<span style="color:#1E40AF;">' + fmtNum(s.estimated) + ' <span title="חושב לפי הסכם — לא מהקובץ" style="color:#3B82F6;font-size:10px;">●</span></span>'
+            : '-';
         return '<tr class="branch-row" onclick="toggleBranchDetails(' + idx + ", '" + escBranch + '\')" style="cursor:pointer;">' +
             '<td><span class="branch-toggle" id="bt-' + idx + '" style="display:inline-block;width:14px;color:var(--gray-400);">▸</span> ' + escapeHtml(branch) + '</td>' +
             '<td class="num">' + s.count + '</td>' +
             '<td class="num">' + fmtNum(s.premium) + '</td>' +
-            '<td class="num">' + fmtNum(s.commission) + '</td>' +
+            '<td class="num">' + actualHtml + '</td>' +
+            '<td class="num">' + estimatedHtml + '</td>' +
             '<td class="num">' + (s.expected > 0 ? fmtNum(s.expected) : '-') + '</td>' +
             '<td>' + gapHtml + '</td>' +
             '<td class="num">' + fmtPct(effRate) + '</td>' +
             '<td>' + badge + '</td>' +
         '</tr>' +
-        '<tr class="branch-detail-row" id="bd-' + idx + '" style="display:none;"><td colspan="8" style="padding:0;background:#FAFBFC;"><div id="bdc-' + idx + '"></div></td></tr>';
+        '<tr class="branch-detail-row" id="bd-' + idx + '" style="display:none;"><td colspan="9" style="padding:0;background:#FAFBFC;"><div id="bdc-' + idx + '"></div></td></tr>';
     }).join('');
     return '<table class="branch-table"><thead><tr>' +
         '<th>ענף</th>' +
         '<th class="num">פוליסות</th>' +
         '<th class="num">פרמיה נטו</th>' +
-        '<th class="num">עמלה ששולמה</th>' +
+        '<th class="num">עמלה ששולמה (מהקובץ)</th>' +
+        '<th class="num">עמלה משוערת <span title="חושב לפי הסכם — לא מדויק" style="color:#3B82F6;font-size:10px;">●</span></th>' +
         '<th class="num">עמלה צפויה</th>' +
         '<th>פער</th>' +
         '<th class="num">% בפועל</th>' +
@@ -204,16 +215,16 @@ function renderBranchDetailTable(records) {
     const rows = sorted.map(r => {
         const prem = r.netPremium || 0;
         const comm = r.commissionPaid || 0;
+        const est = r.commissionEstimated;
         const premCls = prem < 0 ? 'gap-neg' : '';
         const commCls = comm < 0 ? 'gap-neg' : '';
         const txnBadge = r.transactionType
             ? '<span style="font-size:10px;padding:1px 6px;background:#E5E7EB;border-radius:8px;color:var(--gray-600);">' + escapeHtml(r.transactionType) + '</span>'
             : '';
-        // Mark commission source: blue dot for "agreement" (computed, not from file).
-        let commMarker = '';
-        if (r.commissionSource === 'agreement') {
-            commMarker = ' <span title="חושב לפי הסכם — לא קיים בקובץ" style="color:#3B82F6;font-size:10px;">●</span>';
-        }
+        const actualCell = comm !== 0 ? fmtNum(comm) + ' ₪' : '-';
+        const estCell = (est !== null && est !== undefined && est !== 0)
+            ? '<span style="color:#1E40AF;">' + fmtNum(est) + ' ₪ <span title="חושב לפי הסכם — לא מהקובץ" style="color:#3B82F6;font-size:10px;">●</span></span>'
+            : '-';
         return '<tr>' +
             '<td>' + escapeHtml(r.insurer || '') + '</td>' +
             '<td>' + escapeHtml(r.productionYearMonth || '-') + '</td>' +
@@ -222,7 +233,8 @@ function renderBranchDetailTable(records) {
             '<td>' + escapeHtml(r.insuredId || '-') + '</td>' +
             '<td>' + escapeHtml(r.licenseNumber || '-') + '</td>' +
             '<td class="num ' + premCls + '">' + fmtNum(prem) + ' ₪</td>' +
-            '<td class="num ' + commCls + '">' + fmtNum(comm) + ' ₪' + commMarker + '</td>' +
+            '<td class="num ' + commCls + '">' + actualCell + '</td>' +
+            '<td class="num">' + estCell + '</td>' +
         '</tr>';
     }).join('');
     return '<table class="branch-detail-table" style="width:100%;border-collapse:collapse;font-size:12px;margin:0;">' +
@@ -234,7 +246,8 @@ function renderBranchDetailTable(records) {
             '<th style="padding:8px;text-align:right;color:var(--gray-600);font-weight:700;">ת.ז.</th>' +
             '<th style="padding:8px;text-align:right;color:var(--gray-600);font-weight:700;">רכב</th>' +
             '<th style="padding:8px;text-align:left;color:var(--gray-600);font-weight:700;">פרמיה</th>' +
-            '<th style="padding:8px;text-align:left;color:var(--gray-600);font-weight:700;">עמלה</th>' +
+            '<th style="padding:8px;text-align:left;color:var(--gray-600);font-weight:700;">עמלה (מהקובץ)</th>' +
+            '<th style="padding:8px;text-align:left;color:var(--gray-600);font-weight:700;">עמלה משוערת</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table>';
 }
 

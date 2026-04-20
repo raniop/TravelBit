@@ -633,28 +633,33 @@ module.exports = async function handler(req, res) {
                 uploadedBy: user._id
             });
 
-            let totalNet = 0, totalCommission = 0, totalExpected = 0, totalGap = 0;
+            let totalNet = 0, totalCommission = 0, totalExpected = 0, totalGap = 0, totalEstimated = 0;
             const docs = parsed.map(p => {
                 const expectedRate = rateMap.has(p.branchCode) ? rateMap.get(p.branchCode) : null;
                 const expectedCommission = expectedRate !== null ? (p.netPremium * expectedRate / 100) : null;
 
-                // Source files vary in whether they include actual paid commission:
-                //   Menora CSV / Shlomo XLS  → actual is in the file
-                //   HTML "דוח קליטת פרודוקציה" / FL → no commission field, parser yields 0
-                // When actual is missing but an agreement exists, fall back to the agreement-
-                // implied amount so the dashboard isn't misleadingly empty.
-                let commissionPaid = p.commissionPaid;
-                let commissionSource = 'file';
-                if ((!commissionPaid || commissionPaid === 0) && expectedCommission !== null) {
-                    commissionPaid = expectedCommission;
+                // Track commission source per record:
+                //   'file'      = actual amount came from the source file (Menora/Shlomo)
+                //   'agreement' = file had no commission, estimate is premium × agreement rate
+                //   'none'      = file has no commission AND no matching agreement
+                // commissionPaid stays as actual-only (0 when missing). commissionEstimated
+                // is the agreement-based fallback so the UI can show both columns side-by-side.
+                const commissionPaid = p.commissionPaid || 0;
+                let commissionSource;
+                let commissionEstimated = null;
+                if (commissionPaid > 0 || commissionPaid < 0) {
+                    commissionSource = 'file';
+                } else if (expectedCommission !== null) {
                     commissionSource = 'agreement';
-                } else if (!commissionPaid && expectedCommission === null) {
+                    commissionEstimated = expectedCommission;
+                } else {
                     commissionSource = 'none';
                 }
                 const commissionGap = expectedCommission !== null ? (commissionPaid - expectedCommission) : null;
 
                 totalNet += p.netPremium;
                 totalCommission += commissionPaid;
+                if (commissionEstimated !== null) totalEstimated += commissionEstimated;
                 if (expectedCommission !== null) {
                     totalExpected += expectedCommission;
                     totalGap += commissionGap;
@@ -680,6 +685,7 @@ module.exports = async function handler(req, res) {
                     creditFees: p.creditFees,
                     grossWithCreditFees: p.grossWithCreditFees,
                     commissionPaid,
+                    commissionEstimated,
                     commissionSource,
                     commissionManual: p.commissionManual,
                     commissionDifferential: p.commissionDifferential,
@@ -727,6 +733,7 @@ module.exports = async function handler(req, res) {
                 totalRecords: records.length,
                 totalNetPremium: 0,
                 totalCommission: 0,
+                totalEstimatedCommission: 0,
                 totalExpectedCommission: 0,
                 totalGap: 0,
                 byBranch: {},
@@ -736,6 +743,9 @@ module.exports = async function handler(req, res) {
             for (const r of records) {
                 summary.totalNetPremium += r.netPremium || 0;
                 summary.totalCommission += r.commissionPaid || 0;
+                if (r.commissionEstimated !== null && r.commissionEstimated !== undefined) {
+                    summary.totalEstimatedCommission += r.commissionEstimated;
+                }
                 if (r.expectedCommission !== null && r.expectedCommission !== undefined) {
                     summary.totalExpectedCommission += r.expectedCommission;
                     summary.totalGap += r.commissionGap || 0;
@@ -748,10 +758,14 @@ module.exports = async function handler(req, res) {
                 let bkey;
                 if (code && name && code !== name) bkey = code + ' - ' + name;
                 else bkey = name || code || 'לא ידוע';
-                summary.byBranch[bkey] = summary.byBranch[bkey] || { count: 0, premium: 0, commission: 0, expected: 0, gap: 0 };
+                summary.byBranch[bkey] = summary.byBranch[bkey] || { count: 0, premium: 0, commission: 0, estimated: 0, expected: 0, gap: 0, hasEstimated: false };
                 summary.byBranch[bkey].count++;
                 summary.byBranch[bkey].premium += r.netPremium || 0;
                 summary.byBranch[bkey].commission += r.commissionPaid || 0;
+                if (r.commissionEstimated !== null && r.commissionEstimated !== undefined) {
+                    summary.byBranch[bkey].estimated += r.commissionEstimated;
+                    summary.byBranch[bkey].hasEstimated = true;
+                }
                 if (r.expectedCommission !== null && r.expectedCommission !== undefined) {
                     summary.byBranch[bkey].expected += r.expectedCommission;
                     summary.byBranch[bkey].gap += r.commissionGap || 0;
