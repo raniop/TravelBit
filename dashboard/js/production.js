@@ -130,9 +130,18 @@ function renderUploadsList() {
         '</details>';
 }
 
+// Mirror of the server's bkey builder (api/dashboard/production.js).
+// Used to group raw records back into the same buckets as allSummary.byBranch.
+function recordBranchKey(r) {
+    const code = (r.branchCode || '').toString().trim();
+    const name = (r.branchName || '').toString().trim();
+    if (code && name && code !== name) return code + ' - ' + name;
+    return name || code || 'לא ידוע';
+}
+
 function renderBranchTable() {
     const entries = Object.entries(allSummary.byBranch).sort((a, b) => b[1].premium - a[1].premium);
-    const rows = entries.map(([branch, s]) => {
+    const rows = entries.map(([branch, s], idx) => {
         let badge = '<span class="badge-status badge-na">אין הסכם</span>';
         let gapHtml = '-';
         if (s.expected > 0 || s.gap !== 0) {
@@ -144,8 +153,9 @@ function renderBranchTable() {
             else badge = '<span class="badge-status badge-bad">פער ' + Math.round(gapPct) + '%</span>';
         }
         const effRate = s.premium > 0 ? (s.commission / s.premium * 100) : 0;
-        return '<tr>' +
-            '<td>' + escapeHtml(branch) + '</td>' +
+        const escBranch = escapeHtml(branch).replace(/'/g, "\\'");
+        return '<tr class="branch-row" onclick="toggleBranchDetails(' + idx + ", '" + escBranch + '\')" style="cursor:pointer;">' +
+            '<td><span class="branch-toggle" id="bt-' + idx + '" style="display:inline-block;width:14px;color:var(--gray-400);">▸</span> ' + escapeHtml(branch) + '</td>' +
             '<td class="num">' + s.count + '</td>' +
             '<td class="num">' + fmtNum(s.premium) + '</td>' +
             '<td class="num">' + fmtNum(s.commission) + '</td>' +
@@ -153,7 +163,8 @@ function renderBranchTable() {
             '<td>' + gapHtml + '</td>' +
             '<td class="num">' + fmtPct(effRate) + '</td>' +
             '<td>' + badge + '</td>' +
-        '</tr>';
+        '</tr>' +
+        '<tr class="branch-detail-row" id="bd-' + idx + '" style="display:none;"><td colspan="8" style="padding:0;background:#FAFBFC;"><div id="bdc-' + idx + '"></div></td></tr>';
     }).join('');
     return '<table class="branch-table"><thead><tr>' +
         '<th>ענף</th>' +
@@ -164,6 +175,61 @@ function renderBranchTable() {
         '<th>פער</th>' +
         '<th class="num">% בפועל</th>' +
         '<th>סטטוס</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function toggleBranchDetails(idx, branchKey) {
+    const row = document.getElementById('bd-' + idx);
+    const tog = document.getElementById('bt-' + idx);
+    if (!row) return;
+    if (row.style.display === 'none') {
+        // Lazy-render the inner table on first open
+        const container = document.getElementById('bdc-' + idx);
+        if (container && !container.dataset.rendered) {
+            const matched = (allRecords || []).filter(r => recordBranchKey(r) === branchKey);
+            container.innerHTML = renderBranchDetailTable(matched);
+            container.dataset.rendered = '1';
+        }
+        row.style.display = '';
+        if (tog) { tog.textContent = '▾'; tog.style.color = 'var(--primary)'; }
+    } else {
+        row.style.display = 'none';
+        if (tog) { tog.textContent = '▸'; tog.style.color = 'var(--gray-400)'; }
+    }
+}
+
+function renderBranchDetailTable(records) {
+    if (!records.length) return '<div style="padding:20px;text-align:center;color:var(--gray-400);">אין רשומות</div>';
+    const sorted = [...records].sort((a, b) => (b.netPremium || 0) - (a.netPremium || 0));
+    const rows = sorted.map(r => {
+        const prem = r.netPremium || 0;
+        const comm = r.commissionPaid || 0;
+        const premCls = prem < 0 ? 'gap-neg' : '';
+        const commCls = comm < 0 ? 'gap-neg' : '';
+        const txnBadge = r.transactionType
+            ? '<span style="font-size:10px;padding:1px 6px;background:#E5E7EB;border-radius:8px;color:var(--gray-600);">' + escapeHtml(r.transactionType) + '</span>'
+            : '';
+        return '<tr>' +
+            '<td>' + escapeHtml(r.insurer || '') + '</td>' +
+            '<td>' + escapeHtml(r.productionYearMonth || '-') + '</td>' +
+            '<td>' + escapeHtml(r.policyNumber || '') + ' ' + txnBadge + '</td>' +
+            '<td>' + escapeHtml(r.insuredName || '') + '</td>' +
+            '<td>' + escapeHtml(r.insuredId || '-') + '</td>' +
+            '<td>' + escapeHtml(r.licenseNumber || '-') + '</td>' +
+            '<td class="num ' + premCls + '">' + fmtNum(prem) + ' ₪</td>' +
+            '<td class="num ' + commCls + '">' + fmtNum(comm) + ' ₪</td>' +
+        '</tr>';
+    }).join('');
+    return '<table class="branch-detail-table" style="width:100%;border-collapse:collapse;font-size:12px;margin:0;">' +
+        '<thead><tr style="background:#F3F4F6;">' +
+            '<th style="padding:8px;text-align:right;color:var(--gray-600);font-weight:700;">חברה</th>' +
+            '<th style="padding:8px;text-align:right;color:var(--gray-600);font-weight:700;">חודש</th>' +
+            '<th style="padding:8px;text-align:right;color:var(--gray-600);font-weight:700;">מס׳ פוליסה</th>' +
+            '<th style="padding:8px;text-align:right;color:var(--gray-600);font-weight:700;">מבוטח</th>' +
+            '<th style="padding:8px;text-align:right;color:var(--gray-600);font-weight:700;">ת.ז.</th>' +
+            '<th style="padding:8px;text-align:right;color:var(--gray-600);font-weight:700;">רכב</th>' +
+            '<th style="padding:8px;text-align:left;color:var(--gray-600);font-weight:700;">פרמיה</th>' +
+            '<th style="padding:8px;text-align:left;color:var(--gray-600);font-weight:700;">עמלה</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
