@@ -717,49 +717,51 @@ function updateSidebarVisibility() {
         const nav = yeadimSection.parentNode;
         const path = window.location.pathname;
 
-        const yeadimLifeLink = yeadimSection.nextElementSibling; // the (now-renamed) original — חיים ובריאות
+        // Find all the links we care about. yeadimLifeLink is the (renamed) original sibling.
+        const yeadimLifeLink = yeadimSection.nextElementSibling && yeadimSection.nextElementSibling.tagName === 'A'
+            ? yeadimSection.nextElementSibling
+            : null;
         const yeadimElementaryLink = document.getElementById('yeadimElementaryLink');
 
-        // Lazily create the dynamic links once
-        let productionLink = document.getElementById('productionLink');
-        if (user.productionEnabled === true && !productionLink) {
-            productionLink = document.createElement('a');
-            productionLink.id = 'productionLink';
-            productionLink.href = './production';
-            productionLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>תפוקה אלמנטרי';
-        }
-        let lifeHealthLink = document.getElementById('lifeHealthLink');
-        if (user.productionEnabled === true && !lifeHealthLink) {
-            lifeHealthLink = document.createElement('a');
-            lifeHealthLink.id = 'lifeHealthLink';
-            lifeHealthLink.href = './life-health';
-            lifeHealthLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>תפוקה חיים ובריאות';
-        }
-        let commissionsLink = document.getElementById('commissionsLink');
-        if (user.commissionsEnabled === true && !commissionsLink) {
-            commissionsLink = document.createElement('a');
-            commissionsLink.id = 'commissionsLink';
-            commissionsLink.href = './commissions';
-            commissionsLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>הסכמי עמלות';
+        function ensureLink(id, href, html) {
+            let el = document.getElementById(id);
+            if (!el) {
+                el = document.createElement('a');
+                el.id = id;
+                el.href = href;
+                el.innerHTML = html;
+            }
+            return el;
         }
 
-        // Re-insert in the desired order. insertBefore on an existing node moves it.
-        const ordered = [
-            yeadimElementaryLink,
-            productionLink,
-            yeadimLifeLink,
-            lifeHealthLink,
-            commissionsLink
-        ].filter(Boolean);
+        const productionLink = user.productionEnabled === true
+            ? ensureLink('productionLink', './production',
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>תפוקה אלמנטרי')
+            : null;
+        const lifeHealthLink = user.productionEnabled === true
+            ? ensureLink('lifeHealthLink', './life-health',
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>תפוקה חיים ובריאות')
+            : null;
+        const commissionsLink = user.commissionsEnabled === true
+            ? ensureLink('commissionsLink', './commissions',
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>הסכמי עמלות')
+            : null;
+
+        // Build the ordered array, skip nulls (= disabled). Detach any that are already in DOM
+        // first so we can re-append cleanly without insertBefore-self issues.
+        const ordered = [yeadimElementaryLink, productionLink, yeadimLifeLink, lifeHealthLink, commissionsLink].filter(Boolean);
+        for (const el of ordered) if (el.parentNode) el.parentNode.removeChild(el);
+
+        // Re-insert all in order, immediately after the section header.
         let anchor = yeadimSection;
         for (const el of ordered) {
-            nav.insertBefore(el, anchor.nextSibling);
+            if (anchor.nextSibling) nav.insertBefore(el, anchor.nextSibling);
+            else nav.appendChild(el);
             anchor = el;
         }
 
         // Active state
-        document.querySelectorAll('#productionLink, #lifeHealthLink, #commissionsLink, #yeadimElementaryLink').forEach(el => el.classList.remove('active'));
-        if (yeadimLifeLink) yeadimLifeLink.classList.remove('active');
+        for (const el of ordered) el.classList.remove('active');
         if (path.endsWith('/yeadim') || path.endsWith('/yeadim/')) yeadimLifeLink && yeadimLifeLink.classList.add('active');
         else if (path.includes('yeadim-elementary')) yeadimElementaryLink && yeadimElementaryLink.classList.add('active');
         else if (path.includes('life-health')) lifeHealthLink && lifeHealthLink.classList.add('active');
