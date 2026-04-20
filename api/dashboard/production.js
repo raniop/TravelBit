@@ -302,6 +302,7 @@ function parseFLBuffer(buffer, iconv) {
                 insuredName: '',
                 insuredId: '',
                 netPremium: 0,
+                commissionPaid: 0,
                 coverages: []
             };
             blockMap.set(blockKey, block);
@@ -317,42 +318,74 @@ function parseFLBuffer(buffer, iconv) {
             }
         }
 
-        // Policy header (0101 / 0103 / 6101): policy number at 38-50, product name + license plate
-        if (typeShort === '0101' || typeShort === '0103' || typeShort === '6101') {
+        // Policy header (0100 / 0101 / 0103 / 6101): contains TOTAL PREMIUM at fixed position
+        // Layout: pos 38-50 = policy number, pos 50-72 = Hebrew product name (fixed width),
+        // pos 73-80 = premium in agorot (8 digits), pos 80-89 = license plate
+        if (typeShort === '0100' || typeShort === '0101' || typeShort === '0103' || typeShort === '6101') {
             const polMatch = line.substring(38, 50).match(/(\d{6,10})/);
             if (polMatch && !block.policyNumber) {
                 block.policyNumber = polMatch[1].replace(/^0+/, '') || polMatch[1];
             }
-            const heb = line.substring(50, 100).match(/[\u0590-\u05FF\s]{3,}/);
+            const heb = line.substring(50, 73).match(/[\u0590-\u05FF\s]{3,}/);
             if (heb && !block.branchName) block.branchName = reverseHebrew(heb[0].trim());
-            const lic = line.substring(80, 110).match(/(\d{7,8})/);
+
+            // Premium at pos 73-81 (8 digits, in agorot)
+            const premSegment = line.substring(73, 81);
+            const premMatch = premSegment.match(/(\d{8})/);
+            if (premMatch) {
+                const agorot = parseInt(premMatch[1], 10);
+                const premNIS = agorot / 100;
+                if (premNIS > 0 && premNIS < 500000) {
+                    block.netPremium = Math.max(block.netPremium, premNIS);
+                }
+            }
+
+            // License plate at pos 90-99 (after spaces)
+            const lic = line.substring(85, 105).match(/(\d{7,8})/);
             if (lic && !block.licenseNumber) block.licenseNumber = lic[1];
         }
 
-        // Coverage line (X200): amounts in tail (fixed-width positions, in agorot)
+        // Coverage line (X200): SKIP for premium calculation - these are mostly informational
+        // (terms/conditions). Premium is taken from the policy header only.
         if (typeShort === '0200') {
             const heb = line.substring(38, 80).match(/[\u0590-\u05FF\s]{3,}/);
-            const coverageName = heb ? reverseHebrew(heb[0].trim()) : '';
-            // Premium amount typically at pos 120-140 (in agorot) - extract leading digits before zero padding
-            const amountSegment = line.substring(120, 140);
-            const amtMatch = amountSegment.match(/^0*(\d{1,7})/);
-            const amountAgorot = amtMatch ? parseInt(amtMatch[1], 10) : 0;
-            // Convert agorot → shekels
-            const amountNIS = amountAgorot / 100;
-            if (amountNIS > 0 && amountNIS < 1000000) {
-                block.coverages.push({ name: coverageName, amount: amountNIS });
-                block.netPremium += amountNIS;
+            if (heb) {
+                const coverageName = reverseHebrew(heb[0].trim());
+                if (coverageName) block.coverages.push({ name: coverageName });
+            }
+        }
+
+        // Commission/totals footer (0371): commission at pos 50-69 (in agorot)
+        if (typeShort === '0371') {
+            // Look for non-zero amounts in the data section
+            const dataSegment = line.substring(50, 90);
+            const amounts = (dataSegment.match(/(\d{4,})/g) || [])
+                .map(a => parseInt(a.replace(/^0+/, '') || '0', 10))
+                .filter(n => n > 100 && n < 100000000);
+            if (amounts.length > 0) {
+                // First reasonable amount is usually commission (in agorot)
+                const commAgorot = amounts[0];
+                const commNIS = commAgorot / 100;
+                if (commNIS > 0 && commNIS < 100000) {
+                    block.commissionPaid = Math.max(block.commissionPaid || 0, commNIS);
+                }
             }
         }
     }
 
-    // Convert to ProductionRecord format. Use blockKey as fallback policy number if not found.
+    // Convert to ProductionRecord format, deduplicating by policy+premium
     const records = [];
+    const seenKeys = new Set();
     for (const b of blockMap.values()) {
         const polNum = b.policyNumber || b.blockKey;
         if (!polNum) continue;
-        // Skip empty blocks (no customer, no premium)
+        // Skip empty blocks (no customer AND no premium AND no license)
         if (!b.insuredName && b.netPremium === 0 && !b.licenseNumber) continue;
+        // Dedupe: same policy+premium+name = same record
+        const dedupKey = polNum + '|' + b.netPremium + '|' + b.insuredName;
+        if (seenKeys.has(dedupKey)) continue;
+        seenKeys.add(dedupKey);
+
         records.push({
             productionMonth: null, productionYearMonth: null,
             policyNumber: polNum,
@@ -366,7 +399,7 @@ function parseFLBuffer(buffer, iconv) {
             startDate: null, endDate: null,
             netPremium: b.netPremium,
             fees: 0, grossPremium: b.netPremium, creditFees: 0, grossWithCreditFees: b.netPremium,
-            commissionPaid: 0, // FL files don't include commission paid (calc from agreement)
+            commissionPaid: b.commissionPaid || 0,
             commissionManual: 0, commissionDifferential: 0
         });
     }
