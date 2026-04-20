@@ -181,10 +181,199 @@ function parseShlomoXLS(buffer) {
     return records;
 }
 
-// Parse FL ("מבנה אחיד / איגוד לקלע") - DISABLED (requires official spec)
-// Stub: returns empty array. UI will show clear error.
-function parseFLBuffer_DISABLED(buffer, iconv) { return []; }
+// Parse Hachshara HTML/TXT production report
+// Format: text dump with structure:
+//   [customer name]
+//   ת.ז.: [id] כתובת: [...]
+//   פוליסות:
+//       [policy]-[suffix] תאריך תחילה: [d] תאריך סיום: [d]
+//       פרמיה: [amount] סוג ביטוח: [type]
+function parseHachsharaHTML(text) {
+    // Strip HTML wrapper
+    const m = text.match(/<pre[^>]*>([\s\S]+?)<\/pre>/i);
+    const body = m ? m[1] : text;
+
+    // Detect production month from policy dates (use most common start date month)
+    let prodYM = null, prodMonth = null;
+    const dateMatches = body.match(/תאריך תחילה:\s*\d{1,2}\/(\d{1,2})\/(\d{4})/g);
+    if (dateMatches && dateMatches.length > 0) {
+        const monthCounts = {};
+        for (const dm of dateMatches) {
+            const mm = dm.match(/(\d{1,2})\/(\d{4})/);
+            if (mm) {
+                const k = mm[2] + '-' + String(mm[1]).padStart(2, '0');
+                monthCounts[k] = (monthCounts[k] || 0) + 1;
+            }
+        }
+        let best = null, bestCount = 0;
+        for (const [k, c] of Object.entries(monthCounts)) {
+            if (c > bestCount) { best = k; bestCount = c; }
+        }
+        if (best) {
+            prodYM = best;
+            const [y, m] = best.split('-');
+            const abbr = ['ינו','פבר','מרץ','אפר','מאי','יונ','יול','אוג','ספט','אוק','נוב','דצמ'];
+            prodMonth = abbr[parseInt(m) - 1] + '-' + y.slice(-2);
+        }
+    }
+
+    const records = [];
+    // Split on 3+ consecutive newlines (customer separator) — within a customer, only 2 newlines between policies
+    const customerBlocks = body.split(/\n{3,}/).filter(b => /ת\.ז\./.test(b));
+
+    for (const block of customerBlocks) {
+        const lines = block.split(/\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length < 3) continue;
+        const customerName = lines[0].trim();
+        const idMatch = block.match(/ת\.ז\.:\s*(\d+)/);
+        const insuredId = idMatch ? idMatch[1] : '';
+
+        // Extract all policy entries
+        // Pattern: "POLICY-SUFFIX תאריך תחילה: DATE תאריך סיום: DATE\n    פרמיה: AMOUNT   סוג ביטוח: TYPE"
+        const policyRegex = /(\d{8,})-(\d{2})\s+תאריך תחילה:\s*(\d{1,2}\/\d{1,2}\/\d{4})\s+תאריך סיום:\s*(\d{1,2}\/\d{1,2}\/\d{4})[^\n]*\n[^\n]*פרמיה:\s*(-?[\d.]+)[^\n]*סוג ביטוח:\s*([^\n]+?)(?:\n|$)/g;
+
+        let mm;
+        while ((mm = policyRegex.exec(block)) !== null) {
+            const [, polNum, suffix, startDateStr, endDateStr, premiumStr, branchType] = mm;
+            records.push({
+                productionMonth: prodMonth,
+                productionYearMonth: prodYM,
+                policyNumber: polNum + '-' + suffix,
+                licenseNumber: '',
+                branchCode: branchType.trim(),
+                branchName: branchType.trim(),
+                insuredName: customerName,
+                insuredId,
+                customerNumber: '',
+                transactionType: parseInt(suffix) > 0 ? 'תוספת' : 'חדש',
+                startDate: parseDateDMY(startDateStr),
+                endDate: parseDateDMY(endDateStr),
+                netPremium: parseNumber(premiumStr),
+                fees: 0,
+                grossPremium: parseNumber(premiumStr),
+                creditFees: 0,
+                grossWithCreditFees: parseNumber(premiumStr),
+                commissionPaid: 0, // not in this report
+                commissionManual: 0,
+                commissionDifferential: 0
+            });
+        }
+    }
+
+    return records;
+}
+
+// Reverse Hebrew text from DOS bidi rendering
+function reverseHebrew(s) {
+    if (!s) return '';
+    return s.split('').reverse().join('');
+}
+
+// Parse FL ("מבנה אחיד / איגוד לקלע")
+// Format: cp862 (DOS Hebrew), fixed-width ~198-char records, Hebrew text REVERSED
+// Each policy block identified by chars 14-30 (16-char block key).
+// Record types (last 4 chars of position 30-38):
+//   0010, 6010 = file/block header
+//   0021, 6021 = customer info (ID + name + address)
+//   0070, 6070 = period info
+//   0101, 0103, 6101 = policy header (with product name + license plate)
+//   *200 = coverage line items (with amounts)
+//   *300, *370, *371, *372, *373 = footers/totals
 function parseFLBuffer(buffer, iconv) {
+    const text = iconv.decode(buffer, 'cp862');
+    const lines = text.split(/\r?\n/).filter(l => l.length > 50);
+    if (lines.length === 0) return [];
+
+    const blockMap = new Map();
+
+    for (const line of lines) {
+        if (line.length < 40) continue;
+        const blockKey = line.substring(14, 30);
+        const typeCode = line.substring(30, 38);
+        const typeShort = typeCode.slice(-4);
+
+        let block = blockMap.get(blockKey);
+        if (!block) {
+            block = {
+                blockKey,
+                policyNumber: null,
+                licenseNumber: '',
+                branchName: '',
+                insuredName: '',
+                insuredId: '',
+                netPremium: 0,
+                coverages: []
+            };
+            blockMap.set(blockKey, block);
+        }
+
+        // Customer info (0021 / 6021): ID at pos 38-50, Hebrew name at pos 50-100
+        if (typeShort === '0021') {
+            const idMatch = line.substring(38, 50).match(/(\d{9,10})/);
+            if (idMatch && !block.insuredId) block.insuredId = idMatch[1];
+            const hebMatches = line.substring(50, 130).match(/[\u0590-\u05FF\s]{3,}/g);
+            if (hebMatches && hebMatches.length > 0 && !block.insuredName) {
+                block.insuredName = reverseHebrew(hebMatches[0].trim());
+            }
+        }
+
+        // Policy header (0101 / 0103 / 6101): policy number at 38-50, product name + license plate
+        if (typeShort === '0101' || typeShort === '0103' || typeShort === '6101') {
+            const polMatch = line.substring(38, 50).match(/(\d{6,10})/);
+            if (polMatch && !block.policyNumber) {
+                block.policyNumber = polMatch[1].replace(/^0+/, '') || polMatch[1];
+            }
+            const heb = line.substring(50, 100).match(/[\u0590-\u05FF\s]{3,}/);
+            if (heb && !block.branchName) block.branchName = reverseHebrew(heb[0].trim());
+            const lic = line.substring(80, 110).match(/(\d{7,8})/);
+            if (lic && !block.licenseNumber) block.licenseNumber = lic[1];
+        }
+
+        // Coverage line (X200): amounts in tail (fixed-width positions, in agorot)
+        if (typeShort === '0200') {
+            const heb = line.substring(38, 80).match(/[\u0590-\u05FF\s]{3,}/);
+            const coverageName = heb ? reverseHebrew(heb[0].trim()) : '';
+            // Premium amount typically at pos 120-140 (in agorot) - extract leading digits before zero padding
+            const amountSegment = line.substring(120, 140);
+            const amtMatch = amountSegment.match(/^0*(\d{1,7})/);
+            const amountAgorot = amtMatch ? parseInt(amtMatch[1], 10) : 0;
+            // Convert agorot → shekels
+            const amountNIS = amountAgorot / 100;
+            if (amountNIS > 0 && amountNIS < 1000000) {
+                block.coverages.push({ name: coverageName, amount: amountNIS });
+                block.netPremium += amountNIS;
+            }
+        }
+    }
+
+    // Convert to ProductionRecord format. Use blockKey as fallback policy number if not found.
+    const records = [];
+    for (const b of blockMap.values()) {
+        const polNum = b.policyNumber || b.blockKey;
+        if (!polNum) continue;
+        // Skip empty blocks (no customer, no premium)
+        if (!b.insuredName && b.netPremium === 0 && !b.licenseNumber) continue;
+        records.push({
+            productionMonth: null, productionYearMonth: null,
+            policyNumber: polNum,
+            licenseNumber: b.licenseNumber,
+            branchCode: '',
+            branchName: b.branchName,
+            insuredName: b.insuredName || 'לא זוהה',
+            insuredId: b.insuredId || '',
+            customerNumber: '',
+            transactionType: '',
+            startDate: null, endDate: null,
+            netPremium: b.netPremium,
+            fees: 0, grossPremium: b.netPremium, creditFees: 0, grossWithCreditFees: b.netPremium,
+            commissionPaid: 0, // FL files don't include commission paid (calc from agreement)
+            commissionManual: 0, commissionDifferential: 0
+        });
+    }
+    return records;
+}
+
+function parseFLBuffer_OLD_unused(buffer, iconv) {
     const text = iconv.decode(buffer, 'win1255');
     const lines = text.split(/\r?\n/).filter(l => l.length > 50);
 
@@ -278,12 +467,15 @@ function parseFLBuffer(buffer, iconv) {
 // Auto-detect format by file extension or content sniff
 function detectFormat(fileName, buffer) {
     const lower = (fileName || '').toLowerCase();
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'html';
     if (lower.endsWith('.csv') || lower.endsWith('.txt')) return 'csv';
     if (lower.endsWith('.xls') || lower.endsWith('.xlsx')) return 'xls';
     if (lower.endsWith('.fl')) return 'fl';
-    // sniff by content: XLSX starts with PK, FL is fixed-width text
-    if (buffer && buffer.length >= 2) {
-        if (buffer[0] === 0x50 && buffer[1] === 0x4B) return 'xls'; // ZIP signature
+    // sniff by content
+    if (buffer && buffer.length >= 5) {
+        const firstBytes = buffer.slice(0, 100).toString('ascii').toLowerCase();
+        if (/<html|<!doctype/i.test(firstBytes)) return 'html';
+        if (buffer[0] === 0x50 && buffer[1] === 0x4B) return 'xls'; // ZIP (XLSX)
         if (buffer[0] === 0xD0 && buffer[1] === 0xCF) return 'xls'; // OLE2 (XLS)
     }
     return 'csv';
@@ -339,10 +531,11 @@ module.exports = async function handler(req, res) {
 
             if (fmt === 'xls') {
                 parsed = parseShlomoXLS(buf);
+            } else if (fmt === 'html') {
+                const text = iconv.decode(buf, 'win1255');
+                parsed = parseHachsharaHTML(text);
             } else if (fmt === 'fl') {
-                return res.status(400).json({
-                    message: 'פורמט FL ("מבנה איגוד לקלע") עדיין לא נתמך. נדרש מימוש לפי המפרט הרשמי. שלח קובץ בפורמט CSV/XLS אם זמין, או חכה לפרסר ייעודי.'
-                });
+                parsed = parseFLBuffer(buf, iconv);
             } else {
                 const text = iconv.decode(buf, 'win1255');
                 parsed = parseMenoraCSV(text);

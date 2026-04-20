@@ -140,14 +140,17 @@
             <select id="uploadInsurer">
                 <option value="מנורה">מנורה (CSV)</option>
                 <option value="שלמה">שלמה (XLS)</option>
-                <option value="פניקס">פניקס (CSV/XLS — שלח דוגמה)</option>
-                <option value="איילון">איילון (CSV/XLS — שלח דוגמה)</option>
-                <option value="הכשרה">הכשרה (CSV/XLS — שלח דוגמה)</option>
-                <option value="כלל">כלל (CSV/XLS — שלח דוגמה)</option>
+                <option value="הכשרה">הכשרה (HTML דוח קליטת פרודוקציה)</option>
+                <option value="הראל">הראל (FL — מקורב)</option>
+                <option value="שירביט">שירביט (FL — מקורב)</option>
+                <option value="מגדל">מגדל (FL — מקורב)</option>
+                <option value="פניקס">פניקס (שלח דוגמה)</option>
+                <option value="איילון">איילון (שלח דוגמה)</option>
+                <option value="כלל">כלל (שלח דוגמה)</option>
             </select>
-            <p style="font-size:11px;color:var(--gray-500);margin:0 0 12px 0;">פורמט FL (מבנה איגוד לקלע) של מגדל/הראל/שירביט עוד לא נתמך — דורש מימוש לפי מפרט רשמי. עבור מבטחים שעוד אין דוגמה — שלח קובץ ואוסיף פרסר.</p>
+            <p style="font-size:11px;color:var(--gray-500);margin:0 0 12px 0;">⚠️ FL = פורמט "מבנה איגוד לקלע" (DOS, cp862). פרסר מקורב — מזהה פוליסות/לקוחות/רכבים, אך סכומי פרמיה ועמלה אינם מדויקים. למבטחים שעוד אין דוגמה — שלח קובץ ואוסיף פרסר.</p>
             <label>קובץ</label>
-            <input type="file" id="uploadFile" accept=".csv,.xls,.xlsx">
+            <input type="file" id="uploadFile" accept=".csv,.xls,.xlsx,.html,.htm,.fl,.FL">
             <label style="font-weight:400;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
                 <input type="checkbox" id="uploadReplace" checked>
                 החלף נתונים קיימים לחודשים שבקובץ (מומלץ — מונע כפילויות)
