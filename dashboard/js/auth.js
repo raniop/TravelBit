@@ -676,34 +676,40 @@ function updateSidebarVisibility() {
     // Advanced yeadim mode: rename link, add elementary link, move section to top
     // ALSO: rename section header to "יעדים ועמלות" (more general — covers multiple sub-tools)
     if (modules.yeadim && user.yeadimAdvanced === true && yeadimSection) {
+        const nav = yeadimSection.parentNode;
         // Rename section header
         if (!yeadimSection.dataset.renamed) {
             yeadimSection.textContent = 'יעדים ועמלות';
             yeadimSection.dataset.renamed = '1';
         }
-        const yeadimLink = yeadimSection.nextElementSibling;
-        if (yeadimLink && yeadimLink.tagName === 'A' && !yeadimLink.dataset.yeadimAdvancedApplied) {
+        // Find the renamed yeadim-life link. On first pass it's the immediate sibling; on
+        // re-renders it may have moved, so look it up by the dataset flag too.
+        let yeadimLink = yeadimSection.nextElementSibling && yeadimSection.nextElementSibling.tagName === 'A' && yeadimSection.nextElementSibling.getAttribute('href') === './yeadim'
+            ? yeadimSection.nextElementSibling
+            : nav.querySelector('a[data-yeadim-advanced-applied]') || nav.querySelector('a[href="./yeadim"]');
+
+        if (yeadimLink && !yeadimLink.dataset.yeadimAdvancedApplied) {
             yeadimLink.dataset.yeadimAdvancedApplied = '1';
 
-            // Rename existing link to "יעדים חיים ובריאות"
+            // Rename to "יעדים חיים ובריאות"
             const lifeIcon = yeadimLink.querySelector('svg');
             yeadimLink.textContent = '';
             if (lifeIcon) yeadimLink.appendChild(lifeIcon);
             yeadimLink.appendChild(document.createTextNode('יעדים חיים ובריאות'));
-
-            // Add "יעדים אלמנטרי" link if missing
-            if (!document.getElementById('yeadimElementaryLink')) {
-                const elementaryLink = document.createElement('a');
-                elementaryLink.id = 'yeadimElementaryLink';
-                elementaryLink.href = './yeadim-elementary';
-                elementaryLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>יעדים אלמנטרי';
-                yeadimLink.parentNode.insertBefore(elementaryLink, yeadimLink.nextSibling);
-            }
-
-            // Move section to top of nav (rest of order is enforced below)
-            const nav = yeadimSection.parentNode;
-            nav.insertBefore(yeadimSection, nav.firstChild);
         }
+
+        // Create yeadimElementaryLink if missing (will be ordered correctly below)
+        if (!document.getElementById('yeadimElementaryLink')) {
+            const elementaryLink = document.createElement('a');
+            elementaryLink.id = 'yeadimElementaryLink';
+            elementaryLink.href = './yeadim-elementary';
+            elementaryLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>יעדים אלמנטרי';
+            // Temporarily append to nav — gets reordered below.
+            nav.appendChild(elementaryLink);
+        }
+
+        // Move section to top of nav (its links get re-attached to it below)
+        nav.insertBefore(yeadimSection, nav.firstChild);
     }
 
     // Build/insert תפוקה + הסכמים links and enforce final order:
@@ -717,10 +723,9 @@ function updateSidebarVisibility() {
         const nav = yeadimSection.parentNode;
         const path = window.location.pathname;
 
-        // Find all the links we care about. yeadimLifeLink is the (renamed) original sibling.
-        const yeadimLifeLink = yeadimSection.nextElementSibling && yeadimSection.nextElementSibling.tagName === 'A'
-            ? yeadimSection.nextElementSibling
-            : null;
+        // Find the original yeadim-life link by its href — it may not be adjacent to the
+        // section anymore (block 1 only moves the section, not its previous siblings).
+        const yeadimLifeLink = nav.querySelector('a[href="./yeadim"]');
         const yeadimElementaryLink = document.getElementById('yeadimElementaryLink');
 
         function ensureLink(id, href, html) {
