@@ -251,31 +251,49 @@ function closeUploadModal() {
     document.getElementById('uploadModal').classList.remove('show');
 }
 
-// Read first ~4KB of an HTML file and try to extract the company name from
-// the title line "קליטת פרודוקציה מחברת ביטוח X". Returns null for non-HTML.
+const KNOWN_INSURERS = ['מנורה','שלמה','הכשרה','מגדל','הראל','שירביט','פניקס','איילון','כלל'];
+
+// Try to figure out the insurer from a file. Strategy in order:
+//   1. HTML files — read title "קליטת פרודוקציה מחברת ביטוח X"
+//   2. Filename contains a Hebrew insurer name
+//   3. Filename pattern hints (doh_tfukat_sohnim → שלמה)
+//   4. Extension fallback (.csv → מנורה, .xls/.xlsx → שלמה — current single-source-per-format setup)
 async function detectInsurerFromFile(file) {
-    const lower = file.name.toLowerCase();
-    if (!lower.endsWith('.html') && !lower.endsWith('.htm')) return null;
-    try {
-        const slice = file.slice(0, 4096);
-        const buf = await slice.arrayBuffer();
-        // Try cp1255 decoding (manual map for Hebrew range)
-        const bytes = new Uint8Array(buf);
-        let txt = '';
-        for (let i = 0; i < bytes.length; i++) {
-            const b = bytes[i];
-            if (b >= 0xE0 && b <= 0xFA) txt += String.fromCharCode(0x05D0 + (b - 0xE0)); // Hebrew alef..tav
-            else if (b < 0x80) txt += String.fromCharCode(b);
-            else txt += ' ';
-        }
-        const m = txt.match(/קליטת פרודוקציה מחברת ביטוח\s+(\S+)/);
-        return m ? m[1] : null;
-    } catch (_) {
-        return null;
+    const name = file.name;
+    const lower = name.toLowerCase();
+
+    // 1. HTML title
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+        try {
+            const slice = file.slice(0, 4096);
+            const buf = await slice.arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            let txt = '';
+            for (let i = 0; i < bytes.length; i++) {
+                const b = bytes[i];
+                if (b >= 0xE0 && b <= 0xFA) txt += String.fromCharCode(0x05D0 + (b - 0xE0));
+                else if (b < 0x80) txt += String.fromCharCode(b);
+                else txt += ' ';
+            }
+            const m = txt.match(/קליטת פרודוקציה מחברת ביטוח\s+(\S+)/);
+            if (m) return normalizeInsurer(m[1]);
+        } catch (_) { /* fall through */ }
     }
+
+    // 2. Hebrew insurer name in filename
+    const fromName = normalizeInsurer(name);
+    if (fromName) return fromName;
+
+    // 3. Known filename patterns
+    if (/doh[_-]?tfukat[_-]?sohnim/i.test(lower)) return 'שלמה';
+
+    // 4. Extension fallback (single-source-per-format)
+    if (lower.endsWith('.csv')) return 'מנורה';
+    if (lower.endsWith('.xls') || lower.endsWith('.xlsx')) return 'שלמה';
+
+    return null;
 }
 
-const KNOWN_INSURERS = ['מנורה','שלמה','הכשרה','מגדל','הראל','שירביט','פניקס','איילון','כלל'];
 function normalizeInsurer(name) {
     if (!name) return null;
     for (const k of KNOWN_INSURERS) {
