@@ -691,70 +691,80 @@ function updateSidebarVisibility() {
             if (lifeIcon) yeadimLink.appendChild(lifeIcon);
             yeadimLink.appendChild(document.createTextNode('יעדים חיים ובריאות'));
 
-            // Add new link "יעדים אלמנטרי" after it (if not already present)
+            // Add "יעדים אלמנטרי" link if missing
             if (!document.getElementById('yeadimElementaryLink')) {
                 const elementaryLink = document.createElement('a');
                 elementaryLink.id = 'yeadimElementaryLink';
                 elementaryLink.href = './yeadim-elementary';
                 elementaryLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>יעדים אלמנטרי';
                 yeadimLink.parentNode.insertBefore(elementaryLink, yeadimLink.nextSibling);
-
-                // Apply active class based on current page
-                const path = window.location.pathname;
-                if (path.includes('yeadim-elementary')) {
-                    yeadimLink.classList.remove('active');
-                    elementaryLink.classList.add('active');
-                }
             }
 
-            // Move yeadim section + both links to the top of nav
+            // Move section to top of nav (rest of order is enforced below)
             const nav = yeadimSection.parentNode;
-            const elementaryLink = document.getElementById('yeadimElementaryLink');
-            const firstChild = nav.firstChild;
-            nav.insertBefore(yeadimSection, firstChild);
-            nav.insertBefore(yeadimLink, yeadimSection.nextSibling);
-            if (elementaryLink) nav.insertBefore(elementaryLink, yeadimLink.nextSibling);
+            nav.insertBefore(yeadimSection, nav.firstChild);
         }
     }
 
-    // Commissions / Production: append links INSIDE the יעדים section (after move/rename)
+    // Build/insert תפוקה + הסכמים links and enforce final order:
+    //   [section] יעדים ועמלות
+    //   יעדים אלמנטרי
+    //   תפוקה אלמנטרי
+    //   יעדים חיים ובריאות
+    //   תפוקה חיים ובריאות
+    //   הסכמי עמלות
     if (yeadimSection && (user.commissionsEnabled === true || user.productionEnabled === true)) {
-        // Find anchor: last <a> sibling after the section header
+        const nav = yeadimSection.parentNode;
+        const path = window.location.pathname;
+
+        const yeadimLifeLink = yeadimSection.nextElementSibling; // the (now-renamed) original — חיים ובריאות
+        const yeadimElementaryLink = document.getElementById('yeadimElementaryLink');
+
+        // Lazily create the dynamic links once
+        let productionLink = document.getElementById('productionLink');
+        if (user.productionEnabled === true && !productionLink) {
+            productionLink = document.createElement('a');
+            productionLink.id = 'productionLink';
+            productionLink.href = './production';
+            productionLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>תפוקה אלמנטרי';
+        }
+        let lifeHealthLink = document.getElementById('lifeHealthLink');
+        if (user.productionEnabled === true && !lifeHealthLink) {
+            lifeHealthLink = document.createElement('a');
+            lifeHealthLink.id = 'lifeHealthLink';
+            lifeHealthLink.href = './life-health';
+            lifeHealthLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>תפוקה חיים ובריאות';
+        }
+        let commissionsLink = document.getElementById('commissionsLink');
+        if (user.commissionsEnabled === true && !commissionsLink) {
+            commissionsLink = document.createElement('a');
+            commissionsLink.id = 'commissionsLink';
+            commissionsLink.href = './commissions';
+            commissionsLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>הסכמי עמלות';
+        }
+
+        // Re-insert in the desired order. insertBefore on an existing node moves it.
+        const ordered = [
+            yeadimElementaryLink,
+            productionLink,
+            yeadimLifeLink,
+            lifeHealthLink,
+            commissionsLink
+        ].filter(Boolean);
         let anchor = yeadimSection;
-        let next = yeadimSection.nextElementSibling;
-        while (next && next.tagName === 'A') {
-            anchor = next;
-            next = next.nextElementSibling;
+        for (const el of ordered) {
+            nav.insertBefore(el, anchor.nextSibling);
+            anchor = el;
         }
 
-        if (user.commissionsEnabled === true && !document.getElementById('commissionsLink')) {
-            const link = document.createElement('a');
-            link.id = 'commissionsLink';
-            link.href = './commissions';
-            link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>הסכמי עמלות';
-            if (window.location.pathname.includes('commissions')) link.classList.add('active');
-            anchor.parentNode.insertBefore(link, anchor.nextSibling);
-            anchor = link;
-        }
-
-        if (user.productionEnabled === true && !document.getElementById('productionLink')) {
-            const prodLink = document.createElement('a');
-            prodLink.id = 'productionLink';
-            prodLink.href = './production';
-            prodLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>תפוקה אלמנטרי';
-            if (window.location.pathname.includes('/production')) prodLink.classList.add('active');
-            anchor.parentNode.insertBefore(prodLink, anchor.nextSibling);
-            anchor = prodLink;
-        }
-
-        if (user.productionEnabled === true && !document.getElementById('lifeHealthLink')) {
-            const lhLink = document.createElement('a');
-            lhLink.id = 'lifeHealthLink';
-            lhLink.href = './life-health';
-            lhLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>תפוקה חיים ובריאות';
-            if (window.location.pathname.includes('life-health')) lhLink.classList.add('active');
-            anchor.parentNode.insertBefore(lhLink, anchor.nextSibling);
-        }
+        // Active state
+        document.querySelectorAll('#productionLink, #lifeHealthLink, #commissionsLink, #yeadimElementaryLink').forEach(el => el.classList.remove('active'));
+        if (yeadimLifeLink) yeadimLifeLink.classList.remove('active');
+        if (path.endsWith('/yeadim') || path.endsWith('/yeadim/')) yeadimLifeLink && yeadimLifeLink.classList.add('active');
+        else if (path.includes('yeadim-elementary')) yeadimElementaryLink && yeadimElementaryLink.classList.add('active');
+        else if (path.includes('life-health')) lifeHealthLink && lifeHealthLink.classList.add('active');
+        else if (path.includes('/production')) productionLink && productionLink.classList.add('active');
+        else if (path.includes('commissions')) commissionsLink && commissionsLink.classList.add('active');
     }
 }
 // Run immediately (script is at bottom of body, DOM is ready)
