@@ -670,42 +670,14 @@ function updateSidebarVisibility() {
         }
     }
 
-    // Commissions / Production: inject links UNDER the existing יעדים section
-    if (user.commissionsEnabled === true || user.productionEnabled === true) {
-        const nav = document.querySelector('.sidebar-nav');
-        const ySection = document.getElementById('yeadimSection');
-        if (nav && ySection && !document.getElementById('commissionsLink') && !document.getElementById('productionLink')) {
-            // Find the last <a> sibling after yeadimSection (existing yeadim links)
-            let anchor = ySection;
-            let next = ySection.nextElementSibling;
-            while (next && next.tagName === 'A') {
-                anchor = next;
-                next = next.nextElementSibling;
-            }
-
-            if (user.commissionsEnabled === true) {
-                const link = document.createElement('a');
-                link.id = 'commissionsLink';
-                link.href = './commissions';
-                link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>הסכמי עמלות';
-                if (window.location.pathname.includes('commissions')) link.classList.add('active');
-                anchor.parentNode.insertBefore(link, anchor.nextSibling);
-                anchor = link;
-            }
-
-            if (user.productionEnabled === true) {
-                const prodLink = document.createElement('a');
-                prodLink.id = 'productionLink';
-                prodLink.href = './production';
-                prodLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>תפוקה אלמנטרי';
-                if (window.location.pathname.includes('production')) prodLink.classList.add('active');
-                anchor.parentNode.insertBefore(prodLink, anchor.nextSibling);
-            }
-        }
-    }
-
     // Advanced yeadim mode: rename link, add elementary link, move section to top
+    // ALSO: rename section header to "יעדים ועמלות" (more general — covers multiple sub-tools)
     if (modules.yeadim && user.yeadimAdvanced === true && yeadimSection) {
+        // Rename section header
+        if (!yeadimSection.dataset.renamed) {
+            yeadimSection.textContent = 'יעדים ועמלות';
+            yeadimSection.dataset.renamed = '1';
+        }
         const yeadimLink = yeadimSection.nextElementSibling;
         if (yeadimLink && yeadimLink.tagName === 'A' && !yeadimLink.dataset.yeadimAdvancedApplied) {
             yeadimLink.dataset.yeadimAdvancedApplied = '1';
@@ -739,6 +711,36 @@ function updateSidebarVisibility() {
             nav.insertBefore(yeadimSection, firstChild);
             nav.insertBefore(yeadimLink, yeadimSection.nextSibling);
             if (elementaryLink) nav.insertBefore(elementaryLink, yeadimLink.nextSibling);
+        }
+    }
+
+    // Commissions / Production: append links INSIDE the יעדים section (after move/rename)
+    if (yeadimSection && (user.commissionsEnabled === true || user.productionEnabled === true)) {
+        // Find anchor: last <a> sibling after the section header
+        let anchor = yeadimSection;
+        let next = yeadimSection.nextElementSibling;
+        while (next && next.tagName === 'A') {
+            anchor = next;
+            next = next.nextElementSibling;
+        }
+
+        if (user.commissionsEnabled === true && !document.getElementById('commissionsLink')) {
+            const link = document.createElement('a');
+            link.id = 'commissionsLink';
+            link.href = './commissions';
+            link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>הסכמי עמלות';
+            if (window.location.pathname.includes('commissions')) link.classList.add('active');
+            anchor.parentNode.insertBefore(link, anchor.nextSibling);
+            anchor = link;
+        }
+
+        if (user.productionEnabled === true && !document.getElementById('productionLink')) {
+            const prodLink = document.createElement('a');
+            prodLink.id = 'productionLink';
+            prodLink.href = './production';
+            prodLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>תפוקה אלמנטרי';
+            if (window.location.pathname.includes('production')) prodLink.classList.add('active');
+            anchor.parentNode.insertBefore(prodLink, anchor.nextSibling);
         }
     }
 }
