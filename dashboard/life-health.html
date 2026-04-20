@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Travelins | תפוקה חיים ובריאות</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9C%88%EF%B8%8F</text></svg>">
+    <style>
+        .lh-page { padding: 24px; }
+        .lh-toolbar { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; padding: 16px; background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+        .lh-toolbar select, .lh-toolbar input { padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: 8px; font-size: 14px; }
+        .upload-btn { background: linear-gradient(135deg,#F97316,#EA580C); color: white; padding: 10px 18px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .upload-btn:hover { background: linear-gradient(135deg,#EA580C,#C2410C); }
+
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 12px; margin-bottom: 20px; }
+        .sum-card { background: white; padding: 16px; border-radius: 10px; border: 1px solid var(--gray-200); }
+        .sum-card-label { font-size: 12px; color: var(--gray-500); margin-bottom: 4px; }
+        .sum-card-value { font-size: 22px; font-weight: 800; }
+
+        .lh-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); margin-bottom: 20px; }
+        .lh-table th { text-align: right; padding: 10px 12px; background: #F8FAFC; font-weight: 700; font-size: 12px; color: var(--gray-500); border-bottom: 2px solid var(--gray-200); }
+        .lh-table td { padding: 10px 12px; border-bottom: 1px solid var(--gray-100); font-size: 13px; vertical-align: middle; }
+        .lh-table tr:hover td { background: #FFF7ED; }
+        .num { text-align: left; direction: ltr; font-variant-numeric: tabular-nums; }
+        .num.pos { color: #16A34A; font-weight: 700; }
+        .num.neg { color: #DC2626; font-weight: 700; }
+
+        .cat-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+        .cat-commission { background: #DCFCE7; color: #166534; }
+        .cat-vat-paid { background: #DBEAFE; color: #1E40AF; }
+        .cat-vat-credit { background: #FEF3C7; color: #92400E; }
+        .cat-advance { background: #F3E8FF; color: #6B21A8; }
+        .cat-other { background: #F1F5F9; color: var(--gray-500); }
+
+        .section-title { font-size: 16px; font-weight: 700; margin: 18px 0 10px; color: #1E293B; }
+
+        .uploads-list { background: white; border-radius: 10px; padding: 12px; }
+        .upload-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--gray-100); font-size: 13px; }
+        .upload-row:last-child { border-bottom: none; }
+        .upload-meta { color: var(--gray-500); font-size: 11px; }
+        .delete-btn { color: #DC2626; background: none; border: none; cursor: pointer; font-size: 12px; padding: 4px 8px; border-radius: 4px; }
+        .delete-btn:hover { background: #FEE2E2; }
+
+        /* Upload modal — same styles as production page */
+        .upload-modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .upload-modal.show { display: flex; }
+        .upload-modal-inner { background: white; border-radius: 12px; padding: 24px; max-width: 560px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .upload-modal h2 { margin: 0 0 16px; font-size: 18px; }
+        .upload-modal label { display: block; font-size: 12px; color: var(--gray-500); margin-bottom: 4px; font-weight: 600; }
+        .upload-modal select, .upload-modal input[type=file] { width: 100%; padding: 8px; border: 1px solid var(--gray-200); border-radius: 6px; margin-bottom: 12px; font-size: 14px; }
+        .upload-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+        .btn-secondary { background: white; border: 1px solid var(--gray-200); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .btn-primary { background: #F97316; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></div>
+                <div><div class="logo-text">Travel<em>ins</em></div><span class="sidebar-badge" id="companyName">חברה</span></div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="sidebar-section" id="managementSection">ניהול</div>
+                <a href="./"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>סקירה כללית</a>
+                <a href="./trips"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>נסיעות עובדים</a>
+                <a href="./employees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>ניהול עובדים</a>
+                <a href="./expenses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>ניתוח הוצאות</a>
+                <a href="./workdays"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>ימי עבודה בחו"ל</a>
+                <a href="./alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>התראות ביטוח</a>
+                <div class="sidebar-section" id="bituhofirSection">דשבורד ביטוח חו״ל</div>
+                <a href="./bituhofir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>דשבורד ביטוח חו״ל</a>
+                <a href="./policies"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>חיפוש פוליסות</a>
+                <a href="./agents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>סוכנים</a>
+                <a href="./reports"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>דוחות</a>
+                <div class="sidebar-section" id="remindersSection">דשבורד תזכורות</div>
+                <a href="./reminders" id="sidebarRemindersLink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>דשבורד תזכורות</a>
+                <a href="./reminder-detail?type=agentAppointment" class="sidebar-sub-link">מינוי סוכן</a>
+                <a href="./reminder-detail?type=policyCancellations" class="sidebar-sub-link">ביטולי פוליסות</a>
+                <a href="./reminder-detail?type=newProductions" class="sidebar-sub-link">הפקות חדשות</a>
+                <a href="./reminder-detail?type=claims" class="sidebar-sub-link">תביעות</a>
+                <a href="./reminder-detail?type=firstDeposit" class="sidebar-sub-link">הפקדה ראשונה שבוצעה</a>
+                <a href="./reminder-detail?type=completingDeficiencies" class="sidebar-sub-link">השלמת חוסרים</a>
+                <div class="sidebar-section" id="yeadimSection">דשבורד יעדים</div>
+                <a href="./yeadim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>דשבורד יעדים</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="sidebar-user-avatar" id="userAvatar">C</div>
+                    <div class="sidebar-user-info"><div class="sidebar-user-name" id="userName">חברה</div><div class="sidebar-user-role">דשבורד חברה</div></div>
+                    <button class="sidebar-logout" onclick="logout()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+                </div>
+            </div>
+        </aside>
+        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+        <main class="main-content">
+            <div class="page-header">
+                <button class="mobile-menu-btn" onclick="toggleSidebar()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <h1>תפוקה חיים ובריאות</h1>
+            </div>
+
+            <div class="page-body lh-page">
+                <div class="lh-toolbar">
+                    <button class="upload-btn" onclick="openUploadModal()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        העלאת דוח עמלות
+                    </button>
+                    <select id="filterInsurer" onchange="reload()"><option value="">כל המבטחים</option></select>
+                    <select id="filterMonth" onchange="reload()"><option value="">כל החודשים</option></select>
+                </div>
+
+                <div id="contentArea">
+                    <div style="text-align:center;padding:40px;color:var(--gray-400);">טוען...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Upload Modal -->
+    <div class="upload-modal" id="uploadModal">
+        <div class="upload-modal-inner">
+            <h2>העלאת דוח עמלות חיים ובריאות</h2>
+            <p style="font-size:12px;color:var(--gray-500);margin:0 0 14px 0;">קובץ "פירוט תנועות עו״ש - עמלות שוטפות" (XLSX) — דוח חשבונות מהחברה.</p>
+
+            <label>חברת ביטוח</label>
+            <select id="uploadInsurer" style="margin-bottom:12px;">
+                <option value="הראל">הראל</option>
+                <option value="מגדל">מגדל</option>
+                <option value="הפניקס">הפניקס</option>
+                <option value="כלל">כלל</option>
+                <option value="מנורה">מנורה</option>
+                <option value="הכשרה">הכשרה</option>
+                <option value="איילון">איילון</option>
+            </select>
+
+            <label>קובץ</label>
+            <input type="file" id="uploadFile" accept=".xls,.xlsx">
+
+            <label style="font-weight:400;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;margin-top:10px;">
+                <input type="checkbox" id="uploadReplace" checked>
+                החלף נתונים קיימים לחודשים שבקובץ
+            </label>
+            <div id="uploadStatus" style="margin-top:10px;"></div>
+            <div class="upload-modal-actions">
+                <button class="btn-secondary" onclick="closeUploadModal()">ביטול</button>
+                <button class="btn-primary" id="uploadSubmit" onclick="submitUpload()">העלה</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/life-health.js"></script>
+    <script>
+    function toggleSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.toggle('open');if(b)b.classList.toggle('show')}
+    function closeSidebar(){var s=document.getElementById('sidebar'),b=document.getElementById('sidebarBackdrop');s.classList.remove('open');if(b)b.classList.remove('show')}
+    </script>
+</body>
+</html>

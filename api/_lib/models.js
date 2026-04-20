@@ -248,6 +248,41 @@ const productionUploadSchema = new mongoose.Schema({
     uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
+// Life & Health: bank-statement style commission entries (one row per transaction).
+// Different from elementary production: no per-policy detail, just incoming commission /
+// VAT / advances. Used to verify that what hit the bank account matches expectations.
+const lifeHealthCommissionEntrySchema = new mongoose.Schema({
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
+    insurer: { type: String, required: true, trim: true },
+    valueDate: { type: Date },                            // תאריך ערך
+    postingDate: { type: Date },                          // תאריך הזנת תנועה
+    yearMonth: { type: String, trim: true },              // YYYY-MM derived from valueDate
+    description: { type: String, trim: true },            // תיאור תנועה
+    debit: { type: Number, default: 0 },                  // סכום חובה
+    credit: { type: Number, default: 0 },                 // סכום זכות
+    balance: { type: Number, default: null },             // יתרה לתאריך ערך
+    agentCode: { type: String, trim: true },              // מספר סוכן
+    agentName: { type: String, trim: true },              // שם סוכן
+    ownerId: { type: String, trim: true },                // ת.ז. בעלים
+    category: { type: String, trim: true },               // 'commission' | 'vat-paid' | 'vat-credit' | 'advance' | 'other'
+    raw: { type: mongoose.Schema.Types.Mixed },
+    uploadId: { type: mongoose.Schema.Types.ObjectId, ref: 'LifeHealthCommissionUpload', index: true }
+}, { timestamps: true });
+lifeHealthCommissionEntrySchema.index({ companyId: 1, insurer: 1, yearMonth: 1 });
+
+const lifeHealthCommissionUploadSchema = new mongoose.Schema({
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
+    insurer: { type: String, required: true, trim: true },
+    fileName: { type: String, trim: true },
+    rowCount: { type: Number, default: 0 },
+    totalCommission: { type: Number, default: 0 },        // sum of credit where category='commission'
+    totalVatPaid: { type: Number, default: 0 },           // sum of debit where category='vat-paid'
+    totalVatCredit: { type: Number, default: 0 },         // sum of credit where category='vat-credit'
+    totalNet: { type: Number, default: 0 },               // commission - vat-paid + vat-credit
+    monthsCovered: [{ type: String, trim: true }],
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+}, { timestamps: true });
+
 // Use existing models if already compiled (serverless caching)
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Company = mongoose.models.Company || mongoose.model('Company', companySchema);
@@ -259,5 +294,7 @@ const DashboardCache = mongoose.models.DashboardCache || mongoose.model('Dashboa
 const CommissionAgreement = mongoose.models.CommissionAgreement || mongoose.model('CommissionAgreement', commissionAgreementSchema);
 const ProductionRecord = mongoose.models.ProductionRecord || mongoose.model('ProductionRecord', productionRecordSchema);
 const ProductionUpload = mongoose.models.ProductionUpload || mongoose.model('ProductionUpload', productionUploadSchema);
+const LifeHealthCommissionEntry = mongoose.models.LifeHealthCommissionEntry || mongoose.model('LifeHealthCommissionEntry', lifeHealthCommissionEntrySchema);
+const LifeHealthCommissionUpload = mongoose.models.LifeHealthCommissionUpload || mongoose.model('LifeHealthCommissionUpload', lifeHealthCommissionUploadSchema);
 
-module.exports = { User, Company, Employee, Trip, Policy, Reminder, DashboardCache, CommissionAgreement, ProductionRecord, ProductionUpload, normalizeDashboardModules, generateSlug };
+module.exports = { User, Company, Employee, Trip, Policy, Reminder, DashboardCache, CommissionAgreement, ProductionRecord, ProductionUpload, LifeHealthCommissionEntry, LifeHealthCommissionUpload, normalizeDashboardModules, generateSlug };

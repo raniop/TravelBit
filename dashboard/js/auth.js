@@ -69,9 +69,11 @@ function isPageAllowed(user, currentPage) {
 
     const isRemindersPage = currentPage.includes('reminders') || currentPage.includes('reminder-detail');
     const isYeadimPage = currentPage.includes('yeadim');
-    const isCommissionsPage = currentPage.includes('commissions');
+    const isLifeHealthPage = currentPage.includes('life-health');
+    // commissions check excludes the new life-health page (which would otherwise match if we added it later)
+    const isCommissionsPage = currentPage.includes('commissions') && !isLifeHealthPage;
     const isProductionPage = currentPage.includes('production');
-    const isManagementPage = !insurancePageType && !isRemindersPage && !isYeadimPage && !isCommissionsPage && !isProductionPage && !currentPage.includes('login');
+    const isManagementPage = !insurancePageType && !isRemindersPage && !isYeadimPage && !isCommissionsPage && !isProductionPage && !isLifeHealthPage && !currentPage.includes('login');
 
     // Check module-level access
     if (isManagementPage && !modules.management) return false;
@@ -80,6 +82,7 @@ function isPageAllowed(user, currentPage) {
     if (isYeadimPage && !modules.yeadim) return false;
     if (isCommissionsPage && user.commissionsEnabled !== true) return false;
     if (isProductionPage && user.productionEnabled !== true) return false;
+    if (isLifeHealthPage && user.productionEnabled !== true) return false;
 
     // Granular insurance page check
     if (insurancePageType && modules.insurance) {
@@ -739,8 +742,18 @@ function updateSidebarVisibility() {
             prodLink.id = 'productionLink';
             prodLink.href = './production';
             prodLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>תפוקה אלמנטרי';
-            if (window.location.pathname.includes('production')) prodLink.classList.add('active');
+            if (window.location.pathname.includes('/production')) prodLink.classList.add('active');
             anchor.parentNode.insertBefore(prodLink, anchor.nextSibling);
+            anchor = prodLink;
+        }
+
+        if (user.productionEnabled === true && !document.getElementById('lifeHealthLink')) {
+            const lhLink = document.createElement('a');
+            lhLink.id = 'lifeHealthLink';
+            lhLink.href = './life-health';
+            lhLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>תפוקה חיים ובריאות';
+            if (window.location.pathname.includes('life-health')) lhLink.classList.add('active');
+            anchor.parentNode.insertBefore(lhLink, anchor.nextSibling);
         }
     }
 }

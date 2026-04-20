@@ -44,6 +44,9 @@
     { "source": "/api/dashboard/production/uploads", "destination": "/api/dashboard/production" },
     { "source": "/api/dashboard/production/uploads/:id", "destination": "/api/dashboard/production" },
     { "source": "/api/dashboard/production", "destination": "/api/dashboard/production" },
+    { "source": "/api/dashboard/life-health-commissions/uploads", "destination": "/api/dashboard/life-health-commissions" },
+    { "source": "/api/dashboard/life-health-commissions/uploads/:id", "destination": "/api/dashboard/life-health-commissions" },
+    { "source": "/api/dashboard/life-health-commissions", "destination": "/api/dashboard/life-health-commissions" },
     { "source": "/api/(.*)", "destination": "/api/$1" }
   ],
   "headers": [
