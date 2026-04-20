@@ -181,17 +181,24 @@ function parseShlomoXLS(buffer) {
     return records;
 }
 
-// Parse Hachshara HTML/TXT production report
-// Format: text dump with structure:
+// Parse "דוח קליטת פרודוקציה" HTML report.
+// Generic plaintext-in-HTML format produced by the agent's intake tool — observed for
+// Migdal, Harel, Shirbit, and Hachshara. Always preferred over raw FL files.
+//
+// Layout per customer:
 //   [customer name]
 //   ת.ז.: [id] כתובת: [...]
 //   פוליסות:
 //       [policy]-[suffix] תאריך תחילה: [d] תאריך סיום: [d]
 //       פרמיה: [amount] סוג ביטוח: [type]
-function parseHachsharaHTML(text) {
+function parseProductionHTML(text) {
     // Strip HTML wrapper
     const m = text.match(/<pre[^>]*>([\s\S]+?)<\/pre>/i);
     const body = m ? m[1] : text;
+
+    // Detected insurer from title — surfaced for UI sanity check
+    const insurerMatch = body.match(/קליטת פרודוקציה מחברת ביטוח\s+([^\n]+?)(?:\n|$)/);
+    const detectedInsurer = insurerMatch ? insurerMatch[1].replace(/ביטוח\s*$/, '').trim() : null;
 
     // Detect production month from policy dates (use most common start date month)
     let prodYM = null, prodMonth = null;
@@ -228,9 +235,10 @@ function parseHachsharaHTML(text) {
         const idMatch = block.match(/ת\.ז\.:\s*(\d+)/);
         const insuredId = idMatch ? idMatch[1] : '';
 
-        // Extract all policy entries
-        // Pattern: "POLICY-SUFFIX תאריך תחילה: DATE תאריך סיום: DATE\n    פרמיה: AMOUNT   סוג ביטוח: TYPE"
-        const policyRegex = /(\d{8,})-(\d{2})\s+תאריך תחילה:\s*(\d{1,2}\/\d{1,2}\/\d{4})\s+תאריך סיום:\s*(\d{1,2}\/\d{1,2}\/\d{4})[^\n]*\n[^\n]*פרמיה:\s*(-?[\d.]+)[^\n]*סוג ביטוח:\s*([^\n]+?)(?:\n|$)/g;
+        // Extract all policy entries.
+        // Pattern: "POLICY-SUFFIX[/SUBID] תאריך תחילה: DATE תאריך סיום: DATE\n    פרמיה: AMOUNT   סוג ביטוח: TYPE"
+        // Some Migdal/Harel exports append "/NNNN" after the 2-digit suffix (e.g. 103802450725-00/0006).
+        const policyRegex = /(\d{8,})-(\d{2})(?:\/\d+)?\s+תאריך תחילה:\s*(\d{1,2}\/\d{1,2}\/\d{4})\s+תאריך סיום:\s*(\d{1,2}\/\d{1,2}\/\d{4})[^\n]*\n[^\n]*פרמיה:\s*(-?[\d.]+)[^\n]*סוג ביטוח:\s*([^\n]*?)(?:\n|$)/g;
 
         let mm;
         while ((mm = policyRegex.exec(block)) !== null) {
@@ -255,7 +263,8 @@ function parseHachsharaHTML(text) {
                 grossWithCreditFees: parseNumber(premiumStr),
                 commissionPaid: 0, // not in this report
                 commissionManual: 0,
-                commissionDifferential: 0
+                commissionDifferential: 0,
+                detectedInsurer
             });
         }
     }
@@ -270,248 +279,256 @@ function reverseHebrew(s) {
 }
 
 // Parse FL ("מבנה אחיד / איגוד לקלע")
-// Format: cp862 (DOS Hebrew), fixed-width ~198-char records, Hebrew text REVERSED
-// Each policy block identified by chars 14-30 (16-char block key).
-// Record types (last 4 chars of position 30-38):
-//   0010, 6010 = file/block header
-//   0021, 6021 = customer info (ID + name + address)
-//   0070, 6070 = period info
-//   0101, 0103, 6101 = policy header (with product name + license plate)
-//   *200 = coverage line items (with amounts)
-//   *300, *370, *371, *372, *373 = footers/totals
+// cp862 (DOS Hebrew), fixed-width ~198-char records, Hebrew text REVERSED.
+//
+// TWO RECORD-TYPE DIALECTS observed in the wild:
+//
+// MIGDAL-style (006-prefix files, types 0010/0021/0070/0101/0103/0200/0300/0371):
+//   0010 = block header (date)        0021 = customer (ID + name + address)
+//   0070 = period info                0100/0101/0103/6101 = policy header
+//                                       — premium at pos 73-81 in agorot
+//   0200 = coverage description       0300 = totals breakdown
+//   0371/0372 = commission footer     — commission at body offset 33 / 100 → NIS
+//
+// HAREL-style (025-prefix files, types 0001/0002/0007/0008/0009/0010/0020/0030):
+//   0001 = block header (date)        0002 = customer (ID + name)
+//   0007 = period                     0008 = premium item
+//   0009 = commission line            — commission chunk at offset 144 / 10000 → NIS
+//   0010 = vehicle info (license, model name)
+//   0020 = coverage line              0030 = totals
+//                                       — code 15 (16-char chunks) / 100 → NIS
+//
+// Block key = chars 14-30. Production date at body of first 0010 / 0001 record (YYMMDD).
 function parseFLBuffer(buffer, iconv) {
     const text = iconv.decode(buffer, 'cp862');
     const lines = text.split(/\r?\n/).filter(l => l.length > 50);
     if (lines.length === 0) return [];
 
-    const blockMap = new Map();
+    // Detect dialect by record types
+    const types = new Set();
+    for (const l of lines) types.add(l.substring(30, 38).slice(-4));
+    const isHarel = types.has('0030') && !types.has('0300');
 
+    // Production year-month from first block header
+    let prodYM = null, prodMonth = null;
+    const headerType = isHarel ? '0001' : '0010';
+    const firstHeader = lines.find(l => l.substring(30, 38).slice(-4) === headerType);
+    if (firstHeader) {
+        const m = firstHeader.substring(38).match(/^0+([2-3]\d)([0-1]\d)([0-3]\d)/);
+        if (m) {
+            prodYM = '20' + m[1] + '-' + m[2];
+            const monthAbbrs = ['ינו','פבר','מרץ','אפר','מאי','יונ','יול','אוג','ספט','אוק','נוב','דצמ'];
+            prodMonth = monthAbbrs[parseInt(m[2], 10) - 1] + '-' + m[1];
+        }
+    }
+
+    const blockMap = new Map();
     for (const line of lines) {
         if (line.length < 40) continue;
         const blockKey = line.substring(14, 30);
-        const typeCode = line.substring(30, 38);
-        const typeShort = typeCode.slice(-4);
-
+        const typeShort = line.substring(30, 38).slice(-4);
         let block = blockMap.get(blockKey);
         if (!block) {
-            block = {
-                blockKey,
-                policyNumber: null,
-                licenseNumber: '',
-                branchName: '',
-                insuredName: '',
-                insuredId: '',
-                netPremium: 0,
-                commissionPaid: 0,
-                coverages: []
-            };
+            block = { blockKey, types: {}, coverages: [] };
             blockMap.set(blockKey, block);
         }
-
-        // Customer info (0021 / 6021): ID at pos 38-50, Hebrew name at pos 50-100
-        if (typeShort === '0021') {
-            const idMatch = line.substring(38, 50).match(/(\d{9,10})/);
-            if (idMatch && !block.insuredId) block.insuredId = idMatch[1];
-            const hebMatches = line.substring(50, 130).match(/[\u0590-\u05FF\s]{3,}/g);
-            if (hebMatches && hebMatches.length > 0 && !block.insuredName) {
-                block.insuredName = reverseHebrew(hebMatches[0].trim());
-            }
-        }
-
-        // Policy header (0100 / 0101 / 0103 / 6101): contains TOTAL PREMIUM at fixed position
-        // Layout: pos 38-50 = policy number, pos 50-72 = Hebrew product name (fixed width),
-        // pos 73-80 = premium in agorot (8 digits), pos 80-89 = license plate
-        if (typeShort === '0100' || typeShort === '0101' || typeShort === '0103' || typeShort === '6101') {
-            const polMatch = line.substring(38, 50).match(/(\d{6,10})/);
-            if (polMatch && !block.policyNumber) {
-                block.policyNumber = polMatch[1].replace(/^0+/, '') || polMatch[1];
-            }
-            const heb = line.substring(50, 73).match(/[\u0590-\u05FF\s]{3,}/);
-            if (heb && !block.branchName) block.branchName = reverseHebrew(heb[0].trim());
-
-            // Premium at pos 73-81 (8 digits, in agorot)
-            const premSegment = line.substring(73, 81);
-            const premMatch = premSegment.match(/(\d{8})/);
-            if (premMatch) {
-                const agorot = parseInt(premMatch[1], 10);
-                const premNIS = agorot / 100;
-                if (premNIS > 0 && premNIS < 500000) {
-                    block.netPremium = Math.max(block.netPremium, premNIS);
-                }
-            }
-
-            // License plate at pos 90-99 (after spaces)
-            const lic = line.substring(85, 105).match(/(\d{7,8})/);
-            if (lic && !block.licenseNumber) block.licenseNumber = lic[1];
-        }
-
-        // Coverage line (X200): SKIP for premium calculation - these are mostly informational
-        // (terms/conditions). Premium is taken from the policy header only.
-        if (typeShort === '0200') {
-            const heb = line.substring(38, 80).match(/[\u0590-\u05FF\s]{3,}/);
+        if (!block.types[typeShort]) block.types[typeShort] = line;
+        const covType = isHarel ? '0020' : '0200';
+        if (typeShort === covType) {
+            const heb = line.substring(38, 100).match(/[\u0590-\u05FF\s]{3,}/);
             if (heb) {
-                const coverageName = reverseHebrew(heb[0].trim());
-                if (coverageName) block.coverages.push({ name: coverageName });
-            }
-        }
-
-        // Commission/totals footer (0371): commission at pos 50-69 (in agorot)
-        if (typeShort === '0371') {
-            // Look for non-zero amounts in the data section
-            const dataSegment = line.substring(50, 90);
-            const amounts = (dataSegment.match(/(\d{4,})/g) || [])
-                .map(a => parseInt(a.replace(/^0+/, '') || '0', 10))
-                .filter(n => n > 100 && n < 100000000);
-            if (amounts.length > 0) {
-                // First reasonable amount is usually commission (in agorot)
-                const commAgorot = amounts[0];
-                const commNIS = commAgorot / 100;
-                if (commNIS > 0 && commNIS < 100000) {
-                    block.commissionPaid = Math.max(block.commissionPaid || 0, commNIS);
-                }
+                const name = reverseHebrew(heb[0].trim());
+                if (name && !block.coverages.includes(name)) block.coverages.push(name);
             }
         }
     }
 
-    // Convert to ProductionRecord format, deduplicating by policy+premium
     const records = [];
     const seenKeys = new Set();
     for (const b of blockMap.values()) {
-        const polNum = b.policyNumber || b.blockKey;
-        if (!polNum) continue;
-        // Skip empty blocks (no customer AND no premium AND no license)
-        if (!b.insuredName && b.netPremium === 0 && !b.licenseNumber) continue;
-        // Dedupe: same policy+premium+name = same record
-        const dedupKey = polNum + '|' + b.netPremium + '|' + b.insuredName;
-        if (seenKeys.has(dedupKey)) continue;
-        seenKeys.add(dedupKey);
-
-        records.push({
-            productionMonth: null, productionYearMonth: null,
-            policyNumber: polNum,
-            licenseNumber: b.licenseNumber,
+        const r = {
+            productionMonth: prodMonth,
+            productionYearMonth: prodYM,
+            policyNumber: null,
+            licenseNumber: '',
             branchCode: '',
-            branchName: b.branchName,
-            insuredName: b.insuredName || 'לא זוהה',
-            insuredId: b.insuredId || '',
+            branchName: '',
+            insuredName: '',
+            insuredId: '',
             customerNumber: '',
             transactionType: '',
             startDate: null, endDate: null,
-            netPremium: b.netPremium,
-            fees: 0, grossPremium: b.netPremium, creditFees: 0, grossWithCreditFees: b.netPremium,
-            commissionPaid: b.commissionPaid || 0,
-            commissionManual: 0, commissionDifferential: 0
-        });
+            netPremium: 0, fees: 0, grossPremium: 0, creditFees: 0, grossWithCreditFees: 0,
+            commissionPaid: 0, commissionManual: 0, commissionDifferential: 0
+        };
+
+        if (isHarel) extractHarelBlock(b, r); else extractMigdalBlock(b, r);
+
+        if (!r.policyNumber) r.policyNumber = b.blockKey.replace(/^0+/, '') || b.blockKey;
+        if (!r.branchName && b.coverages.length) r.branchName = b.coverages[0];
+        if (!r.insuredName && r.netPremium === 0 && !r.licenseNumber) continue;
+
+        const dedupKey = r.policyNumber + '|' + r.netPremium + '|' + r.insuredName;
+        if (seenKeys.has(dedupKey)) continue;
+        seenKeys.add(dedupKey);
+        records.push(r);
     }
     return records;
 }
 
-function parseFLBuffer_OLD_unused(buffer, iconv) {
-    const text = iconv.decode(buffer, 'win1255');
-    const lines = text.split(/\r?\n/).filter(l => l.length > 50);
+function extractMigdalBlock(b, r) {
+    const t = b.types;
 
-    // Detect agent code from common header (position 5-14, 11 digits with leading zeros)
-    let agentCode = null;
-    if (lines.length > 0) {
-        const m = lines[0].match(/^.{5}(\d{6,12})/);
-        if (m) agentCode = m[1].replace(/^0+/, '');
+    // Customer in 0021 / 6021 (6XXX variants appear in same file as renewal-prefix records).
+    const cust = t['0021'] || t['6021'];
+    if (cust) {
+        const id = cust.substring(38, 50).match(/(\d{9,10})/);
+        if (id) r.insuredId = id[1].replace(/^0+/, '') || id[1];
+        const heb = cust.substring(50, 130).match(/[\u0590-\u05FF\s]{3,}/);
+        if (heb) r.insuredName = reverseHebrew(heb[0].trim());
     }
 
-    // Group records by "block" — each policy block typically has multiple record types.
-    // The grouping key seems to be in the header (chars ~15-30 = policy ref).
-    // For each block, extract: policy num, customer name, branch, premium, commission
+    const pol = t['0103'] || t['0101'] || t['0100'] || t['6101'] || t['6103'] || t['6100'];
+    if (pol) {
+        const polMatch = pol.substring(38, 50).match(/(\d{6,10})/);
+        if (polMatch) r.policyNumber = polMatch[1].replace(/^0+/, '') || polMatch[1];
 
-    // Strategy: scan for records with type 6101 (policy summary) and 6020 (customer)
-    // and aggregate them per block.
+        const heb = pol.substring(50, 73).match(/[\u0590-\u05FF\s]{3,}/);
+        if (heb) r.branchName = reverseHebrew(heb[0].trim());
 
-    const records = [];
-    let currentBlock = null;
-    const flushBlock = () => {
-        if (currentBlock && currentBlock.policyNumber) {
-            records.push(currentBlock);
-        }
-        currentBlock = null;
-    };
-
-    for (const line of lines) {
-        if (line.length < 40) continue;
-        const typeCode = line.substring(30, 38);
-        const blockKey = line.substring(15, 30);
-
-        // New block
-        if (!currentBlock || currentBlock._key !== blockKey) {
-            flushBlock();
-            currentBlock = {
-                _key: blockKey,
-                productionMonth: null,
-                productionYearMonth: null,
-                policyNumber: null,
-                licenseNumber: '',
-                branchCode: '',
-                branchName: '',
-                insuredName: '',
-                insuredId: '',
-                customerNumber: '',
-                transactionType: '',
-                startDate: null, endDate: null,
-                netPremium: 0, fees: 0, grossPremium: 0, creditFees: 0, grossWithCreditFees: 0,
-                commissionPaid: 0, commissionManual: 0, commissionDifferential: 0
-            };
+        const premStr = pol.substring(73, 81).replace(/[^0-9]/g, '');
+        if (premStr.length >= 6) {
+            const nis = parseInt(premStr, 10) / 100;
+            if (nis > 0 && nis < 500000) r.netPremium = nis;
         }
 
-        // Type 6101 — policy summary line. Contains policy number around pos 38-50
-        if (/6101/.test(typeCode)) {
-            const seg = line.substring(38, 100);
-            const polMatch = seg.match(/(\d{6,})/);
-            if (polMatch) currentBlock.policyNumber = polMatch[1];
-        }
+        const lic = pol.substring(85, 130).match(/(\d{7,8})/);
+        if (lic) r.licenseNumber = lic[1].replace(/^0+/, '') || lic[1];
+    }
 
-        // Type 6020 — customer name (Hebrew text in middle of record)
-        if (/6020/.test(typeCode)) {
-            const heb = line.substring(45, 90).trim();
-            if (heb && /[\u0590-\u05FF]/.test(heb)) {
-                currentBlock.insuredName = heb;
-            }
-        }
+    r.grossPremium = r.netPremium;
+    r.grossWithCreditFees = r.netPremium;
 
-        // Type ending in 200 — premium/commission lines
-        if (/200$/.test(typeCode)) {
-            // Look for amounts in expected positions
-            const amts = line.substring(60, 198).match(/\d{6,}/g) || [];
-            // Take largest reasonable amount as premium candidate
-            for (const a of amts) {
-                const n = parseInt(a, 10);
-                if (n > 100 && n < 100000000) {
-                    if (currentBlock.netPremium === 0) currentBlock.netPremium = n;
-                    break;
-                }
-            }
+    // Commission only from 0371 / 6371 (primary). 0370/0372 are auxiliary records
+    // with different field semantics — extracting from them produces garbage.
+    // Body layout: '1' prefix + 16-char chunks of (14-digit amount + 2-digit padding).
+    // Chunk #3 carries commission as a 10-digit amount (offset 33-43) at 2 implied decimals.
+    const comm = t['0371'] || t['6371'];
+    if (comm) {
+        const body = comm.substring(38);
+        const cAg = parseInt(body.substring(33, 43), 10);
+        if (!isNaN(cAg) && cAg > 0 && cAg < 100000000) {
+            r.commissionPaid = cAg / 100;
         }
     }
-    flushBlock();
-
-    // Filter out blocks without a real policy number
-    return records.filter(r => r.policyNumber).map(r => {
-        const { _key, ...rest } = r;
-        return rest;
-    });
 }
 
-// Auto-detect format by file extension or content sniff
+function extractHarelBlock(b, r) {
+    const t = b.types;
+
+    const cust = t['0002'];
+    if (cust) {
+        const id = cust.substring(38, 56).match(/(\d{9})/);
+        if (id) r.insuredId = id[1];
+        const heb = cust.substring(50, 130).match(/[\u0590-\u05FF\s]{3,}/);
+        if (heb) r.insuredName = reverseHebrew(heb[0].trim());
+    }
+
+    // Policy number: block key chars 2-10 hold the canonical 8-digit policy id
+    // (e.g. "0025207607026020" → "25207607"). Same number is repeated inside several records.
+    const polFromKey = b.blockKey.substring(2, 10);
+    if (/^\d{8}$/.test(polFromKey)) r.policyNumber = polFromKey;
+
+    const veh = t['0010'];
+    if (veh) {
+        if (!r.policyNumber) {
+            const polMatch = veh.substring(38, 50).match(/(\d{6,10})/);
+            if (polMatch) r.policyNumber = polMatch[1].replace(/^0+/, '') || polMatch[1];
+        }
+        const heb = veh.substring(50, 80).match(/[\u0590-\u05FF\s]{3,}/);
+        if (heb) r.branchName = reverseHebrew(heb[0].trim());
+        // License plate is the last 7-8 digit run before trailing zeros
+        const allNums = veh.substring(80, 130).match(/\d{7,8}/g) || [];
+        if (allNums.length) r.licenseNumber = allNums[allNums.length - 1].replace(/^0+/, '') || allNums[allNums.length - 1];
+    }
+
+    // Totals 0030: 16-char chunks of (2-digit code + 14-digit amount). Code 15 = total premium /100.
+    // Some non-vehicle blocks (e.g. home insurance) use a 3-digit code variant where the parse
+    // yields huge numbers — clamp anything above 500K NIS (=5e7 in agorot) to filter junk.
+    const totals = t['0030'];
+    if (totals) {
+        const body = totals.substring(38);
+        let total = 0, base = 0;
+        for (let i = 0; i + 16 <= body.length; i += 16) {
+            const code = body.substring(i, i + 2);
+            const amt = parseInt(body.substring(i + 2, i + 16), 10);
+            if (isNaN(amt) || amt < 0 || amt > 5e7) continue;
+            if (code === '01') base = amt / 100;
+            if (code === '15') total = amt / 100;
+        }
+        r.netPremium = total || base;
+        r.grossPremium = r.netPremium;
+        r.grossWithCreditFees = r.netPremium;
+    }
+
+    // Commission 0009: scan 16-char chunks, last non-zero chunk holds commission with 10 implied decimals.
+    // Observed across blocks: chunk like "0000475604000000" (raw int 475604000000) → 47.5604 NIS.
+    const comm = t['0009'];
+    if (comm) {
+        const body = comm.substring(38);
+        let lastVal = 0;
+        for (let i = 0; i + 16 <= body.length; i += 16) {
+            const v = parseInt(body.substring(i, i + 16), 10);
+            if (!isNaN(v) && v > 100 && v < 1e15) lastVal = v;
+        }
+        if (lastVal > 0) r.commissionPaid = lastVal / 1e10;
+    }
+}
+
+// Auto-detect format by file extension or content sniff.
+// Returns 'fl' for FL files, 'fl-zip' for FL packed in a ZIP (e.g. Harel C* file in smsdir).
+// XLSX files are also ZIP-prefixed; we tell them apart by extension first, then by ZIP entry names.
 function detectFormat(fileName, buffer) {
     const lower = (fileName || '').toLowerCase();
     if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'html';
     if (lower.endsWith('.csv') || lower.endsWith('.txt')) return 'csv';
-    if (lower.endsWith('.xls') || lower.endsWith('.xlsx')) return 'xls';
+    if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) return 'xls';
     if (lower.endsWith('.fl')) return 'fl';
+    if (lower.endsWith('.zip')) return 'fl-zip';
     // sniff by content
     if (buffer && buffer.length >= 5) {
         const firstBytes = buffer.slice(0, 100).toString('ascii').toLowerCase();
         if (/<html|<!doctype/i.test(firstBytes)) return 'html';
-        if (buffer[0] === 0x50 && buffer[1] === 0x4B) return 'xls'; // ZIP (XLSX)
+        if (buffer[0] === 0x50 && buffer[1] === 0x4B) return 'fl-zip'; // PK ZIP
         if (buffer[0] === 0xD0 && buffer[1] === 0xCF) return 'xls'; // OLE2 (XLS)
     }
     return 'csv';
+}
+
+// Extract the FL data file from a ZIP archive (Harel format: smsdir/<agent>/C*.NN)
+async function extractFLFromZip(buffer) {
+    const JSZip = require('jszip');
+    const zip = await JSZip.loadAsync(buffer);
+    let target = null;
+    zip.forEach((path, file) => {
+        if (file.dir) return;
+        const base = path.split('/').pop();
+        // Prefer files matching C[0-9]+.[0-9]+ (Harel data file pattern)
+        if (/^C\d+\.\d+$/i.test(base)) { target = file; return; }
+        if (!target && /\.fl$/i.test(base)) target = file;
+    });
+    if (!target) {
+        // Fallback: largest non-trivial entry
+        let largest = null, size = 0;
+        zip.forEach((path, file) => {
+            if (file.dir) return;
+            const s = file._data ? file._data.uncompressedSize : 0;
+            if (s > size) { size = s; largest = file; }
+        });
+        target = largest;
+    }
+    if (!target) throw new Error('לא נמצא קובץ FL בתוך ה-ZIP');
+    return await target.async('nodebuffer');
 }
 
 // Build a lookup map of branchCode → expectedRate from a commission agreement
@@ -566,9 +583,12 @@ module.exports = async function handler(req, res) {
                 parsed = parseShlomoXLS(buf);
             } else if (fmt === 'html') {
                 const text = iconv.decode(buf, 'win1255');
-                parsed = parseHachsharaHTML(text);
+                parsed = parseProductionHTML(text);
             } else if (fmt === 'fl') {
                 parsed = parseFLBuffer(buf, iconv);
+            } else if (fmt === 'fl-zip') {
+                const flBuf = await extractFLFromZip(buf);
+                parsed = parseFLBuffer(flBuf, iconv);
             } else {
                 const text = iconv.decode(buf, 'win1255');
                 parsed = parseMenoraCSV(text);
