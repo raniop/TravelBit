@@ -637,10 +637,24 @@ module.exports = async function handler(req, res) {
             const docs = parsed.map(p => {
                 const expectedRate = rateMap.has(p.branchCode) ? rateMap.get(p.branchCode) : null;
                 const expectedCommission = expectedRate !== null ? (p.netPremium * expectedRate / 100) : null;
-                const commissionGap = expectedCommission !== null ? (p.commissionPaid - expectedCommission) : null;
+
+                // Source files vary in whether they include actual paid commission:
+                //   Menora CSV / Shlomo XLS  → actual is in the file
+                //   HTML "דוח קליטת פרודוקציה" / FL → no commission field, parser yields 0
+                // When actual is missing but an agreement exists, fall back to the agreement-
+                // implied amount so the dashboard isn't misleadingly empty.
+                let commissionPaid = p.commissionPaid;
+                let commissionSource = 'file';
+                if ((!commissionPaid || commissionPaid === 0) && expectedCommission !== null) {
+                    commissionPaid = expectedCommission;
+                    commissionSource = 'agreement';
+                } else if (!commissionPaid && expectedCommission === null) {
+                    commissionSource = 'none';
+                }
+                const commissionGap = expectedCommission !== null ? (commissionPaid - expectedCommission) : null;
 
                 totalNet += p.netPremium;
-                totalCommission += p.commissionPaid;
+                totalCommission += commissionPaid;
                 if (expectedCommission !== null) {
                     totalExpected += expectedCommission;
                     totalGap += commissionGap;
@@ -665,7 +679,8 @@ module.exports = async function handler(req, res) {
                     grossPremium: p.grossPremium,
                     creditFees: p.creditFees,
                     grossWithCreditFees: p.grossWithCreditFees,
-                    commissionPaid: p.commissionPaid,
+                    commissionPaid,
+                    commissionSource,
                     commissionManual: p.commissionManual,
                     commissionDifferential: p.commissionDifferential,
                     expectedRate,

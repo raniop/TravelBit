@@ -209,6 +209,11 @@ function renderBranchDetailTable(records) {
         const txnBadge = r.transactionType
             ? '<span style="font-size:10px;padding:1px 6px;background:#E5E7EB;border-radius:8px;color:var(--gray-600);">' + escapeHtml(r.transactionType) + '</span>'
             : '';
+        // Mark commission source: blue dot for "agreement" (computed, not from file).
+        let commMarker = '';
+        if (r.commissionSource === 'agreement') {
+            commMarker = ' <span title="חושב לפי הסכם — לא קיים בקובץ" style="color:#3B82F6;font-size:10px;">●</span>';
+        }
         return '<tr>' +
             '<td>' + escapeHtml(r.insurer || '') + '</td>' +
             '<td>' + escapeHtml(r.productionYearMonth || '-') + '</td>' +
@@ -217,7 +222,7 @@ function renderBranchDetailTable(records) {
             '<td>' + escapeHtml(r.insuredId || '-') + '</td>' +
             '<td>' + escapeHtml(r.licenseNumber || '-') + '</td>' +
             '<td class="num ' + premCls + '">' + fmtNum(prem) + ' ₪</td>' +
-            '<td class="num ' + commCls + '">' + fmtNum(comm) + ' ₪</td>' +
+            '<td class="num ' + commCls + '">' + fmtNum(comm) + ' ₪' + commMarker + '</td>' +
         '</tr>';
     }).join('');
     return '<table class="branch-detail-table" style="width:100%;border-collapse:collapse;font-size:12px;margin:0;">' +
