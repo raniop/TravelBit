@@ -70,7 +70,8 @@ function isPageAllowed(user, currentPage) {
     const isRemindersPage = currentPage.includes('reminders') || currentPage.includes('reminder-detail');
     const isYeadimPage = currentPage.includes('yeadim');
     const isCommissionsPage = currentPage.includes('commissions');
-    const isManagementPage = !insurancePageType && !isRemindersPage && !isYeadimPage && !isCommissionsPage && !currentPage.includes('login');
+    const isProductionPage = currentPage.includes('production');
+    const isManagementPage = !insurancePageType && !isRemindersPage && !isYeadimPage && !isCommissionsPage && !isProductionPage && !currentPage.includes('login');
 
     // Check module-level access
     if (isManagementPage && !modules.management) return false;
@@ -78,6 +79,7 @@ function isPageAllowed(user, currentPage) {
     if (isRemindersPage && !modules.reminders) return false;
     if (isYeadimPage && !modules.yeadim) return false;
     if (isCommissionsPage && user.commissionsEnabled !== true) return false;
+    if (isProductionPage && user.productionEnabled !== true) return false;
 
     // Granular insurance page check
     if (insurancePageType && modules.insurance) {
@@ -668,28 +670,33 @@ function updateSidebarVisibility() {
         }
     }
 
-    // Commissions module: inject "הסכמי עמלות" link if enabled
-    if (user.commissionsEnabled === true) {
+    // Commissions module: inject "הסכמי עמלות" + "תפוקה אלמנטרי" links if enabled
+    if (user.commissionsEnabled === true || user.productionEnabled === true) {
         const nav = document.querySelector('.sidebar-nav');
         if (nav && !document.getElementById('commissionsSection')) {
             const sec = document.createElement('div');
             sec.className = 'sidebar-section';
             sec.id = 'commissionsSection';
             sec.textContent = 'הסכמים ועמלות';
+            nav.appendChild(sec);
 
-            const link = document.createElement('a');
-            link.id = 'commissionsLink';
-            link.href = './commissions';
-            link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>הסכמי עמלות';
-
-            // Mark active if currently on commissions page
-            if (window.location.pathname.includes('commissions')) {
-                link.classList.add('active');
+            if (user.commissionsEnabled === true) {
+                const link = document.createElement('a');
+                link.id = 'commissionsLink';
+                link.href = './commissions';
+                link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>הסכמי עמלות';
+                if (window.location.pathname.includes('commissions')) link.classList.add('active');
+                nav.appendChild(link);
             }
 
-            // Append at end of nav (will get moved up if yeadimAdvanced runs after)
-            nav.appendChild(sec);
-            nav.appendChild(link);
+            if (user.productionEnabled === true) {
+                const prodLink = document.createElement('a');
+                prodLink.id = 'productionLink';
+                prodLink.href = './production';
+                prodLink.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>תפוקה אלמנטרי';
+                if (window.location.pathname.includes('production')) prodLink.classList.add('active');
+                nav.appendChild(prodLink);
+            }
         }
     }
 

@@ -54,6 +54,7 @@ const companySchema = new mongoose.Schema({
     },
     yeadimAdvanced: { type: Boolean, default: false },
     commissionsEnabled: { type: Boolean, default: false },
+    productionEnabled: { type: Boolean, default: false },
     subscriptionStart: { type: Date, default: Date.now },
     subscriptionEnd: { type: Date },
     isActive: { type: Boolean, default: true }
@@ -198,6 +199,53 @@ const commissionAgreementSchema = new mongoose.Schema({
 
 commissionAgreementSchema.index({ companyId: 1, insurer: 1, isActive: 1 });
 
+// ===== PRODUCTION RECORD (פוליסות שהופקו) =====
+const productionRecordSchema = new mongoose.Schema({
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
+    insurer: { type: String, required: true, trim: true, index: true },
+    productionMonth: { type: String, trim: true },        // e.g., 'ינו-26'
+    productionYearMonth: { type: String, trim: true, index: true }, // e.g., '2026-01' (sortable)
+    policyNumber: { type: String, trim: true, index: true },
+    licenseNumber: { type: String, trim: true },
+    branchCode: { type: String, trim: true },              // ענף ראשי
+    branchName: { type: String, trim: true },
+    subBranchCode: { type: String, trim: true },           // ענף משנה (when present)
+    insuredName: { type: String, trim: true },
+    insuredId: { type: String, trim: true },
+    customerNumber: { type: String, trim: true },
+    transactionType: { type: String, trim: true },        // חידוש / חדש / תוספת / ביטול / עמלה
+    startDate: { type: Date },
+    endDate: { type: Date },
+    netPremium: { type: Number, default: 0 },
+    fees: { type: Number, default: 0 },
+    grossPremium: { type: Number, default: 0 },
+    creditFees: { type: Number, default: 0 },
+    grossWithCreditFees: { type: Number, default: 0 },
+    commissionPaid: { type: Number, default: 0 },          // עמלה רגילה
+    commissionManual: { type: Number, default: 0 },        // עמלה ידנית
+    commissionDifferential: { type: Number, default: 0 },  // עמלה הפרשית
+    expectedRate: { type: Number, default: null },         // computed from CommissionAgreement
+    expectedCommission: { type: Number, default: null },   // = netPremium * expectedRate / 100
+    commissionGap: { type: Number, default: null },        // = commissionPaid - expectedCommission
+    raw: { type: mongoose.Schema.Types.Mixed },            // original row for audit
+    uploadId: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductionUpload', index: true }
+}, { timestamps: true });
+
+productionRecordSchema.index({ companyId: 1, insurer: 1, productionYearMonth: 1 });
+
+const productionUploadSchema = new mongoose.Schema({
+    companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true, index: true },
+    insurer: { type: String, required: true, trim: true },
+    fileName: { type: String, trim: true },
+    rowCount: { type: Number, default: 0 },
+    totalNetPremium: { type: Number, default: 0 },
+    totalCommission: { type: Number, default: 0 },
+    totalExpectedCommission: { type: Number, default: 0 },
+    totalGap: { type: Number, default: 0 },
+    monthsCovered: [{ type: String, trim: true }],
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+}, { timestamps: true });
+
 // Use existing models if already compiled (serverless caching)
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Company = mongoose.models.Company || mongoose.model('Company', companySchema);
@@ -207,5 +255,7 @@ const Policy = mongoose.models.Policy || mongoose.model('Policy', policySchema);
 const Reminder = mongoose.models.Reminder || mongoose.model('Reminder', reminderSchema);
 const DashboardCache = mongoose.models.DashboardCache || mongoose.model('DashboardCache', dashboardCacheSchema);
 const CommissionAgreement = mongoose.models.CommissionAgreement || mongoose.model('CommissionAgreement', commissionAgreementSchema);
+const ProductionRecord = mongoose.models.ProductionRecord || mongoose.model('ProductionRecord', productionRecordSchema);
+const ProductionUpload = mongoose.models.ProductionUpload || mongoose.model('ProductionUpload', productionUploadSchema);
 
-module.exports = { User, Company, Employee, Trip, Policy, Reminder, DashboardCache, CommissionAgreement, normalizeDashboardModules, generateSlug };
+module.exports = { User, Company, Employee, Trip, Policy, Reminder, DashboardCache, CommissionAgreement, ProductionRecord, ProductionUpload, normalizeDashboardModules, generateSlug };

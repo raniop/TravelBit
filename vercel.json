@@ -41,6 +41,9 @@
     { "source": "/api/dashboard/yeadim", "destination": "/api/dashboard/yeadim" },
     { "source": "/api/dashboard/commissions/:id", "destination": "/api/dashboard/commissions" },
     { "source": "/api/dashboard/commissions", "destination": "/api/dashboard/commissions" },
+    { "source": "/api/dashboard/production/uploads", "destination": "/api/dashboard/production" },
+    { "source": "/api/dashboard/production/uploads/:id", "destination": "/api/dashboard/production" },
+    { "source": "/api/dashboard/production", "destination": "/api/dashboard/production" },
     { "source": "/api/(.*)", "destination": "/api/$1" }
   ],
   "headers": [
